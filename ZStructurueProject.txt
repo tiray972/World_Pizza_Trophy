@@ -1,0 +1,2 @@
+/world-pizza-trophy 
+├── app │ ├── layout.tsx │ ├── page.tsx │ ├── schedule/page.tsx # Tableau des passages public │ ├── dashboard/... │ ├── admin/... │ ├── booking/... │ └── api/ │ ├── auth/... │ ├── stripe/... │ ├── admin/products/create/route.ts # Création de packs Stripe │ └── booking/reserve/route.ts ├── components │ ├── ui/ │ └── custom/ ├── lib │ ├── firebase/ │ │ ├── client.ts │ │ └── admin.ts │ ├── auth.ts │ └── booking.ts ├── types │ └── firestore.ts └── .env.local

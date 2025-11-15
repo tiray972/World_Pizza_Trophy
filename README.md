@@ -1,60 +1,66 @@
-# World Pizza Trophy – Roadmap Technique & Setup
+# World Pizza Trophy – Document de Référence Architecte
 
-## 🏗 1. Choix du stack
-- Frontend : Next.js (App Router, Typescript, shadcn/ui, TailwindCSS)
-- Backend : Firebase (Auth, Firestore, Cloud Functions, Storage)
-- Paiements : Stripe Checkout
-- Upload photos : Firebase Storage + Cloud Functions
-- Emails transactionnels : Resend ou Firebase Extensions
-- Déploiement : Vercel
-
----
-
-## 🚀 2. Objectifs MVP (phase 1)
-1. Landing page vitrine (FR / EN)
-2. Compte utilisateur (Auth)
-3. Formulaire d’inscription
-4. Sélection d’une ou plusieurs catégories
-5. Réservation créneau horaire (slot booking)
-6. Paiement Stripe obligatoire pour valider la réservation
-7. Dashboard utilisateur
-8. Dashboard admin (secured)
-9. Data en temps réel (Firebase)
+## 🏗 1. Stack Technique & Rôles
+| Rôle | Technologie | Détail |
+| :--- | :--- | :--- |
+| **Frontend** | Next.js (TS) | App Router, TailwindCSS, shadcn/ui. |
+| **Backend/DB** | Firebase | Auth (Custom Claims), Firestore, Storage. |
+| **Paiements** | Stripe | Checkout, Webhooks, Gestion des produits/prix **via API Backend**. |
+| **Opérations** | Admin Panel | Inscription manuelle (bypass paiement), gestion des Packs/Bons. |
+| **Déploiement** | Vercel | Frontend & Serverless Functions. |
 
 ---
 
-## 📅 3. Sprint Plan
+## 🚀 2. Objectifs MVP (Phase 1)
+1.  **Catalogue :** Packs (produits Stripe) et Catégories sont gérés par l'admin.
+2.  **Réservation :** Système sur 2 Jours, slots verrouillés via transaction Firestore AVANT paiement.
+3.  **Flexibilité Achat :** Achat "à la carte" (1 slot) ou via un **Bon/Code** pour un Pack.
+4.  **Admin Opérationnel :** Inscription manuelle de participants (slots "offerts").
+5.  **Audit :** Récapitulatif des paiements et export CSV du planning.
+6.  **Visibilité :** Tableau des passages public (`/schedule`).
+
+---
+
+## 📅 3. Plan de Sprints & Prompts Architecte
+
+Chaque sprint est accompagné du prompt à utiliser pour demander le code correspondant.
+
 ### Sprint 1 – Setup & Base
-- Init repo Next.js
-- Setup Tailwind + shadcn/ui
-- Setup Firebase SDK + env config
-- Structure dossiers (domain-driven)
+* **Objectif :** Initialisation des dépendances et de la structure de base.
+* **Tâches :** Init repo, Setup Tailwind/shadcn, Setup Firebase Client/Admin, Structure de dossiers.
+* **✅ Prompt à utiliser pour commencer (S1) :**
+> You are my senior fullstack architect. For the "World Pizza Trophy" project, generate the full code for Sprint 1 (Setup & Base). Provide the file structure, the complete code for `/lib/firebase/client.ts`, `/lib/firebase/admin.ts`, and the full set of Firestore Security Rules necessary for a multi-day slot booking system with an 'admin' role.
 
 ### Sprint 2 – Auth & Profil
-- Firebase Auth + middleware
-- Page profil + completion champ
-- Formulaire catégories
+* **Objectif :** Gérer l'authentification et les autorisations de base.
+* **Tâches :** Firebase Auth (SignIn/Up), Middleware pour le RBAC, Page Profil, Création des Custom Claims.
+* **✅ Prompt à utiliser pour commencer (S2) :**
+> You are my senior fullstack architect. For the "World Pizza Trophy" project, generate the full code for Sprint 2 (Auth & Profil). Provide the client-side code for Firebase Authentication (sign-in/sign-up), the Next.js Middleware logic to enforce role-based access control (RBAC) using Firebase Custom Claims ('user' vs 'admin'), and the API route (`/api/auth/setRole`) for setting initial claims.
 
-### Sprint 3 – Slots booking
-- Modèle Firestore collections
-- UI sélecteur créneau (calendar style)
-- Vérrouillage transactionnel Firestore
+### Sprint 3 – Slots & Pack Booking (Modèles de Données)
+* **Objectif :** Finaliser les modèles de données complexes pour les Packs, les Bons et les Slots.
+* **Tâches :** Typescript pour tous les modèles (`users`, `categories`, `products`, **`vouchers`**, `slots`), Logique de base du verrouillage transactionnel.
+* **✅ Prompt à utiliser pour commencer (S3) :**
+> You are my senior fullstack architect. For the "World Pizza Trophy" project, generate the full code for Sprint 3 (Data Models & Logic). Provide the complete TypeScript definitions for the new Firestore models: `Product` (must include `slotsRequired` and `stripePriceId`), `Voucher` (must include `isSingleUse`, `isUsed`), and the updated `Slot` (must include `day: 1|2`). Also provide the initial transactional logic for locking a single slot.
 
-### Sprint 4 – Stripe Integration
-- Checkout Session
-- Webhooks validation
-- Liaison paiement <-> réservation
+### Sprint 4 – Stripe Pack Integration
+* **Objectif :** Mettre en place le flux de paiement sécurisé et l'interaction avec Stripe.
+* **Tâches :** API de Checkout (gestion Packs/À la carte), Webhook robuste (confirmation multi-slots et mise à jour des `vouchers`).
+* **✅ Prompt à utiliser pour commencer (S4) :**
+> You are my senior fullstack architect. For the "World Pizza Trophy" project, generate the full code for Sprint 4 (Stripe Integration). Provide the complete code for the API route `/api/stripe/checkout-session` (must handle both single-slot and multi-slot/voucher-based payment flows). Crucially, provide the complete, secure webhook (`/api/stripe/webhook/route.ts`) logic that updates the status of all locked slots, marks the `Voucher` as used, and handles payment recording.
 
-### Sprint 5 – Admin Panel
-- Roles via Custom Claims
-- CRUD participants + slots
-- Export CSV + stats
+### Sprint 5 – Admin Panel (Contrôle Total)
+* **Objectif :** Créer l'interface admin et les services de contrôle.
+* **Tâches :** CRUD Packs/Vouchers/Utilisateurs, Inscription Manuelle (bypass), Export CSV.
+* **✅ Prompt à utiliser pour commencer (S5) :**
+> You are my senior fullstack architect. For the "World Pizza Trophy" project, generate the full code for Sprint 5 (Admin Control). Provide the code for: 1. The API route `/api/admin/products/create` that automatically creates a Product/Price on Stripe and saves the details in Firestore. 2. The API route for the **Manual Slot Assignment** (bypassing Stripe). 3. The API route to generate the **CSV export** of the participant schedule.
 
 ### Sprint 6 – Photos & shop (Phase 2)
-- Upload photos par admin
-- Marketplace (tag par candidat)
-- Paiement + délivrance via cloud link
+* **Objectif :** Ajout des fonctionnalités post-concours.
+* **Tâches :** Cloud Functions pour upload/redimensionnement, Intégration de la Marketplace (affichage/paiement).
+* **✅ Prompt à utiliser pour commencer (S6) :**
+> You are my senior fullstack architect. For the "World Pizza Trophy" project, generate the full plan and code structure for Sprint 6 (Photos & Shop). Detail the Cloud Function setup required for securely uploading and resizing photos for the marketplace, and provide the initial Firestore rules and API logic for handling the purchase and delivery of the digital photo links.
 
 ---
 
-## 📂 4. Structure du dossier
+## 📂 4. Structure du Dossier (Référence)
