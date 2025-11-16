@@ -1,4 +1,4 @@
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse, NextRequest } from "next/server"; // Importation corrigée
 import { adminDB } from "@/lib/firebase/admin"; // Chemin corrigé
 import Stripe from 'stripe';
 
@@ -7,19 +7,21 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2023-10-16' as any, // Correction du typage strict pour la version d'API
 });
 
-// Le chemin d'API est /api/booking/checkout-pack
+// Le chemin d'API est /api/booking/checkout
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { productStripePriceId, slotsToReserve, userId, userEmail } = body;
+        const { slotsToReserve, userId, userEmail } = body;
 
-        // Validation des données d'entrée
-        if (!productStripePriceId || !slotsToReserve.length || !userId || !userEmail) {
-            return NextResponse.json({ error: "Données de pack/slots manquantes." }, { status: 400 });
+        // 1. Validation des données d'entrée
+        if (!slotsToReserve || slotsToReserve.length === 0 || !userId || !userEmail) {
+            return NextResponse.json({ error: "Données de créneaux manquantes." }, { status: 400 });
         }
 
-        // 1. Vérification de l'existence et de l'état "available" des slots
+        const lineItems = [];
         const availableSlots = [];
+        
+        // 2. Vérification de la disponibilité des slots et préparation des line items Stripe
         for (const slot of slotsToReserve) {
             const slotRef = adminDB.collection("slots").doc(slot.slotId);
             const slotDoc = await slotRef.get();
@@ -27,26 +29,34 @@ export async function POST(req: NextRequest) {
             if (!slotDoc.exists || slotDoc.data()?.status !== 'available') {
                 return NextResponse.json({ error: `Créneau non disponible ou inexistant: ${slot.slotId}` }, { status: 400 });
             }
+
+            // Récupérer le prix du produit associé à cette catégorie (pour les line items Stripe)
+            const categoryId = slotDoc.data()!.categoryId;
+            const categoryDoc = await adminDB.collection("categories").doc(categoryId).get();
+
+            if (!categoryDoc.exists) {
+                return NextResponse.json({ error: `Catégorie non trouvée pour le slot ${slot.slotId}` }, { status: 404 });
+            }
+
+            const categoryPrice = categoryDoc.data()?.unitPrice;
+            const categoryStripePriceId = categoryDoc.data()?.stripePriceId; // Assurez-vous d'avoir cet ID dans Firestore
+
+            if (!categoryStripePriceId) {
+                return NextResponse.json({ error: `Prix Stripe manquant pour la catégorie ${categoryId}` }, { status: 500 });
+            }
+
+            lineItems.push({
+                price: categoryStripePriceId, // ID du prix Stripe
+                quantity: 1,
+            });
             availableSlots.push({ ref: slotRef, data: slotDoc.data() });
         }
 
-        // 2. Récupérer l'ID du produit depuis Stripe (ou directement depuis Firestore)
-        const productDoc = await adminDB.collection("products").where('stripePriceId', '==', productStripePriceId).limit(1).get();
-        
-        if (productDoc.empty) {
-             return NextResponse.json({ error: "Produit non trouvé dans Firestore." }, { status: 404 });
-        }
-        const productData = productDoc.docs[0].data();
 
         // 3. Création de la Session Stripe
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
-            line_items: [
-                {
-                    price: productStripePriceId, // Utiliser l'ID de prix Stripe du pack
-                    quantity: 1,
-                },
-            ],
+            line_items: lineItems,
             mode: 'payment',
             success_url: `${req.headers.get('origin')}/booking/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${req.headers.get('origin')}/booking?canceled=true`,
@@ -57,8 +67,7 @@ export async function POST(req: NextRequest) {
                 userEmail: userEmail,
                 // Stocker les IDs des slots en chaîne JSON
                 slotsToReserve: JSON.stringify(slotsToReserve.map((s: any) => s.slotId)), 
-                isPack: 'true',
-                packName: productData.name,
+                isPack: 'false',
             },
         });
 
@@ -78,7 +87,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ sessionId: session.id, url: session.url });
 
     } catch (error) {
-        console.error("Erreur lors de la création de la session Stripe (Pack):", error);
+        console.error("Erreur lors de la création de la session Stripe:", error);
         return NextResponse.json({ error: "Erreur interne du serveur lors de la création de la session Stripe." }, { status: 500 });
     }
 }

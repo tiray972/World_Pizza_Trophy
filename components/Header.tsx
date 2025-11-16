@@ -112,7 +112,7 @@ export default function Header({
         {/* Right Side */}
         <div className="hidden md:flex items-center gap-4">
 
-          {/* Language Switcher */}
+          {/* language Switcher */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="text-gray-700">

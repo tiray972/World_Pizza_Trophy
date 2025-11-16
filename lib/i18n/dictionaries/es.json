@@ -1,197 +1,50 @@
 {
   "home": {
-    "hero_title": "Encuentra tu hogar en los EMIRATOS con un acompañamiento personalizado para una llegada tranquila y exitosa.",
-    "hero_find_home": "ENCONTRAR UNA VIVIENDA",
-    "hero_contact_us": "CONTÁCTANOS",
-    "problem_title": "Cada recién llegado a los Emiratos enfrenta el mismo problema,",
-    "problem_subtitle": "¡ENCONTRAR UNA VIVIENDA RÁPIDAMENTE!",
-    "problem_text": "Sin visa o en espera de una, es difícil encontrar alojamiento, ya que la mayoría de los alquileres son anuales. La única solución suele ser recurrir a hoteles o alquileres vacacionales.",
-    "our_priority": "NUESTRA PRIORIDAD",
-    "your_support": "TU ACOMPAÑAMIENTO",
-    "your_support_p": "Te ayudamos en la obtención de tu visa personal, la de tu familia y también la de tu empresa, además de todos los trámites administrativos necesarios para tu instalación.",
-    "your_support_p1": "NUESTRA PRIORIDAD: HACER QUE TU INSTALACIÓN EN LOS EMIRATOS SEA MÁS ACCESIBLE GRACIAS A UN ACOMPAÑAMIENTO PERSONALIZADO Y UNA RED DE SOCIOS DEDICADOS.",
-    "your_support_p2": "Nuestros socios se encargarán completamente de la gestión de tus visas si tu empresa actual no lo hace. La obtención de la visa es un paso clave para establecerse en los Emiratos Árabes Unidos, por lo que nos aseguramos de que el proceso sea simple, rápido y conforme con las regulaciones vigentes. Si estás considerando lanzar tu propio negocio o estás listo para hacerlo realidad, estaremos a tu lado para guiarte en la constitución legal, los trámites administrativos y la obtención de las licencias necesarias.",
-    "your_installation": "TU INSTALACIÓN",
-    "your_installation_p": "Con o sin visa, encuentra tu primer hogar por corto o largo plazo e instálate con total tranquilidad gracias a nuestros socios y propietarios seleccionados cuidadosamente.",
-    "your_installation_p1": "NUESTRA PRIORIDAD: OFRECER UNA EXPERIENCIA COMPLETA MÁS ALLÁ DE LA SIMPLE BÚSQUEDA DE VIVIENDA, ACOMPAÑÁNDOTE EN CADA PASO DE TU INSTALACIÓN EN LOS EMIRATOS.",
-    "your_installation_p2": "A través de Expatlife.com, te ofrecemos una selección rigurosa de alojamientos en los Emiratos, cuidadosamente seleccionados por nuestro equipo para garantizar la mejor calidad desde tu llegada. Ya sea que busques una solución para una estancia corta o larga, con o sin visa, y para cualquier presupuesto, cada alojamiento será adecuado para tus necesidades, ya estés solo o con tu familia.",
-    "your_trust": "TU CONFIANZA",
-    "be_patient": "SÉ PACIENTE, LLEGAREMOS PRONTO",
-    "more_info": "MÁS INFORMACIÓN",
-    "your_trust_p": "Nuestra experiencia de varios años en relaciones públicas te permitirá recibir apoyo en cualquier trámite, ya sea administrativo u otro, en los Emiratos.",
-    "your_trust_p1": "NUESTRA PRIORIDAD: SIMPLIFICAR TUS TRÁMITES IMPREVISTOS GRACIAS A NUESTRA EXPERIENCIA LOCAL Y UNA RED DE SOCIOS CONFIABLES.",
-    "your_trust_p2": "Después de instalarte, es común encontrarse con trámites o preguntas inesperadas sobre la vida cotidiana, como la compra de un coche, la elección de una escuela o la contratación de un seguro. Expatlife.com te acompaña en todas tus necesidades, ya sea en relación con tu vida actual o tus proyectos futuros en los Emiratos Árabes Unidos. Gracias a nuestra sólida experiencia en el territorio y a una red de socios confiables, te proporcionamos soluciones adaptadas y un apoyo constante.",
-    "about_us": "¿QUIÉNES SOMOS?",
-    "expatlife_intro": "El apoyo a los expatriados en los EAU es hoy una prioridad para nosotros. Después de varios años de experiencia en relaciones públicas y comunicación, expatlife.com fue fundado para ofrecer una solución a los nuevos expatriados, asegurando una instalación tranquila y completa.",
-    "faq_title": "Preguntas Frecuentes",
-    "faq":[
-      {
-        "question": "¿Qué servicios ofrece Expatlife?",
-        "answer":
-          "Expatlife ayuda a los expatriados a establecerse en los Emiratos Árabes Unidos, incluyendo la búsqueda de vivienda, la obtención de visas y la orientación administrativa."
-      },
-      {
-        "question": "¿Puedo encontrar una vivienda sin visa?",
-        "answer":
-          "Sí, Expatlife ofrece soluciones para encontrar vivienda, ya sea que tenga una visa o no."
-      },
-      {
-        "question": "¿Qué tipos de viviendas están disponibles?",
-        "answer":
-          "Expatlife ofrece una variedad de alojamientos adaptados a diferentes necesidades, tanto para estancias cortas como largas, con opciones para todos los presupuestos."
-      },
-      {
-        "question": "¿Ayudan a obtener una visa o una Emirates ID?",
-        "answer":
-          "Sí, nuestros socios especializados pueden ayudarle a obtener su visa y Emirates ID, incluso si su empresa no se encarga de este proceso."
-      },
-      {
-        "question": "¿Puedo recibir asistencia para crear mi empresa?",
-        "answer":
-          "Absolutamente, Expatlife ofrece apoyo en los trámites de creación de empresas, desde la planificación inicial hasta el registro oficial."
-      },
-      {
-        "question": "¿Qué incluye el apoyo después de la instalación?",
-        "answer":
-          "Ayudamos con trámites comunes como la compra de un vehículo, la elección de una escuela o la contratación de un seguro, gracias a nuestra experiencia y socios confiables."
-      },
-      {
-        "question": "¿Hay un servicio de atención al cliente para responder mis preguntas?",
-        "answer":
-          "Sí, nuestro equipo está disponible para responder a sus preguntas y ayudarle en todos sus trámites en los Emiratos."
-      },
-      {
-        "question": "¿Puedo usar sus servicios si no hablo inglés o árabe?",
-        "answer":
-          "Sí, ofrecemos asistencia multilingüe para facilitar su transición a los Emiratos."
-      },
-      {
-        "question": "¿Cuáles son los costos asociados con sus servicios?",
-        "answer":
-          "Los costos varían según los servicios solicitados. Contacte a nuestro equipo para obtener un presupuesto personalizado."
+    "hero": {
+      "title": "Trofeo Mundial de la Pizza Multicategoría",
+      "subtitle": "El campeonato internacional dedicado a pizzaiolos profesionales: técnica, creatividad y excelencia.",
+      "cta": {
+        "register": "Inscribirse ahora",
+        "categories": "Ver categorías"
       }
-    ]
+    },
+    "intro": {
+      "title": "Un evento mundial único",
+      "text": "El Trofeo Mundial de la Pizza reúne a los mejores profesionales del mundo para competir en múltiples categorías oficiales bajo un jurado internacional de expertos."
+    },
+    "numbers": {
+      "title": "El Evento en cifras",
+      "pizzaiolos": "Pizzaiolos esperados",
+      "countries": "Países representados",
+      "categories": "Categorías oficiales"
+    },
+    "why": {
+      "title": "¿Por qué participar?",
+      "items": [
+        {
+          "title": "Reconocimiento internacional",
+          "text": "Gana visibilidad ante prensa, patrocinadores y escuelas de formación."
+        },
+        {
+          "title": "Títulos oficiales",
+          "text": "Múltiples trofeos que premian técnica, cocción, creatividad, presentación e innovación."
+        },
+        {
+          "title": "Red profesional",
+          "text": "Conoce chefs renombrados, marcas, proveedores e inversores."
+        }
+      ]
+    },
+    "cta": {
+      "title": "¿Listo para aceptar el desafío?",
+      "subtitle": "Inscríbete ahora y reserva tu espacio de demostración.",
+      "button": "Inscribirme"
+    }
   },
-  "contact": {
-    "title": "¿Listo para comenzar tu nueva vida en los Emiratos?",
-    "subtitle": "Contáctanos hoy para recibir apoyo personalizado en tu proyecto.",
-    "name": "Nombre",
-    "surname": "Apellido",
-    "message": "Mensaje",
-    "button": "Contáctanos",
-    "sending": "Enviando...",
-    "success": "¡Mensaje enviado con éxito!",
-    "error": "Error al enviar el mensaje. Inténtalo de nuevo."
-  },
-  "form": {
-    "title": "Formulario de Acompañamiento",
-    "country": "País de residencia actual",
-    "profession": "Profesión",
-    "companyExists": "¿Ha creado ya una empresa en los EAU?",
-    "activity": "¿Cuál será la actividad?",
-    "startDate": "¿Cuándo desea iniciar la actividad?",
-    "needsVisa": "¿Necesita una visa?",
-    "familySponsorship": "¿Necesita patrocinar a su familia?",
-    "assistance": "¿Necesita asistencia para:",
-    "accounting": "Contabilidad y fiscalidad",
-    "legal": "Cumplimiento legal",
-    "marketing": "Marketing y comunicación",
-    "recruitment": "Reclutamiento de personal",
-    "name": "Apellido",
-    "surname": "Nombre",
-    "email": "Correo electrónico",
-    "phone": "Teléfono",
-    "yes": "Sí",
-    "no": "No",
-    "next": "Siguiente",
-    "previous": "Anterior",
-    "submit": "Enviar",
-    "select": "Seleccionar...",
-    "needsFamilySponsorship": "¿Necesita patrocinar a su familia?"
-  },
-  "support": {
-    "titre_herro": "Cree su empresa y obtenga su visa en los Emiratos Árabes Unidos",
-    "subtitle_herro": "Soporte personalizado",
-    "p_herro": "Nuestro equipo de expertos está aquí para guiarlo en cada paso del proceso, ofreciéndole un servicio personalizado adaptado a sus necesidades específicas.",
-    "your_support_p1": "SU APOYO",
-    "why_choose": "¿Por qué elegir los Emiratos Árabes Unidos?",
-    "why_choose1": "FISCALIDAD ATRACTIVA",
-    "why_choose1_p": "Los Emiratos Árabes Unidos ofrecen un marco fiscal de los más ventajosos del mundo. A diferencia de muchos países, no aplican impuestos sobre la renta de las personas y establecen una tasa de impuesto corporativo de solo el 9% para empresas que generen más de 375,000 AED de beneficios.",
-    "why_choose2": "Infraestructura",
-    "why_choose2_p": "Los Emiratos Árabes Unidos son reconocidos por su infraestructura de última generación que facilita el crecimiento empresarial. Cuentan con una red de transporte y logística avanzada, con puertos marítimos de los más eficientes del mundo, aeropuertos internacionales y acceso a las principales capitales globales.",
-    "why_choose3": "Economía dinámica",
-    "why_choose3_p": "Los Emiratos Árabes Unidos poseen una economía resiliente y diversificada, respaldada por sectores en rápido crecimiento. Gracias a una política económica favorable a los inversores y una regulación simplificada, el país atrae cada año a miles de empresas internacionales y startups.",
-    "service": "NUESTRO SERVICIO",
-    "servi_subtittle": "Un soporte llave en mano",
-    "servi_p": "Para la creación de su empresa en los Emiratos Árabes Unidos, nos encargaremos de todos los pasos del proceso para garantizar una instalación rápida, eficiente y conforme a las normativas locales. Analizaremos su proyecto y objetivos para definir la mejor estructura legal para su empresa, ya sea FREEZONE, MAINLAND, OFFSHORE, etc.",
-    "your_com": "Comunicación y Visibilidad",
-    "your_com_p1": "Destáquese con nuestros socios",
-    "your_com_p2": "Lo acompañamos en la estructuración de su comunicación y el desarrollo de su presencia. Esto incluye la creación y optimización de su identidad visual (logotipo, branding), el diseño de su sitio web y la gestión de su e-reputación. Implementamos estrategias digitales en redes sociales, publicidad dirigida y campañas de comunicación. Lo conectamos con expertos reconocidos para amplificar su visibilidad y asegurar el crecimiento de su negocio.",
-    "creatSas":"crear mi empresa",
-    "our_steps":"NUESTROS PASOS",
-    "steps":[
-      { 
-        "step_name": "Paso 1",
-        "id": 1,
-        "title": "Gestión completa de los trámites legales y administrativos",
-        "intro": "GESTIÓN DE TODOS LOS TRÁMITES RELACIONADOS CON LA CREACIÓN DE SU EMPRESA",
-        "description": [
-          "Redacción de estatutos legales y documentos de incorporación.",
-          "Registro de su empresa ante las autoridades competentes.",
-          "Obtención de su licencia comercial según su sector de actividad.",
-          "Asistencia para el alquiler de una oficina física o una dirección virtual según sus necesidades."
-        ],
-        "image": "/images/passport.png",
-        "icon": "file-text"
-      },
-      {
-        "step_name": "Paso 2",
-        "id": 2,
-        "title": "Obtención de visados para usted y su familia",
-        "intro": "APOYO EN TODOS LOS TRÁMITES RELACIONADOS CON SU VISADO DE RESIDENCIA, ASÍ COMO PARA SU FAMILIA Y EMPLEADOS SI ES NECESARIO",
-        "description": [
-          "Preparación para su entrada al país.",
-          "Solicitud, seguimiento y entrega de su Emirates ID.",
-          "Trámites médicos obligatorios: análisis de sangre, huellas dactilares, etc.",
-          "Patrocinio de sus familiares y empleados."
-        ],
-        "image": "/images/215.png",
-        "icon": "heart-pulse"
-      },
-      {
-        "step_name": "Paso 3",
-        "id": 3,
-        "title": "Apertura de una cuenta bancaria profesional",
-        "intro": "APERTURA DE SU CUENTA BANCARIA EMPRESARIAL DE MANERA SENCILLA Y SEGURA",
-        "description": [
-          "Elección del banco más adecuado a sus necesidades entre nuestros socios.",
-          "Asistencia en la preparación de la documentación requerida.",
-          "Conexión con asesores bancarios especializados.",
-          "Asistencia post-apertura y gestión bancaria para optimizar el uso y manejar eficientemente las transacciones."
-        ],
-        "image": "/images/bank.png",
-        "icon": "banknote"
-      },
-      {
-        "step_name": "Paso 4",
-        "id": 4,
-        "title": "Soporte y asistencia post-creación",
-        "intro": "PERMANECEMOS A SU LADO PARA GARANTIZAR UNA GESTIÓN EMPRESARIAL FLUIDA Y CUMPLIMIENTO NORMATIVO",
-        "description": [
-          "Asistencia contable para una gestión financiera segura.",
-          "Apoyo en el crecimiento y expansión con socios estratégicos.",
-          "Soporte administrativo y de RRHH para optimizar la gestión de su empresa.",
-          "Supervisión de obligaciones legales y fiscales, renovación de licencias, gestión de visados y cumplimiento tributario."
-        ],
-        "image": "/images/215.png",
-        "icon": "briefcase-business"
-      }
-    ]
-  },
-  "calendar": {
-    "Schedule_time_with_me": "programar una cita conmigo",
-    "take_rdv": "tomar una cita"
+  "meta": {
+    "title": "Trofeo Mundial de la Pizza Multicategoría",
+    "description": "El campeonato internacional dedicado a pizzaiolos profesionales: técnica, creatividad y excelencia.",
+    "keywords": "pizza, trofeo, concurso, pizzaiolo, profesional, internacional, multicategoría, creatividad, excelencia",
+    "site_name": "World Pizza Trophy"
   }
-  
-
 }

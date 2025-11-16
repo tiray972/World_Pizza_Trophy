@@ -1,24 +1,50 @@
 {
   "home": {
-    "hero_title": "World Multi-Category Pizza Trophy",
-    "hero_subtitle": "The international championship dedicated to professional pizza chefs: skills, creativity and excellence.",
-    "hero_cta_register": "Register now",
-    "hero_cta_categories": "View categories",
-    "intro_title": "A Unique Global Event",
-    "intro_text": "The World Pizza Trophy brings together the best professional pizza chefs from around the world to compete across multiple official categories under an international expert jury.",
-    "numbers_title": "Event Statistics",
-    "numbers_pizzaiolos": "Expected pizza chefs",
-    "numbers_countries": "Represented countries",
-    "numbers_categories": "Official categories",
-    "why_title": "Why Participate?",
-    "why_1_title": "International recognition",
-    "why_1_text": "Gain visibility from media, sponsors, schools and professional networks.",
-    "why_2_title": "Official titles",
-    "why_2_text": "Multiple trophies rewarding cooking mastery, creativity, presentation and innovation.",
-    "why_3_title": "Professional networking",
-    "why_3_text": "Meet world-class chefs, product brands, suppliers and industry leaders.",
-    "cta_bottom_title": "Ready to take on the challenge?",
-    "cta_bottom_sub": "Register now and secure your demonstration slot.",
-    "cta_bottom_btn": "Start registration"
+    "hero": {
+      "title": "World Multi-Category Pizza Trophy",
+      "subtitle": "The international championship dedicated to professional pizza chefs: skills, creativity and excellence.",
+      "cta": {
+        "register": "Register now",
+        "categories": "View categories"
+      }
+    },
+    "intro": {
+      "title": "A Unique Global Event",
+      "text": "The World Pizza Trophy brings together the best professional pizza chefs from around the world to compete across multiple official categories under an international expert jury."
+    },
+    "numbers": {
+      "title": "Event Statistics",
+      "pizzaiolos": "Expected pizza chefs",
+      "countries": "Represented countries",
+      "categories": "Official categories"
+    },
+    "why": {
+      "title": "Why Participate?",
+      "items": [
+        {
+          "title": "International recognition",
+          "text": "Gain visibility from media, sponsors, schools and professional networks."
+        },
+        {
+          "title": "Official titles",
+          "text": "Multiple trophies rewarding cooking mastery, creativity, presentation and innovation."
+        },
+        {
+          "title": "Professional networking",
+          "text": "Meet world-class chefs, product brands, suppliers and industry leaders."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Ready to take on the challenge?",
+      "subtitle": "Register now and secure your demonstration slot.",
+      "button": "Start registration"
+    }
+  },
+  "meta": {
+    "title": "World Multi-Category Pizza Trophy",
+    "description": "The international championship dedicated to professional pizza chefs: skills, creativity and excellence.",
+    "keywords": "pizza, trophy, competition, pizzaiolo, professional, international, multi-category, creativity, excellence",
+    "site_name": "World Pizza Trophy"
   }
 }

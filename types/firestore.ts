@@ -84,3 +84,18 @@ export interface Slot {
     status: SlotStatus;
     stripeSessionId: string | null;
 }
+
+/** Représente un enregistrement de paiement Stripe. */
+export interface Payment {
+    id: string; // ID du document de paiement (Firestore)
+    userId: string;
+    stripeSessionId: string;
+    amount: number; // Montant payé en EUR (non centimes)
+    status: 'paid' | 'refunded' | 'failed';
+    slotIds: string[]; // IDs des slots couverts par ce paiement (peut être 1 ou N pour un pack)
+    isPack: boolean; // Indique si le paiement concernait un pack
+    packName?: string; // Nom du pack si isPack est true
+    metadata: Record<string, any>; // Métadonnées brutes de la session Stripe
+    createdAt: Date; // Date d'enregistrement du paiement
+    updatedAt: Date;
+}
