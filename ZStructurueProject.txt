@@ -25,3 +25,6 @@
 │   └── utils.ts            # Fonctions utilitaires diverses
 └── types
     └── firestore.ts        # Modèles de données critiques (Slots, Vouchers, Products)
+
+
+    
