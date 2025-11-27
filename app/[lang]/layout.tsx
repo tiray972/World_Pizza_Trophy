@@ -2,6 +2,7 @@ import localFont from "next/font/local";
 import "../globals.css";
 import { locales } from "@/lib/i18n/config";
 import { TriggerRefreshProvider } from "@/providers/TriggerRefreshprovider";
+import { AuthProvider } from "@/providers/AuthProvider";
 
 const francois = localFont({
   src: "../../fonts/FrancoisOne-Regular.ttf",
@@ -68,7 +69,9 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
       </head>
 
       <body className={`${francois.variable} antialiased`} suppressHydrationWarning>
-        <TriggerRefreshProvider>{children}</TriggerRefreshProvider>
+        <AuthProvider>
+          <TriggerRefreshProvider>{children}</TriggerRefreshProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -1,13 +1,13 @@
+// app/[lang]/booking/page.tsx
 'use client';
 
 import { SlotBookingView } from "@/components/custom/SlotBookingCalendar";
 import { Slot, Category, Settings, Product } from "@/types/firestore";
 import { Timestamp } from "firebase/firestore";
-import { useEffect, useState } from "react";
-import { auth } from "@/lib/firebase/client";
-import { onAuthStateChanged, User } from "firebase/auth";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useAuth } from "@/providers/AuthProvider"; // <-- utilise ton AuthProvider
 
 // --- MOCKUP DE DONNÉES ---
 const EVENT_YEAR = 2026;
@@ -71,48 +71,25 @@ const MOCK_SLOTS: Slot[] = [
     { id: 's5', categoryId: 'cat_acrobatie', day: 1 as 1, startTime: Timestamp.fromDate(new Date(day1.setHours(15, 0, 0, 0))), endTime: Timestamp.fromDate(new Date(day1.setHours(15, 5, 0, 0))), userId: null, status: 'available', stripeSessionId: null },
 ];
 
-// FIX: Ajout de params pour récupérer la langue actuelle
 export default function BookingPage({ params }: { params: { lang: string } }) {
     const router = useRouter();
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    const { user, loading } = useAuth(); // ✅ utilise AuthProvider
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // Récupérer la langue actuelle pour les redirections
-    const currentLang = params.lang || 'fr'; // Fallback au cas où
+    const currentLang = params.lang || 'fr';
 
-    // 1. Écouter l'état de l'authentification
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setCurrentUser(user);
-            setLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
-
-    // --- FONCTION GESTION ERREUR ---
+    // --- Gestion erreurs ---
     const handleError = (msg: string) => {
-        toast.error("Une erreur est survenue", {
-            description: msg,
-            duration: 5000,
-        });
+        toast.error("Une erreur est survenue", { description: msg, duration: 5000 });
         setIsProcessing(false);
     };
 
-    // --- API CALL: CHECKOUT CLASSIQUE ---
-    const handleCheckout = async (slots: { slotId: string, categoryId: string }[]) => {
-        if (!currentUser) {
-            const loginUrl = `/${currentLang}/auth/login?redirect=/${currentLang}/booking`;
-            
-            toast.info("Connexion requise", {
-                description: "Vous devez être connecté pour réserver des créneaux.",
-                action: {
-                    label: "Se connecter",
-                    onClick: () => router.push(loginUrl),
-                }
-            });
-            // Redirection automatique si le toast n'est pas cliqué
-            router.push(loginUrl); 
+    // --- CHECKOUT CLASSIQUE ---
+    const handleCheckout = async (slots: { slotId: string; categoryId: string }[]) => {
+        if (!user) {
+            const loginUrl = `/${currentLang}/auth/login?redirect=/booking`;
+            toast.info("Connexion requise", { description: "Vous devez être connecté pour réserver.", action: { label: "Se connecter", onClick: () => router.push(loginUrl) } });
+            router.push(loginUrl);
             return;
         }
 
@@ -120,44 +97,29 @@ export default function BookingPage({ params }: { params: { lang: string } }) {
         toast.loading("Préparation du paiement...", { id: "checkout-loading" });
 
         try {
-            const response = await fetch('/api/booking/checkout', {
+            const res = await fetch('/api/booking/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    slotsToReserve: slots,
-                    userId: currentUser.uid,
-                    userEmail: currentUser.email,
-                }),
+                body: JSON.stringify({ slotsToReserve: slots, userId: user.uid, userEmail: user.email }),
             });
 
-            const data = await response.json();
-
-            if (!response.ok) throw new Error(data.error || "Erreur lors du paiement");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Erreur lors du paiement");
 
             toast.dismiss("checkout-loading");
             toast.success("Redirection vers Stripe...");
-            
-            // Redirection vers Stripe
             if (data.url) window.location.href = data.url;
-
-        } catch (error: any) {
+        } catch (err: any) {
             toast.dismiss("checkout-loading");
-            handleError(error.message);
+            handleError(err.message);
         }
     };
 
-    // --- API CALL: CHECKOUT PACK ---
-    const handlePackCheckout = async (product: Product, slots: { slotId: string, categoryId: string }[]) => {
-        if (!currentUser) {
-            const loginUrl = `/${currentLang}/auth/login?redirect=/${currentLang}/booking`;
-
-            toast.info("Connexion requise", {
-                description: "Vous devez être connecté pour acheter un pack.",
-                action: {
-                    label: "Se connecter",
-                    onClick: () => router.push(loginUrl),
-                }
-            });
+    // --- CHECKOUT PACK ---
+    const handlePackCheckout = async (product: Product, slots: { slotId: string; categoryId: string }[]) => {
+        if (!user) {
+            const loginUrl = `/${currentLang}/auth/login?redirect=/booking`;
+            toast.info("Connexion requise", { description: "Vous devez être connecté pour acheter un pack.", action: { label: "Se connecter", onClick: () => router.push(loginUrl) } });
             router.push(loginUrl);
             return;
         }
@@ -166,56 +128,44 @@ export default function BookingPage({ params }: { params: { lang: string } }) {
         toast.loading("Configuration de votre pack...", { id: "pack-loading" });
 
         try {
-            const response = await fetch('/api/booking/checkout-pack', {
+            const res = await fetch('/api/booking/checkout-pack', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    productStripePriceId: product.stripePriceId,
-                    slotsToReserve: slots, 
-                    userId: currentUser.uid,
-                    userEmail: currentUser.email,
-                }),
+                body: JSON.stringify({ productStripePriceId: product.stripePriceId, slotsToReserve: slots, userId: user.uid, userEmail: user.email }),
             });
 
-            const data = await response.json();
-
-            if (!response.ok) throw new Error(data.error || "Erreur lors de l'achat du pack");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Erreur lors de l'achat du pack");
 
             toast.dismiss("pack-loading");
             toast.success("Pack validé, redirection vers le paiement...");
-
-            // Redirection vers Stripe
             if (data.url) window.location.href = data.url;
-
-        } catch (error: any) {
+        } catch (err: any) {
             toast.dismiss("pack-loading");
-            handleError(error.message);
+            handleError(err.message);
         }
     };
 
-    // Données simulées (Mock)
+    // --- Mock data ---
     const settings = MOCK_SETTINGS;
     const availableSlots = MOCK_SLOTS;
     const categories = MOCK_CATEGORIES;
-    const products = MOCK_PRODUCTS.filter(p => p.isActive); 
-
+    const products = MOCK_PRODUCTS.filter(p => p.isActive);
     const registrationClosed = Date.now() > settings.registrationDeadline.toMillis();
-    
+
     if (loading) return <div className="flex justify-center items-center h-screen">Chargement...</div>;
 
     return (
         <div className={`container mx-auto py-10 ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
-            <SlotBookingView 
-                availableSlots={availableSlots as any} 
+            <SlotBookingView
+                availableSlots={availableSlots as any}
                 categories={categories as any}
                 settings={settings}
                 products={products as any}
                 registrationClosed={registrationClosed}
-                onCheckout={handleCheckout} 
+                onCheckout={handleCheckout}
                 onPackCheckout={handlePackCheckout as any}
             />
-            {/* L'état de chargement est maintenant géré visuellement par Sonner Toast, 
-                mais on garde le blocage d'UI pour éviter les doubles clics */}
         </div>
     );
 }
