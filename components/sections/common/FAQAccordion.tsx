@@ -4,7 +4,7 @@ import {
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
-} from "@/app/components/ui/accordion";
+} from "@/components/ui/accordion";
 
 export type FAQAccordionProps = {
   title?: string;
