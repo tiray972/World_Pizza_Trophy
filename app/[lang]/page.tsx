@@ -4,6 +4,16 @@ import Link from "next/link";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import Text4Images2Section from "@/components/sections/new/Text4Images2Section";
+import Text4ImagesSection from "@/components/sections/new/Text4Images";
+import Text2imagesSection from "@/components/sections/new/text2images";
+import ImageTextImage from "@/components/sections/new/ImageTextImage";
+import FAQAccordion from "@/components/sections/common/FAQAccordion";
+import FullWidthBanner from "@/components/sections/common/FullWidthBanner";
+import HeroImageBackground from "@/components/sections/common/HeroImageBackground";
+import TestimonialsSlider from "@/components/sections/common/TestimonialsSlider";
+import ThreeColumnFeatures from "@/components/sections/common/ThreeColumnFeatures";
+import TimelineSection from "@/components/sections/common/TimelineSection";
 
 type SupportedLang = "fr" | "en" | "es";
 
@@ -26,112 +36,73 @@ export default async function Home({ params }: Props) {
 
   const dictionary = await getDictionary(lang);
 
+  
+  const pizzaSections = [
+    {
+      title: dictionary.home.hero.title,
+      content: dictionary.home.hero.subtitle,
+      images: [
+        "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1920&q=80",
+        "https://images.unsplash.com/photo-1511689984-6c7a80667a5a?w=1920&q=80",
+        "https://images.unsplash.com/photo-1600891964093-4316c288032e?w=1920&q=80", // pizza competition style
+        "https://images.unsplash.com/photo-1594007654729-407eedc4be3f?w=1920&q=80"
+      ],
+      component: HeroImageBackground,
+    },
+    {
+      title: dictionary.home.intro.title,
+      content: dictionary.home.intro.text,
+      images: [
+        "https://images.unsplash.com/photo-1593504049359-74330189a345?q=80&w=627&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=962&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        "https://images.unsplash.com/photo-1594007654729-407eedc4be3f?w=1920&q=80",
+      ],
+      component: ImageTextImage,
+    },
+    {
+      title: dictionary.home.numbers.title,
+      content: `${dictionary.home.numbers.pizzaiolos} | ${dictionary.home.numbers.countries} | ${dictionary.home.numbers.categories}`,
+      images: [
+        "https://images.unsplash.com/photo-1571997478779-2adcbbe9ab2f?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        "https://images.unsplash.com/photo-1571997478779-2adcbbe9ab2f?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+        "https://images.unsplash.com/photo-1600891964599-f61ba0e24092?w=1920&q=80"
+      ],
+      component: ThreeColumnFeatures,
+    },
+    {
+      title: dictionary.home.why.title,
+      content: dictionary.home.why.items.map(i => i.title + ': ' + i.text).join('\n'),
+      images: [
+        "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1920&q=80",
+        "https://images.unsplash.com/photo-1534939554772-54585f0a60b7?w=1920&q=80"
+      ],
+      component: Text4ImagesSection,
+    },
+    {
+      title: dictionary.home.cta.title,
+      content: dictionary.home.cta.subtitle,
+      images: [
+        "https://images.unsplash.com/photo-1600891964373-fb57c60d1f30?w=1920&q=80"
+      ],
+      component: FullWidthBanner,
+    },
+  ];
+  
   return (
     <div className="bg-white text-zinc-900 antialiased">
       <Header lang={lang} />
-
-      {/* HERO */}
-      <section
-        className="relative h-[78vh] flex items-center justify-center bg-cover bg-center"
-        style={{ backgroundImage: `url('https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1920&q=80')` }}
-        aria-label={dictionary.home.hero.title}
-      >
-        <div className="absolute inset-0 bg-black/60" />
-        <div className="relative z-10 text-center max-w-4xl px-6">
-          <div className="mx-auto mb-6 w-40 sm:w-56 md:w-64">
-            <Image
-              src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80"
-              alt={dictionary.meta.site_name || "World Pizza Trophy"}
-              width={400}
-              height={200}
-              className="w-full h-auto mx-auto rounded-lg shadow-2xl"
-            />
-          </div>
-
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white leading-tight mb-4 uppercase drop-shadow-lg">
-            {dictionary.home.hero.title}
-          </h1>
-
-          <p className="text-lg sm:text-xl text-white/90 mb-8">
-            {dictionary.home.hero.subtitle}
-          </p>
-
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link
-              href={`/${lang}/registration`}
-              className="inline-block bg-[#c1121f] text-white font-semibold py-3 px-8 rounded-lg hover:bg-[#a40d18] transition shadow-md"
-            >
-              {dictionary.home.hero.cta.register}
-            </Link>
-
-            <Link
-              href={`/${lang}/categories`}
-              className="inline-block bg-white text-black font-semibold py-3 px-8 rounded-lg hover:bg-gray-100 transition shadow-sm"
-            >
-              {dictionary.home.hero.cta.categories}
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* INTRO */}
-      <section className="py-16 px-6 max-w-5xl mx-auto text-center">
-        <h2 className="text-3xl font-bold mb-4">{dictionary.home.intro.title}</h2>
-        <p className="text-lg text-zinc-700">{dictionary.home.intro.text}</p>
-      </section>
-
-      {/* STATS */}
-      <section className="py-16 bg-[#fdf0d5]">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-center mb-12">{dictionary.home.numbers.title}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="p-6">
-              <span className="block text-5xl font-extrabold text-[#c1121f]">300+</span>
-              <p className="mt-2 text-zinc-700">{dictionary.home.numbers.pizzaiolos}</p>
-            </div>
-
-            <div className="p-6">
-              <span className="block text-5xl font-extrabold text-[#c1121f]">25+</span>
-              <p className="mt-2 text-zinc-700">{dictionary.home.numbers.countries}</p>
-            </div>
-
-            <div className="p-6">
-              <span className="block text-5xl font-extrabold text-[#c1121f]">7</span>
-              <p className="mt-2 text-zinc-700">{dictionary.home.numbers.categories}</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* WHY PARTICIPATE */}
-      <section className="py-16 px-6 max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-12">{dictionary.home.why.title}</h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-          {dictionary.home.why.items.map((item, index) => (
-            <div key={index} className="p-6 border rounded-lg shadow-sm">
-              <h3 className="font-semibold mb-2">{item.title}</h3>
-              <p className="text-sm text-zinc-700">{item.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA SECTION */}
-      <section className="py-16 text-center bg-[#111827] text-white">
-        <div className="max-w-4xl mx-auto px-6">
-          <h2 className="text-3xl font-bold mb-4">{dictionary.home.cta.title}</h2>
-          <p className="mb-8 text-zinc-300">{dictionary.home.cta.subtitle}</p>
-
-          <Link
-            href={`/${lang}/registration`}
-            className="inline-block bg-white text-black px-8 py-3 rounded-lg font-semibold shadow hover:bg-gray-200"
-          >
-            {dictionary.home.cta.button}
-          </Link>
-        </div>
-      </section>
-
+      {/* Sections dynamiques World Pizza Trophy */}
+      {pizzaSections.map((section, idx) => {
+        const SectionComponent = section.component;
+        return (
+          <SectionComponent
+            key={idx}
+            title={section.title}
+            content={section.content}
+            images={section.images}
+          />
+        );
+      })}
       <Footer />
     </div>
   );
