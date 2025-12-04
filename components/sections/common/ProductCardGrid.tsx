@@ -1,4 +1,15 @@
-export default function ProductCardGrid({ products = [] }) {
+type Product = {
+  image: string;
+  title: string;
+  description: string;
+  buttonText?: string;
+};
+
+interface ProductCardGridProps {
+  products?: Product[];
+}
+
+export default function ProductCardGrid({ products = [] }: ProductCardGridProps) {
   return (
     <section className="py-16 px-4 md:px-12 bg-[#f8f8f8]">
       <div className="max-w-7xl mx-auto grid gap-8 md:grid-cols-3">
