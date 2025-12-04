@@ -14,6 +14,7 @@ import HeroImageBackground from "@/components/sections/common/HeroImageBackgroun
 import TestimonialsSlider from "@/components/sections/common/TestimonialsSlider";
 import ThreeColumnFeatures from "@/components/sections/common/ThreeColumnFeatures";
 import TimelineSection from "@/components/sections/common/TimelineSection";
+// import SectionTextImageClipPath from "@/components/sections/new/SectionTextImageClipPath";
 
 type SupportedLang = "fr" | "en" | "es";
 
@@ -103,6 +104,12 @@ export default async function Home({ params }: Props) {
           />
         );
       })}
+      {/* <SectionTextImageClipPath
+        title="Titre de la section"
+        content="Le texte de ta section ici."
+        images={["https://images.unsplash.com/photo-1593504049359-74330189a345?q=80&w=627&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"]}
+        clipPathSvg="/images/svg/3.svg" // ou "/images/svg/4.svg"
+      /> */}
       <Footer />
     </div>
   );
