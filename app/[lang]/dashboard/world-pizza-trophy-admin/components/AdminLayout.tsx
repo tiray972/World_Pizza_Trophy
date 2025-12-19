@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from "react";
 import { Sidebar, NAV_ITEMS } from "./Sidebar";
 import { Header } from "./Header";

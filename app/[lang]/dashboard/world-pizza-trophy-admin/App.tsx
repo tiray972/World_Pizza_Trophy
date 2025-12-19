@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useMemo } from 'react';
 import { AdminLayout } from './components/AdminLayout';
 import { ViewType, Slot, User, Category, WPTEvent, Product, Voucher, Payment } from './types';

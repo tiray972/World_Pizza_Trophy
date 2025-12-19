@@ -1,5 +1,11 @@
 import { LucideIcon } from "lucide-react";
-import { Timestamp } from "firebase/firestore";
+import type { Timestamp as FirebaseTimestamp } from "firebase/firestore";
+import type { Timestamp as AdminTimestamp } from "firebase-admin/firestore";
+
+// Use the appropriate Timestamp based on context
+// For server-side: use AdminTimestamp
+// For client-side: use FirebaseTimestamp
+export type TimestampType = FirebaseTimestamp | AdminTimestamp;
 
 /* ---------------------------------
    NAV / ADMIN UI
@@ -40,9 +46,9 @@ export interface WPTEvent {
   id: string;
   name: string;
   eventYear: number;
-  eventStartDate: Timestamp;
-  eventEndDate: Timestamp;
-  registrationDeadline: Timestamp;
+  eventStartDate: TimestampType;
+  eventEndDate: TimestampType;
+  registrationDeadline: TimestampType;
   status: EventStatus; // Replaces isActive
 }
 
@@ -57,7 +63,7 @@ export interface EventRegistration {
   categoryIds: string[];
   stripeCustomerId?: string;
   paymentId?: string; // Link to the proof of payment
-  registeredAt: Timestamp;
+  registeredAt: TimestampType;
 }
 
 export interface User {
@@ -68,7 +74,7 @@ export interface User {
   country: string;
   phone: string;
   role: UserRole; // Global role (e.g. is this person an admin?)
-  createdAt: Timestamp;
+  createdAt: TimestampType;
   
   /**
    * Status per event.
@@ -106,15 +112,15 @@ export interface Slot {
   eventId: string;
   categoryId: string;
   date: string;
-  startTime: Timestamp;
-  endTime: Timestamp;
+  startTime: TimestampType;
+  endTime: TimestampType;
   status: SlotStatus;
   userId?: string;
   stripeSessionId: string | null;
   
   // Traceability Fields
   assignedByAdminId?: string; // If assigned manually by admin
-  assignedAt?: Timestamp; // When the assignment happened
+  assignedAt?: TimestampType; // When the assignment happened
   assignmentType?: AssignmentType;
 }
 
@@ -147,8 +153,8 @@ export interface Voucher {
   isSingleUse: boolean;
   isUsed: boolean;
   userId: string | null;
-  expiresAt: Timestamp | null;
-  createdAt: Timestamp;
+  expiresAt: TimestampType | null;
+  createdAt: TimestampType;
 }
 
 /* ---------------------------------
@@ -171,6 +177,6 @@ export interface Payment {
   packName?: string;
   
   metadata: Record<string, any>;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: TimestampType;
+  updatedAt: TimestampType;
 }

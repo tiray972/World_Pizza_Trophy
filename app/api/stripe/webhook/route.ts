@@ -4,7 +4,7 @@ import { adminDB } from "@/lib/firebase/admin"; // Assurez-vous que le chemin es
 import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { Payment } from "@/types/firestore"; // Maintenant disponible
-import { FieldValue } from "firebase-admin/firestore";
+import * as admin from "firebase-admin";
 
 // Initialisation de Stripe (utilisation de la variable d'environnement)
 // On utilise 'as any' car ce code est exécuté côté serveur (Next.js API route)
@@ -37,13 +37,15 @@ export async function POST(req: Request) {
             slotsToReserve: slotsToReserveJson, // JSON string des IDs
             isPack: isPackString,               // 'true' ou 'false'
             packName,                          // Nom du pack (si existant)
-            userEmail                          // Email de l'utilisateur
+            userEmail,                         // Email de l'utilisateur
+            eventId                            // Event ID from metadata
         } = session.metadata as { 
             userId: string, 
             slotsToReserve: string, 
             isPack: string,
             packName?: string,
-            userEmail: string
+            userEmail: string,
+            eventId?: string
         };
         
         const amountTotal = session.amount_total || 0;
@@ -70,16 +72,18 @@ export async function POST(req: Request) {
             // 1. Enregistrer le paiement
             const paymentRecord: Payment = {
                 id: session.id, // Utilisé pour le typage, l'ID réel sera généré par addDoc
+                eventId: eventId || "", // Get from metadata or will need to fetch from slot
                 userId: userId,
                 stripeSessionId: session.id,
                 amount: amountTotal / 100, // Convertir les centimes en unité
                 status: "paid",
+                source: "stripe",
                 slotIds: slotIds,
                 isPack: isPack,
                 packName: isPack ? packName : undefined,
                 metadata: session.metadata as Record<string, any>,
-                createdAt: new Date(),
-                updatedAt: new Date(),
+                createdAt: admin.firestore.Timestamp.now(),
+                updatedAt: admin.firestore.Timestamp.now(),
             };
             const paymentRef = adminDB.collection("payments").doc(); // Crée un nouvel ID auto-généré
             batch.set(paymentRef, paymentRecord);
