@@ -81,7 +81,7 @@ export const MOCK_EVENT: WPTEvent = {
       name: 'Pack Compétiteur OR',
       description: '3 catégories + repas VIP',
       stripePriceId: 'price_gold_xyz',
-      unitAmount: 30000, // cents
+      unitAmount: 300, // cents
       slotsRequired: 3,
       isPack: true,
       includesMeal: true,
@@ -93,7 +93,7 @@ export const MOCK_EVENT: WPTEvent = {
       name: 'Pack Duo',
       description: '2 catégories pour 2 personnes',
       stripePriceId: 'price_duo_abc',
-      unitAmount: 18000,
+      unitAmount: 180.90,
       slotsRequired: 2,
       isPack: true,
       includesMeal: false,
