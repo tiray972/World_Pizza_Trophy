@@ -1,3 +1,5 @@
+// app/[lang]/dashboard/world-pizza-trophy-admin/lib/useFirebase.ts
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -16,7 +18,63 @@ import {
 import { db } from '@/lib/firebase/client';
 import { WPTEvent, User, Slot, Category, Product, Voucher, Payment } from '@/types/firestore';
 
-// --- CATEGORY TEMPLATES HOOK (Global, Read-Only) ---
+// ============================================================================
+// CONVERSION HELPERS (Firestore Timestamp ↔ Date)
+// ============================================================================
+
+/**
+ * Convert Firestore Timestamp to JavaScript Date.
+ * Safely handles Date, Timestamp, and null values.
+ */
+function convertTimestampToDate(value: any): Date | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (value instanceof Date) {
+    return value;
+  }
+  if (value && typeof value.toDate === 'function') {
+    // Firestore Timestamp
+    return value.toDate();
+  }
+  return null;
+}
+
+/**
+ * Convert JavaScript Date to Firestore Timestamp.
+ * Used when writing back to Firestore.
+ */
+function convertDateToTimestamp(value: Date | null): Timestamp | null {
+  if (value === null) {
+    return null;
+  }
+  return Timestamp.fromDate(value);
+}
+
+/**
+ * Recursively convert Firestore document data to domain types.
+ * Handles Timestamp fields by converting them to Date.
+ */
+function convertFirestoreDocumentData<T extends Record<string, any>>(
+  doc: T,
+  timestampFields: (keyof T)[]
+): T {
+  const converted = { ...doc };
+  
+  for (const field of timestampFields) {
+    if (field in converted) {
+      const value = converted[field];
+      converted[field] = convertTimestampToDate(value) as any;
+    }
+  }
+  
+  return converted;
+}
+
+// ============================================================================
+// CATEGORY TEMPLATES HOOK (Global, Read-Only)
+// ============================================================================
+
 export const useCategoryTemplates = () => {
   const [templates, setTemplates] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +82,6 @@ export const useCategoryTemplates = () => {
 
   useEffect(() => {
     setLoading(true);
-    // Query templates collection (no eventId filter = global templates)
     const q = query(collection(db, 'categoryTemplates'));
     const unsubscribe = onSnapshot(
       q,
@@ -48,7 +105,10 @@ export const useCategoryTemplates = () => {
   return { templates, loading, error };
 };
 
-// --- PRODUCT TEMPLATES HOOK (Global, Read-Only) ---
+// ============================================================================
+// PRODUCT TEMPLATES HOOK (Global, Read-Only)
+// ============================================================================
+
 export const useProductTemplates = () => {
   const [templates, setTemplates] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +139,10 @@ export const useProductTemplates = () => {
   return { templates, loading, error };
 };
 
-// --- EVENTS HOOK ---
+// ============================================================================
+// EVENTS HOOK
+// ============================================================================
+
 export const useEvents = () => {
   const [events, setEvents] = useState<WPTEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,10 +153,13 @@ export const useEvents = () => {
     const unsubscribe = onSnapshot(
       collection(db, 'events'),
       (snapshot) => {
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as WPTEvent[];
+        const data = snapshot.docs.map(doc => {
+          const raw = doc.data();
+          return convertFirestoreDocumentData(
+            { id: doc.id, ...raw } as WPTEvent,
+            ['eventStartDate', 'eventEndDate', 'registrationDeadline']
+          );
+        });
         setEvents(data);
         setLoading(false);
       },
@@ -108,7 +174,15 @@ export const useEvents = () => {
 
   const createEvent = async (eventData: Omit<WPTEvent, 'id'>) => {
     try {
-      const docRef = await addDoc(collection(db, 'events'), eventData);
+      const dataToWrite = {
+        name: eventData.name,
+        eventYear: eventData.eventYear,
+        eventStartDate: convertDateToTimestamp(eventData.eventStartDate),
+        eventEndDate: convertDateToTimestamp(eventData.eventEndDate),
+        registrationDeadline: convertDateToTimestamp(eventData.registrationDeadline),
+        status: eventData.status,
+      };
+      const docRef = await addDoc(collection(db, 'events'), dataToWrite);
       return docRef.id;
     } catch (err) {
       throw new Error(`Failed to create event: ${err}`);
@@ -117,7 +191,16 @@ export const useEvents = () => {
 
   const updateEvent = async (eventId: string, data: Partial<WPTEvent>) => {
     try {
-      await updateDoc(doc(db, 'events', eventId), data);
+      const dataToWrite: Record<string, any> = {};
+      
+      if ('eventStartDate' in data) dataToWrite.eventStartDate = convertDateToTimestamp(data.eventStartDate!);
+      if ('eventEndDate' in data) dataToWrite.eventEndDate = convertDateToTimestamp(data.eventEndDate!);
+      if ('registrationDeadline' in data) dataToWrite.registrationDeadline = convertDateToTimestamp(data.registrationDeadline!);
+      if ('name' in data) dataToWrite.name = data.name;
+      if ('eventYear' in data) dataToWrite.eventYear = data.eventYear;
+      if ('status' in data) dataToWrite.status = data.status;
+      
+      await updateDoc(doc(db, 'events', eventId), dataToWrite);
     } catch (err) {
       throw new Error(`Failed to update event: ${err}`);
     }
@@ -126,7 +209,10 @@ export const useEvents = () => {
   return { events, loading, error, createEvent, updateEvent };
 };
 
-// --- USERS HOOK ---
+// ============================================================================
+// USERS HOOK
+// ============================================================================
+
 export const useUsers = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,10 +223,27 @@ export const useUsers = () => {
     const unsubscribe = onSnapshot(
       collection(db, 'users'),
       (snapshot) => {
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as User[];
+        const data = snapshot.docs.map(doc => {
+          const raw = doc.data();
+          const converted = convertFirestoreDocumentData(
+            { id: doc.id, ...raw } as User,
+            ['createdAt']
+          );
+          
+          // Also convert timestamps in registrations (nested objects)
+          if (converted.registrations) {
+            const registrations: Record<string, any> = {};
+            for (const [key, reg] of Object.entries(converted.registrations)) {
+              registrations[key] = {
+                ...reg,
+                registeredAt: convertTimestampToDate(reg.registeredAt)
+              };
+            }
+            converted.registrations = registrations;
+          }
+          
+          return converted;
+        });
         setUsers(data);
         setLoading(false);
       },
@@ -155,7 +258,29 @@ export const useUsers = () => {
 
   const updateUser = async (userId: string, data: Partial<User>) => {
     try {
-      await updateDoc(doc(db, 'users', userId), data);
+      const dataToWrite: Record<string, any> = {};
+      
+      if ('createdAt' in data) dataToWrite.createdAt = convertDateToTimestamp(data.createdAt!);
+      if ('firstName' in data) dataToWrite.firstName = data.firstName;
+      if ('lastName' in data) dataToWrite.lastName = data.lastName;
+      if ('email' in data) dataToWrite.email = data.email;
+      if ('country' in data) dataToWrite.country = data.country;
+      if ('phone' in data) dataToWrite.phone = data.phone;
+      if ('role' in data) dataToWrite.role = data.role;
+      if ('registrations' in data) {
+        // Convert registrations timestamps
+        dataToWrite.registrations = Object.fromEntries(
+          Object.entries(data.registrations!).map(([key, reg]) => [
+            key,
+            {
+              ...reg,
+              registeredAt: convertDateToTimestamp(reg.registeredAt)
+            }
+          ])
+        );
+      }
+      
+      await updateDoc(doc(db, 'users', userId), dataToWrite);
     } catch (err) {
       throw new Error(`Failed to update user: ${err}`);
     }
@@ -164,7 +289,10 @@ export const useUsers = () => {
   return { users, loading, error, updateUser };
 };
 
-// --- SLOTS HOOK ---
+// ============================================================================
+// SLOTS HOOK
+// ============================================================================
+
 export const useSlots = (eventId?: string) => {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,10 +309,13 @@ export const useSlots = (eventId?: string) => {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Slot[];
+        const data = snapshot.docs.map(doc => {
+          const raw = doc.data();
+          return convertFirestoreDocumentData(
+            { id: doc.id, ...raw } as Slot,
+            ['startTime', 'endTime', 'assignedAt']
+          );
+        });
         setSlots(data);
         setLoading(false);
       },
@@ -199,7 +330,15 @@ export const useSlots = (eventId?: string) => {
 
   const createSlots = async (slotsData: Omit<Slot, 'id'>[]) => {
     try {
-      const promises = slotsData.map(slot => addDoc(collection(db, 'slots'), slot));
+      const promises = slotsData.map(slot => {
+        const dataToWrite = {
+          ...slot,
+          startTime: convertDateToTimestamp(slot.startTime),
+          endTime: convertDateToTimestamp(slot.endTime),
+          assignedAt: slot.assignedAt ? convertDateToTimestamp(slot.assignedAt) : undefined,
+        };
+        return addDoc(collection(db, 'slots'), dataToWrite);
+      });
       await Promise.all(promises);
     } catch (err) {
       throw new Error(`Failed to create slots: ${err}`);
@@ -208,7 +347,18 @@ export const useSlots = (eventId?: string) => {
 
   const updateSlot = async (slotId: string, data: Partial<Slot>) => {
     try {
-      await updateDoc(doc(db, 'slots', slotId), data);
+      const dataToWrite: Record<string, any> = {};
+      
+      if ('startTime' in data) dataToWrite.startTime = convertDateToTimestamp(data.startTime!);
+      if ('endTime' in data) dataToWrite.endTime = convertDateToTimestamp(data.endTime!);
+      if ('assignedAt' in data) dataToWrite.assignedAt = data.assignedAt ? convertDateToTimestamp(data.assignedAt) : null;
+      if ('status' in data) dataToWrite.status = data.status;
+      if ('userId' in data) dataToWrite.userId = data.userId;
+      if ('stripeSessionId' in data) dataToWrite.stripeSessionId = data.stripeSessionId;
+      if ('assignedByAdminId' in data) dataToWrite.assignedByAdminId = data.assignedByAdminId;
+      if ('assignmentType' in data) dataToWrite.assignmentType = data.assignmentType;
+      
+      await updateDoc(doc(db, 'slots', slotId), dataToWrite);
     } catch (err) {
       throw new Error(`Failed to update slot: ${err}`);
     }
@@ -240,7 +390,10 @@ export const useSlots = (eventId?: string) => {
   return { slots, loading, error, createSlots, updateSlot, deleteSlot, deleteSlotsByDate };
 };
 
-// --- CATEGORIES HOOK (Event-specific, Fully editable) ---
+// ============================================================================
+// CATEGORIES HOOK (Event-specific, Fully editable)
+// ============================================================================
+
 export const useCategories = (eventId?: string) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -253,7 +406,6 @@ export const useCategories = (eventId?: string) => {
     }
 
     setLoading(true);
-    // Query only categories WITH eventId (not templates)
     const q = query(
       collection(db, 'categories'),
       where('eventId', '==', eventId)
@@ -278,7 +430,6 @@ export const useCategories = (eventId?: string) => {
   }, [eventId]);
 
   const createCategory = async (catData: Omit<Category, 'id'>) => {
-    // Guard: Must have eventId
     if (!catData.eventId) {
       throw new Error('Category must have an eventId');
     }
@@ -293,7 +444,6 @@ export const useCategories = (eventId?: string) => {
   const updateCategory = async (catId: string, data: Partial<Category>) => {
     try {
       const categoryRef = doc(db, 'categories', catId);
-      // Verify document exists before updating
       const snapshot = await getDocs(query(collection(db, 'categories'), where('__name__', '==', catId)));
       if (snapshot.empty) {
         throw new Error(`Category with ID "${catId}" not found in database`);
@@ -307,7 +457,6 @@ export const useCategories = (eventId?: string) => {
   const deleteCategory = async (catId: string) => {
     try {
       const categoryRef = doc(db, 'categories', catId);
-      // Verify document exists before deleting
       const snapshot = await getDocs(query(collection(db, 'categories'), where('__name__', '==', catId)));
       if (snapshot.empty) {
         throw new Error(`Category with ID "${catId}" not found in database`);
@@ -321,7 +470,10 @@ export const useCategories = (eventId?: string) => {
   return { categories, loading, error, createCategory, updateCategory, deleteCategory };
 };
 
-// --- PRODUCTS HOOK (Event-specific, Fully editable) ---
+// ============================================================================
+// PRODUCTS HOOK (Event-specific, Fully editable)
+// ============================================================================
+
 export const useProducts = (eventId?: string) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -334,7 +486,6 @@ export const useProducts = (eventId?: string) => {
     }
 
     setLoading(true);
-    // Query only products WITH eventId (not templates)
     const q = query(
       collection(db, 'products'),
       where('eventId', '==', eventId)
@@ -359,7 +510,6 @@ export const useProducts = (eventId?: string) => {
   }, [eventId]);
 
   const createProduct = async (productData: Omit<Product, 'id'>) => {
-    // Guard: Must have eventId
     if (!productData.eventId) {
       throw new Error('Product must have an eventId');
     }
@@ -374,7 +524,6 @@ export const useProducts = (eventId?: string) => {
   const updateProduct = async (productId: string, data: Partial<Product>) => {
     try {
       const productRef = doc(db, 'products', productId);
-      // Verify document exists before updating
       const snapshot = await getDocs(query(collection(db, 'products'), where('__name__', '==', productId)));
       if (snapshot.empty) {
         throw new Error(`Product with ID "${productId}" not found in database`);
@@ -388,7 +537,6 @@ export const useProducts = (eventId?: string) => {
   const deleteProduct = async (productId: string) => {
     try {
       const productRef = doc(db, 'products', productId);
-      // Verify document exists before deleting
       const snapshot = await getDocs(query(collection(db, 'products'), where('__name__', '==', productId)));
       if (snapshot.empty) {
         throw new Error(`Product with ID "${productId}" not found in database`);
@@ -402,7 +550,10 @@ export const useProducts = (eventId?: string) => {
   return { products, loading, error, createProduct, updateProduct, deleteProduct };
 };
 
-// --- VOUCHERS HOOK ---
+// ============================================================================
+// VOUCHERS HOOK
+// ============================================================================
+
 export const useVouchers = (eventId?: string) => {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
@@ -419,10 +570,13 @@ export const useVouchers = (eventId?: string) => {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Voucher[];
+        const data = snapshot.docs.map(doc => {
+          const raw = doc.data();
+          return convertFirestoreDocumentData(
+            { id: doc.id, ...raw } as Voucher,
+            ['expiresAt', 'createdAt']
+          );
+        });
         setVouchers(data);
         setLoading(false);
       },
@@ -437,7 +591,12 @@ export const useVouchers = (eventId?: string) => {
 
   const createVoucher = async (voucherData: Omit<Voucher, 'id'>) => {
     try {
-      const docRef = await addDoc(collection(db, 'vouchers'), voucherData);
+      const dataToWrite = {
+        ...voucherData,
+        expiresAt: voucherData.expiresAt ? convertDateToTimestamp(voucherData.expiresAt) : null,
+        createdAt: convertDateToTimestamp(voucherData.createdAt),
+      };
+      const docRef = await addDoc(collection(db, 'vouchers'), dataToWrite);
       return docRef.id;
     } catch (err) {
       throw new Error(`Failed to create voucher: ${err}`);
@@ -455,7 +614,10 @@ export const useVouchers = (eventId?: string) => {
   return { vouchers, loading, error, createVoucher, deleteVoucher };
 };
 
-// --- PAYMENTS HOOK ---
+// ============================================================================
+// PAYMENTS HOOK
+// ============================================================================
+
 export const usePayments = (eventId?: string) => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -472,10 +634,13 @@ export const usePayments = (eventId?: string) => {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Payment[];
+        const data = snapshot.docs.map(doc => {
+          const raw = doc.data();
+          return convertFirestoreDocumentData(
+            { id: doc.id, ...raw } as Payment,
+            ['createdAt', 'updatedAt']
+          );
+        });
         setPayments(data);
         setLoading(false);
       },
@@ -490,7 +655,15 @@ export const usePayments = (eventId?: string) => {
 
   const updatePayment = async (paymentId: string, data: Partial<Payment>) => {
     try {
-      await updateDoc(doc(db, 'payments', paymentId), data);
+      const dataToWrite: Record<string, any> = {};
+      
+      if ('createdAt' in data) dataToWrite.createdAt = convertDateToTimestamp(data.createdAt!);
+      if ('updatedAt' in data) dataToWrite.updatedAt = convertDateToTimestamp(data.updatedAt!);
+      if ('status' in data) dataToWrite.status = data.status;
+      if ('metadata' in data) dataToWrite.metadata = data.metadata;
+      if ('slotIds' in data) dataToWrite.slotIds = data.slotIds;
+      
+      await updateDoc(doc(db, 'payments', paymentId), dataToWrite);
     } catch (err) {
       throw new Error(`Failed to update payment: ${err}`);
     }

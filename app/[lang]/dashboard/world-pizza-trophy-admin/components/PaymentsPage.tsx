@@ -6,7 +6,6 @@ import { Badge } from "./ui/Badge";
 import { Payment, User, WPTEvent, Slot } from "@/types/firestore";
 import { AlertTriangle, CheckCircle2, RefreshCw, Filter, CreditCard, UserCheck, AlertOctagon } from "lucide-react";
 import { formatCurrency, formatUser, cn } from "../lib/utils";
-import { Timestamp } from "firebase/firestore";
 
 interface PaymentsPageProps {
   payments: Payment[];
@@ -43,7 +42,7 @@ export function PaymentsPage({
   }
 
   // 1. Filter Payments by Event
-  const eventPayments = payments.filter(p => p.eventId === selectedEvent.id).sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+  const eventPayments = payments.filter(p => p.eventId === selectedEvent.id).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   // 2. Analysis Logic
   const analyzedPayments = eventPayments.map(payment => {
@@ -104,7 +103,7 @@ export function PaymentsPage({
         const currentReg = user.registrations[selectedEvent.id] || {
             paid: false,
             categoryIds: [],
-            registeredAt: Timestamp.now()
+            registeredAt: new Date()
         };
 
         onUpdateUser(userId, {
@@ -213,8 +212,8 @@ export function PaymentsPage({
                   filteredPayments.map(({ payment, user, issues, hasIssues }) => (
                     <tr key={payment.id} className={cn("border-b transition-colors hover:bg-muted/50", hasIssues && "bg-yellow-50/50 dark:bg-yellow-900/10")}>
                       <td className="p-4 align-middle text-muted-foreground whitespace-nowrap">
-                         {payment.createdAt.toDate().toLocaleDateString()}
-                         <div className="text-xs opacity-70">{payment.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                         {payment.createdAt.toLocaleDateString()}
+                         <div className="text-xs opacity-70">{payment.createdAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                       </td>
                       <td className="p-4 align-middle font-medium">
                          {user ? (

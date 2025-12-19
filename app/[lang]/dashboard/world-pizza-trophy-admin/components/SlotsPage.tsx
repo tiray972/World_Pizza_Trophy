@@ -8,7 +8,6 @@ import { CreateSlotModal } from "./CreateSlotModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Clock, User as UserIcon, Loader2, FileSpreadsheet, Plus, CalendarDays, Trash2, Eraser, AlertTriangle, Lock, ShieldAlert, UserCog } from "lucide-react";
 import { formatTime, formatUser } from "../lib/utils";
-import { Timestamp } from "firebase/firestore";
 
 interface SlotsPageProps {
   slots: Slot[];
@@ -70,7 +69,7 @@ export function SlotsPage({
   // Filter slots for current date view
   const currentSlots = eventSlots
     .filter(s => s.date === activeDate)
-    .sort((a, b) => a.startTime.toMillis() - b.startTime.toMillis());
+    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
   const getStatusBadge = (status: SlotStatus) => {
     switch (status) {
@@ -118,7 +117,7 @@ export function SlotsPage({
         status: newStatus,
         // Traceability Fields
         assignedByAdminId: 'admin_current', // Mock ID for the active admin
-        assignedAt: Timestamp.now(),
+        assignedAt: new Date(),
         assignmentType: 'manual'
       };
 
@@ -386,7 +385,7 @@ export function SlotsPage({
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onConfirm={handleCreateConfirm}
-        defaultDate={selectedEvent.eventStartDate.toDate().toISOString().split('T')[0]} // Pass event start date
+        defaultDate={selectedEvent.eventStartDate.toISOString().split('T')[0]} // Pass event start date
         categories={categories}
       />
 

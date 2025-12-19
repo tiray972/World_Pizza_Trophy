@@ -1,8 +1,4 @@
 import { Category, Slot, User, Product, Voucher, WPTEvent, Payment } from "@/types/firestore";
-import { Timestamp } from "firebase/firestore";
-
-// Helper to create timestamp from JS Date
-const toTimestamp = (date: Date) => Timestamp.fromDate(date);
 
 // --- DATES SETUP (2025) ---
 const EVENT_YEAR = 2025;
@@ -19,18 +15,18 @@ export const MOCK_EVENTS: WPTEvent[] = [
     id: 'evt_2025',
     name: 'World Pizza Trophy 2025',
     eventYear: 2025,
-    eventStartDate: toTimestamp(day1),
-    eventEndDate: toTimestamp(day2),
-    registrationDeadline: toTimestamp(regDeadline),
+    eventStartDate: day1,
+    eventEndDate: day2,
+    registrationDeadline: regDeadline,
     status: 'open',
   },
   {
     id: 'evt_2026',
     name: 'World Pizza Trophy 2026',
     eventYear: 2026,
-    eventStartDate: toTimestamp(new Date(2026, 10, 3)),
-    eventEndDate: toTimestamp(new Date(2026, 10, 4)),
-    registrationDeadline: toTimestamp(new Date(2026, 9, 20)),
+    eventStartDate: new Date(2026, 10, 3),
+    eventEndDate: new Date(2026, 10, 4),
+    registrationDeadline: new Date(2026, 9, 20),
     status: 'draft',
   }
 ];
@@ -269,8 +265,8 @@ export const MOCK_VOUCHERS: Voucher[] = [
     isSingleUse: false, 
     isUsed: false,
     userId: null,
-    expiresAt: Timestamp.fromDate(new Date("2024-12-31")),
-    createdAt: Timestamp.now()
+    expiresAt: new Date("2024-12-31"),
+    createdAt: new Date()
   },
   { 
     id: "v2", 
@@ -280,8 +276,8 @@ export const MOCK_VOUCHERS: Voucher[] = [
     isSingleUse: false, 
     isUsed: false,
     userId: null,
-    expiresAt: Timestamp.fromDate(new Date("2025-12-31")),
-    createdAt: Timestamp.now()
+    expiresAt: new Date("2025-12-31"),
+    createdAt: new Date()
   }
 ];
 
@@ -300,8 +296,8 @@ export const MOCK_PAYMENTS: Payment[] = [
         isPack: true,
         packName: "Pack Compétiteur OR 2025",
         metadata: {},
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
+        createdAt: new Date(),
+        updatedAt: new Date()
     },
     // 2. Luigi Verdi - Paid via Admin Manual, but let's simulate a sync issue in the data
     // Payment exists and is paid, but let's assume the user status (below) might be out of sync
@@ -317,8 +313,8 @@ export const MOCK_PAYMENTS: Payment[] = [
         isPack: true,
         packName: "Pack Duo 2025",
         metadata: { note: "Paid cash on site" },
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
+        createdAt: new Date(),
+        updatedAt: new Date()
     },
     // 3. John Doe - Unpaid in registration, but here is a failed payment attempt
     {
@@ -333,8 +329,8 @@ export const MOCK_PAYMENTS: Payment[] = [
         isPack: true,
         packName: "Pack Compétiteur OR 2025",
         metadata: {},
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
+        createdAt: new Date(),
+        updatedAt: new Date()
     }
 ];
 
@@ -348,13 +344,13 @@ export const INITIAL_USERS: User[] = [
     country: "Italy",
     phone: "+39 123 456 7890",
     role: "user",
-    createdAt: Timestamp.now(),
+    createdAt: new Date(),
     registrations: {
       'evt_2025': {
         paid: true,
         paymentId: "pay_001",
         categoryIds: ["cat_classique"],
-        registeredAt: Timestamp.now()
+        registeredAt: new Date()
       }
     }
   },
@@ -366,18 +362,18 @@ export const INITIAL_USERS: User[] = [
     country: "Italy",
     phone: "+39 098 765 4321",
     role: "user",
-    createdAt: Timestamp.now(),
+    createdAt: new Date(),
     registrations: {
       'evt_2025': {
         paid: true, // Synced correctly
         paymentId: "pay_002",
         categoryIds: ["cat_napo"],
-        registeredAt: Timestamp.now()
+        registeredAt: new Date()
       },
       'evt_2026': {
         paid: false, 
         categoryIds: ["cat_napo"],
-        registeredAt: Timestamp.now()
+        registeredAt: new Date()
       }
     }
   },
@@ -389,12 +385,12 @@ export const INITIAL_USERS: User[] = [
     country: "USA",
     phone: "+1 555 0199",
     role: "user",
-    createdAt: Timestamp.now(),
+    createdAt: new Date(),
     registrations: {
       'evt_2025': {
         paid: false, // Correctly unpaid as payment failed
         categoryIds: ["cat_freestyle"],
-        registeredAt: Timestamp.now()
+        registeredAt: new Date()
       }
     }
   },
@@ -407,12 +403,12 @@ export const INITIAL_USERS: User[] = [
       country: "France",
       phone: "000",
       role: "user",
-      createdAt: Timestamp.now(),
+      createdAt: new Date(),
       registrations: {
           'evt_2025': {
               paid: false, // ERROR: Should be TRUE because I will add a payment for him dynamically or via logic
               categoryIds: [],
-              registeredAt: Timestamp.now()
+              registeredAt: new Date()
           }
       }
   }
@@ -431,8 +427,8 @@ MOCK_PAYMENTS.push({
     isPack: true,
     packName: "Pack Gold",
     metadata: {},
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now()
+    createdAt: new Date(),
+    updatedAt: new Date()
 });
 
 
@@ -454,8 +450,8 @@ const createSlot = (
     eventId: 'evt_2025', // Linked to the 2025 event
     categoryId: catId,
     date: dayStr,
-    startTime: toTimestamp(start),
-    endTime: toTimestamp(end),
+    startTime: start,
+    endTime: end,
     status: 'available',
     stripeSessionId: null
   };

@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { Button } from "./ui/Button";
 import { Voucher } from "@/types/firestore";
 import { X } from "lucide-react";
-import { Timestamp } from "firebase/firestore";
 
 interface VoucherFormModalProps {
   isOpen: boolean;
@@ -49,7 +48,7 @@ export function VoucherFormModal({
         code: formData.code.toUpperCase(),
         productId: formData.productId,
         isSingleUse: formData.isSingleUse === "true",
-        expiresAt: formData.expiresAt ? Timestamp.fromDate(new Date(formData.expiresAt)) : null,
+        expiresAt: formData.expiresAt ? new Date(formData.expiresAt) : null,
       });
       
       setFormData({

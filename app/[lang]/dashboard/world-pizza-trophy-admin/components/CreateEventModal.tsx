@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { Button } from "./ui/Button";
 import { WPTEvent } from "@/types/firestore";
 import { X, Calendar, Copy, Star, FileText } from "lucide-react";
-import { Timestamp } from "firebase/firestore";
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -44,9 +43,9 @@ export function CreateEventModal({
       await onConfirm({
         name: formData.name,
         eventYear: Number(formData.eventYear),
-        eventStartDate: Timestamp.fromDate(new Date(formData.eventStartDate)),
-        eventEndDate: Timestamp.fromDate(new Date(formData.eventEndDate)),
-        registrationDeadline: Timestamp.fromDate(new Date(formData.registrationDeadline)),
+        eventStartDate: new Date(formData.eventStartDate),
+        eventEndDate: new Date(formData.eventEndDate),
+        registrationDeadline: new Date(formData.registrationDeadline),
       }, copyFromId || null);
       
       onClose();

@@ -82,11 +82,16 @@ export async function POST(req: Request) {
                 isPack: isPack,
                 packName: isPack ? packName : undefined,
                 metadata: session.metadata as Record<string, any>,
-                createdAt: admin.firestore.Timestamp.now(),
-                updatedAt: admin.firestore.Timestamp.now(),
+                createdAt: new Date(),
+                updatedAt: new Date(),
             };
             const paymentRef = adminDB.collection("payments").doc(); // Crée un nouvel ID auto-généré
-            batch.set(paymentRef, paymentRecord);
+            // Convert Date to Firestore Timestamp when writing to database
+            batch.set(paymentRef, {
+                ...paymentRecord,
+                createdAt: admin.firestore.Timestamp.fromDate(paymentRecord.createdAt),
+                updatedAt: admin.firestore.Timestamp.fromDate(paymentRecord.updatedAt),
+            });
 
             // 2. Mettre à jour TOUS les Slots : Passer de 'pending' à 'paid'
             slotIds.forEach(slotId => {

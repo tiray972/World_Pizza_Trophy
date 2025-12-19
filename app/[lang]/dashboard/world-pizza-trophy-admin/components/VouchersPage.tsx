@@ -8,7 +8,6 @@ import { VoucherFormModal } from "./VoucherFormModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Plus, Tag, Copy, CalendarOff, AlertTriangle, Trash2 } from "lucide-react";
 import { cn } from "../lib/utils";
-import { Timestamp } from "firebase/firestore";
 
 interface VouchersPageProps {
   vouchers: Voucher[];
@@ -30,7 +29,7 @@ export function VouchersPage({ vouchers, selectedEventId, onCreateVoucher, onDel
       eventId: selectedEventId,
       isUsed: false,
       userId: null,
-      createdAt: Timestamp.now()
+      createdAt: new Date()
     });
   };
 
@@ -51,7 +50,7 @@ export function VouchersPage({ vouchers, selectedEventId, onCreateVoucher, onDel
     if (voucher.isSingleUse && voucher.isUsed) return { label: "Used", variant: "secondary" as const };
     
     if (voucher.expiresAt) {
-      if (voucher.expiresAt.toDate() < new Date()) return { label: "Expired", variant: "destructive" as const };
+      if (voucher.expiresAt < new Date()) return { label: "Expired", variant: "destructive" as const };
     }
     
     return { label: "Active", variant: "success" as const };
@@ -61,9 +60,9 @@ export function VouchersPage({ vouchers, selectedEventId, onCreateVoucher, onDel
     navigator.clipboard.writeText(text);
   };
 
-  const formatDate = (ts: Timestamp | null) => {
-    if (!ts) return null;
-    return ts.toDate().toLocaleDateString();
+  const formatDate = (date: Date | null) => {
+    if (!date) return null;
+    return date.toLocaleDateString();
   };
 
   if (!selectedEventId) {

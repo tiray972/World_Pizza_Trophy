@@ -3,7 +3,6 @@ import { Button } from "./ui/Button";
 import { Slot, Category } from "@/types/firestore";
 import { X, Layers, AlertTriangle } from "lucide-react";
 import { cn } from "../lib/utils";
-import { Timestamp } from "firebase/firestore";
 
 interface CreateSlotModalProps {
   isOpen: boolean;
@@ -75,8 +74,8 @@ export function CreateSlotModal({
 
   if (!isOpen) return null;
 
-  const createTimestamp = (dateStr: string, timeStr: string): Timestamp => {
-    return Timestamp.fromDate(new Date(`${dateStr}T${timeStr}:00`));
+  const createDateTime = (dateStr: string, timeStr: string): Date => {
+    return new Date(`${dateStr}T${timeStr}:00`);
   };
 
   const handleSingleChange = (
@@ -142,8 +141,8 @@ export function CreateSlotModal({
       slots.push({
         date: batchData.date,
         categoryId: batchData.categoryId,
-        startTime: createTimestamp(batchData.date, startStr),
-        endTime: createTimestamp(batchData.date, endStr),
+        startTime: createDateTime(batchData.date, startStr),
+        endTime: createDateTime(batchData.date, endStr),
       });
 
       const nextStartTotalMinutes = nextEndTotalMinutes + breakTime;
@@ -165,8 +164,8 @@ export function CreateSlotModal({
         await onConfirm([{
           date: singleData.date,
           categoryId: singleData.categoryId,
-          startTime: createTimestamp(singleData.date, singleData.startTime),
-          endTime: createTimestamp(singleData.date, singleData.endTime),
+          startTime: createDateTime(singleData.date, singleData.startTime),
+          endTime: createDateTime(singleData.date, singleData.endTime),
         }]);
       } else {
         const slots = generateBatchSlots();

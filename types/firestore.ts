@@ -1,11 +1,10 @@
-import { LucideIcon } from "lucide-react";
-import type { Timestamp as FirebaseTimestamp } from "firebase/firestore";
-import type { Timestamp as AdminTimestamp } from "firebase-admin/firestore";
+// types/firestore.ts
+// ⚠️ IMPORTANT: This file defines DOMAIN TYPES (what the UI layer uses).
+// All timestamp fields are plain JavaScript Date, never Firestore Timestamp.
+// Conversion from Firestore Timestamp to Date happens in useFirebase.ts (client) 
+// and admin API handlers (server).
 
-// Use the appropriate Timestamp based on context
-// For server-side: use AdminTimestamp
-// For client-side: use FirebaseTimestamp
-export type TimestampType = FirebaseTimestamp | AdminTimestamp;
+import { LucideIcon } from "lucide-react";
 
 /* ---------------------------------
    NAV / ADMIN UI
@@ -26,7 +25,7 @@ export type ViewType =
   | 'products'
   | 'vouchers'
   | 'users'
-  | 'payments' // Added payments view
+  | 'payments'
   | 'exports';
 
 /* ---------------------------------
@@ -46,10 +45,10 @@ export interface WPTEvent {
   id: string;
   name: string;
   eventYear: number;
-  eventStartDate: TimestampType;
-  eventEndDate: TimestampType;
-  registrationDeadline: TimestampType;
-  status: EventStatus; // Replaces isActive
+  eventStartDate: Date;
+  eventEndDate: Date;
+  registrationDeadline: Date;
+  status: EventStatus;
 }
 
 /* ---------------------------------
@@ -63,7 +62,7 @@ export interface EventRegistration {
   categoryIds: string[];
   stripeCustomerId?: string;
   paymentId?: string; // Link to the proof of payment
-  registeredAt: TimestampType;
+  registeredAt: Date;
 }
 
 export interface User {
@@ -73,8 +72,8 @@ export interface User {
   email: string;
   country: string;
   phone: string;
-  role: UserRole; // Global role (e.g. is this person an admin?)
-  createdAt: TimestampType;
+  role: UserRole;
+  createdAt: Date;
   
   /**
    * Status per event.
@@ -89,15 +88,15 @@ export interface User {
 
 export interface Category {
   id: string;
-  eventId: string; // Linked to specific event
+  eventId: string;
   name: string;
   description: string;
-  rules?: string; // HTML or Text rules/regulations
+  rules?: string;
   unitPrice: number;
   maxSlots: number;
   durationMinutes: number;
-  activeDates: string[];
-  isActive: boolean; // Controls visibility for slot creation
+  activeDates: string[]; // ISO date strings (YYYY-MM-DD)
+  isActive: boolean;
 }
 
 /* ---------------------------------
@@ -111,16 +110,16 @@ export interface Slot {
   id: string;
   eventId: string;
   categoryId: string;
-  date: string;
-  startTime: TimestampType;
-  endTime: TimestampType;
+  date: string; // ISO date string (YYYY-MM-DD)
+  startTime: Date; // Converted from Firestore Timestamp
+  endTime: Date;   // Converted from Firestore Timestamp
   status: SlotStatus;
   userId?: string;
   stripeSessionId: string | null;
   
   // Traceability Fields
-  assignedByAdminId?: string; // If assigned manually by admin
-  assignedAt?: TimestampType; // When the assignment happened
+  assignedByAdminId?: string;
+  assignedAt?: Date; // Converted from Firestore Timestamp
   assignmentType?: AssignmentType;
 }
 
@@ -130,7 +129,7 @@ export interface Slot {
 
 export interface Product {
   id: string;
-  eventId: string; // Linked to specific event
+  eventId: string;
   name: string;
   description: string;
   stripePriceId: string;
@@ -147,14 +146,14 @@ export interface Product {
 
 export interface Voucher {
   id: string;
-  eventId: string; // Linked to specific event
+  eventId: string;
   code: string;
   productId: string;
   isSingleUse: boolean;
   isUsed: boolean;
   userId: string | null;
-  expiresAt: TimestampType | null;
-  createdAt: TimestampType;
+  expiresAt: Date | null; // Converted from Firestore Timestamp
+  createdAt: Date;        // Converted from Firestore Timestamp
 }
 
 /* ---------------------------------
@@ -165,18 +164,18 @@ export type PaymentSource = 'stripe' | 'manual' | 'admin';
 
 export interface Payment {
   id: string;
-  eventId: string; // CRITICAL: Links payment to specific event year
+  eventId: string;
   userId: string;
-  stripeSessionId: string | null; // Null if manual/admin
-  amount: number; // Amount in cents
+  stripeSessionId: string | null;
+  amount: number;
   status: 'paid' | 'refunded' | 'failed' | 'pending';
   source: PaymentSource;
   
-  slotIds: string[]; // Slots reserved by this payment
+  slotIds: string[];
   isPack: boolean;
   packName?: string;
   
   metadata: Record<string, any>;
-  createdAt: TimestampType;
-  updatedAt: TimestampType;
+  createdAt: Date;  // Converted from Firestore Timestamp
+  updatedAt: Date;  // Converted from Firestore Timestamp
 }

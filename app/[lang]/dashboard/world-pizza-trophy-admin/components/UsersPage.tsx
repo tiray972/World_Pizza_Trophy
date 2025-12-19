@@ -7,7 +7,6 @@ import { Slot, User, Category, WPTEvent } from "@/types/firestore"; // Import WP
 import { ManualSlotAssignModal } from "./ManualSlotAssignModal";
 import { Plus, Search, Calendar, CheckCircle2, XCircle, Loader2, FileSpreadsheet, Globe, AlertTriangle, UserMinus, Lock } from "lucide-react";
 import { formatUser } from "../lib/utils";
-import { Timestamp } from "firebase/firestore";
 
 interface UsersPageProps {
   users: User[];
@@ -57,7 +56,7 @@ export function UsersPage({ users, slots, categories, selectedEventId, onUpdateS
           status: isPaid ? 'paid' : 'offered',
           // Traceability
           assignedByAdminId: 'admin_current',
-          assignedAt: Timestamp.now(),
+          assignedAt: new Date(),
           assignmentType: 'manual'
         });
       }

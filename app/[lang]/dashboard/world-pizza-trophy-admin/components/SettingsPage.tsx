@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { WPTEvent, EventStatus } from "@/types/firestore";
-import { Timestamp } from "firebase/firestore";
 import { Calendar, Save, AlertCircle, Plus, Activity } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -31,9 +30,9 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
       setFormData({
         name: event.name,
         eventYear: event.eventYear,
-        startDate: event.eventStartDate.toDate().toISOString().split('T')[0],
-        endDate: event.eventEndDate.toDate().toISOString().split('T')[0],
-        regDeadline: event.registrationDeadline.toDate().toISOString().split('T')[0],
+        startDate: event.eventStartDate.toISOString().split('T')[0],
+        endDate: event.eventEndDate.toISOString().split('T')[0],
+        regDeadline: event.registrationDeadline.toISOString().split('T')[0],
         status: event.status,
       });
     }
@@ -59,9 +58,9 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
         ...event,
         name: formData.name,
         eventYear: Number(formData.eventYear),
-        eventStartDate: Timestamp.fromDate(new Date(formData.startDate)),
-        eventEndDate: Timestamp.fromDate(new Date(formData.endDate)),
-        registrationDeadline: Timestamp.fromDate(new Date(formData.regDeadline)),
+        eventStartDate: new Date(formData.startDate),
+        eventEndDate: new Date(formData.endDate),
+        registrationDeadline: new Date(formData.regDeadline),
         status: formData.status,
       };
 

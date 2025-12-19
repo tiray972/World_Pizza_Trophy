@@ -50,16 +50,6 @@ const getCategoryName = (categoryId: string, categories: Category[]): string =>
 const formatPrice = (amount: number): string =>
   amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
 
-const timestampToDate = (timestamp: any): Date => {
-  if (timestamp instanceof Date) {
-    return timestamp;
-  }
-  if (timestamp && typeof timestamp.toDate === 'function') {
-    return timestamp.toDate();
-  }
-  return new Date();
-};
-
 export function SlotBookingView({
   availableSlots,
   categories,
@@ -87,8 +77,8 @@ export function SlotBookingView({
     console.log(`   - State: activeCategoryId=${activeCategoryId}, activeDate=${activeDate}`);
   }, [availableSlots, categories, activeCategoryId, activeDate]);
 
-  const eventStartDate = useMemo(() => timestampToDate(settings.eventStartDate), [settings.eventStartDate]);
-  const registrationDeadlineDate = useMemo(() => timestampToDate(settings.registrationDeadline), [settings.registrationDeadline]);
+  const eventStartDate = useMemo(() => new Date(settings.eventStartDate), [settings.eventStartDate]);
+  const registrationDeadlineDate = useMemo(() => new Date(settings.registrationDeadline), [settings.registrationDeadline]);
 
   const activeCategory = useMemo(() => {
     const id = isPackSelectionSheetOpen ? activePackCategoryId : activeCategoryId;
@@ -132,8 +122,8 @@ export function SlotBookingView({
         return categoryMatch && dateMatch && statusMatch && notInStandardCart && notInPackSelection;
       })
       .sort((a, b) => {
-        const timeA = timestampToDate(a.startTime).getTime();
-        const timeB = timestampToDate(b.startTime).getTime();
+        const timeA = new Date(a.startTime).getTime();
+        const timeB = new Date(b.startTime).getTime();
         return timeA - timeB;
       });
 
@@ -166,7 +156,7 @@ export function SlotBookingView({
 
   const handleToggleSelect = (slot: Slot) => {
     const isCurrentlySelected = selectedSlots.some(s => s.slotId === slot.id);
-    const startTime = timestampToDate(slot.startTime);
+    const startTime = new Date(slot.startTime);
 
     if (isCurrentlySelected) {
       setSelectedSlots(selectedSlots.filter(s => s.slotId !== slot.id));
@@ -186,7 +176,7 @@ export function SlotBookingView({
     if (!packToPurchase) return;
 
     const isCurrentlySelected = selectedPackSlots.some(s => s.slotId === slot.id);
-    const startTime = timestampToDate(slot.startTime);
+    const startTime = new Date(slot.startTime);
 
     if (isCurrentlySelected) {
       setSelectedPackSlots(selectedPackSlots.filter(s => s.slotId !== slot.id));
@@ -440,7 +430,7 @@ export function SlotBookingView({
                             ))}
 
                           {filteredSlots.map(slot => {
-                            const time = timestampToDate(slot.startTime);
+                            const time = new Date(slot.startTime);
                             return (
                               <Button
                                 key={slot.id}
@@ -536,7 +526,7 @@ export function SlotBookingView({
                     <div className="space-y-2">
                       {filteredSlots.map(slot => {
                         const isSelected = selectedSlots.some(s => s.slotId === slot.id);
-                        const time = timestampToDate(slot.startTime);
+                        const time = new Date(slot.startTime);
 
                         return (
                           <Button

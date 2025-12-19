@@ -58,7 +58,7 @@ export function ExportsPage({ slots, categories }: ExportsPageProps) {
 
   const sortedSlots = [...slots].sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date);
-    return a.startTime.toMillis() - b.startTime.toMillis();
+    return a.startTime.getTime() - b.startTime.getTime();
   });
 
   const getCategoryName = (categoryId: string) => {

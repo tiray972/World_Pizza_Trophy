@@ -239,9 +239,7 @@ export default function BookingPage({ params }: { params: { lang: string } }) {
   };
 
   const registrationClosed = event
-    ? Date.now() > (event.registrationDeadline instanceof Date 
-        ? event.registrationDeadline.getTime() 
-        : event.registrationDeadline.toDate?.().getTime?.() || 0)
+    ? Date.now() > event.registrationDeadline.getTime()
     : false;
 
   if (loading || pageLoading) {
