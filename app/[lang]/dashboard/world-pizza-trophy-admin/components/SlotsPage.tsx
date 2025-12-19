@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
-import { Slot, User, SlotStatus, Category, WPTEvent } from "../types";
+import { Slot, User, SlotStatus, Category, WPTEvent } from "@/types/firestore";
 import { AssignSlotModal } from "./AssignSlotModal";
 import { CreateSlotModal } from "./CreateSlotModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";

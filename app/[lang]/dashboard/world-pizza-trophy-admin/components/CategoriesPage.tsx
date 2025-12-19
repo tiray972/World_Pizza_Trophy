@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Card, CardContent } from "./ui/Card";
 import { Button } from "./ui/Button";
-import { Category, Slot } from "../types";
+import { Category, Slot } from "@/types/firestore";
 import { Plus, Edit2, Trash2, Download, AlertTriangle, FileText, Clock, Users, Eye, EyeOff, Copy, ScanEye, BarChart3 } from "lucide-react";
 import { formatCurrency, cn } from "../lib/utils";
 import { CategoryFormModal } from "./CategoryFormModal";

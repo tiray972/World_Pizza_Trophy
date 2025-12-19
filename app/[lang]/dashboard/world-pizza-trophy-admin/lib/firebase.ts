@@ -1,4 +1,4 @@
-import { Slot, User, Product, Voucher, Category } from "../types";
+import { Slot, User, Product, Voucher, Category } from "@/types/firestore";
 
 /**
  * FIREBASE INTEGRATION PLACEHOLDER

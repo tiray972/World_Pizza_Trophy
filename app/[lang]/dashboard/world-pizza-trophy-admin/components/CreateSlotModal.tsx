@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "./ui/Button";
-import { Slot, Category } from "../types";
+import { Slot, Category } from "@/types/firestore";
 import { X, Layers, AlertTriangle } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Timestamp } from "firebase/firestore";

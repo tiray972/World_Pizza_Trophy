@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
-import { Slot, User, Category, WPTEvent } from "../types"; // Import WPTEvent to check status
+import { Slot, User, Category, WPTEvent } from "@/types/firestore"; // Import WPTEvent to check status
 import { ManualSlotAssignModal } from "./ManualSlotAssignModal";
 import { Plus, Search, Calendar, CheckCircle2, XCircle, Loader2, FileSpreadsheet, Globe, AlertTriangle, UserMinus, Lock } from "lucide-react";
 import { formatUser } from "../lib/utils";

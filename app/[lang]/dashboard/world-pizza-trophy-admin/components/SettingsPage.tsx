@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
-import { WPTEvent, EventStatus } from "../types";
+import { WPTEvent, EventStatus } from "@/types/firestore";
 import { Timestamp } from "firebase/firestore";
 import { Calendar, Save, AlertCircle, Plus, Activity } from "lucide-react";
 import { cn } from "../lib/utils";

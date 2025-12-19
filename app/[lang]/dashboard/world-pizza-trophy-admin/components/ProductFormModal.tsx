@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Button } from "./ui/Button";
-import { Product } from "../types";
+import { Product } from "@/types/firestore";
 import { X } from "lucide-react";
 
 interface ProductFormModalProps {

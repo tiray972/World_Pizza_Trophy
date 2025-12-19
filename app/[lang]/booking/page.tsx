@@ -2,144 +2,158 @@
 
 import { SlotBookingView } from "@/components/custom/SlotBookingCalendar";
 import { Slot, Category, WPTEvent, Product } from "@/types/firestore";
-import { Timestamp } from "firebase/firestore";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
-
-const EVENT_YEAR = 2025;
-
-// Dates réelles de l’événement
-const day1 = new Date(2025, 10, 4, 9, 0, 0); // 4 novembre 2025
-const day2 = new Date(2025, 10, 5, 9, 0, 0); // 5 novembre 2025
-
-const day1ISO = day1.toISOString().split('T')[0]; // 2025-11-04
-const day2ISO = day2.toISOString().split('T')[0]; // 2025-11-05
-
-const regDeadline = new Date(2025, 12, 22); // 20 octobre 2025
-
-export const MOCK_EVENT: WPTEvent = {
-    id: 'event_wpt_2025',
-    name: 'World Pizza Trophy',
-    eventYear: 2025,
-    eventStartDate: Timestamp.fromDate(day1),
-    eventEndDate: Timestamp.fromDate(day2),
-    registrationDeadline: Timestamp.fromDate(regDeadline),
-    status: 'open',
-  };
-  export const MOCK_CATEGORIES: Category[] = [
-    {
-      id: 'cat_classique',
-      eventId: 'event_wpt_2025',
-      name: 'Pizza Classique',
-      description: 'La tradition italienne.',
-      unitPrice: 120,
-      maxSlots: 60,
-      durationMinutes: 10,
-      activeDates: [day1ISO, day2ISO],
-      isActive: true,
-    },
-    {
-      id: 'cat_calzone',
-      eventId: 'event_wpt_2025',
-      name: 'Calzone',
-      description: 'Le classique replié.',
-      unitPrice: 100,
-      maxSlots: 30,
-      durationMinutes: 10,
-      activeDates: [day1ISO, day2ISO],
-      isActive: true,
-    },
-    {
-      id: 'cat_napo',
-      eventId: 'event_wpt_2025',
-      name: 'Napolitaine',
-      description: 'Vera Pizza Napoletana.',
-      unitPrice: 180,
-      maxSlots: 20,
-      durationMinutes: 10,
-      activeDates: [day1ISO],
-      isActive: true,
-    },
-    {
-      id: 'cat_focaccia',
-      eventId: 'event_wpt_2025',
-      name: 'Focaccia',
-      description: 'Pain plat à l’huile d’olive.',
-      unitPrice: 80,
-      maxSlots: 20,
-      durationMinutes: 10,
-      activeDates: [day2ISO],
-      isActive: true,
-    },
-  ];
-  export const MOCK_PRODUCTS: Product[] = [
-    {
-      id: 'pack_gold',
-      eventId: 'event_wpt_2025',
-      name: 'Pack Compétiteur OR',
-      description: '3 catégories + repas VIP',
-      stripePriceId: 'price_gold_xyz',
-      unitAmount: 300, // cents
-      slotsRequired: 3,
-      isPack: true,
-      includesMeal: true,
-      isActive: true,
-    },
-    {
-      id: 'pack_duo',
-      eventId: 'event_wpt_2025',
-      name: 'Pack Duo',
-      description: '2 catégories pour 2 personnes',
-      stripePriceId: 'price_duo_abc',
-      unitAmount: 180.90,
-      slotsRequired: 2,
-      isPack: true,
-      includesMeal: false,
-      isActive: true,
-    },
-  ];
-  export const MOCK_SLOTS: Slot[] = [
-    {
-      id: 'slot_classique_1',
-      eventId: 'event_wpt_2025',
-      categoryId: 'cat_classique',
-      date: day1ISO,
-      startTime: Timestamp.fromDate(new Date(2025, 10, 4, 10, 0)),
-      endTime: Timestamp.fromDate(new Date(2025, 10, 4, 10, 10)),
-      status: 'available',
-      stripeSessionId: null,
-    },
-    {
-      id: 'slot_napo_1',
-      eventId: 'event_wpt_2025',
-      categoryId: 'cat_napo',
-      date: day1ISO,
-      startTime: Timestamp.fromDate(new Date(2025, 10, 4, 11, 0)),
-      endTime: Timestamp.fromDate(new Date(2025, 10, 4, 11, 10)),
-      status: 'available',
-      stripeSessionId: null,
-    },
-    {
-      id: 'slot_focaccia_1',
-      eventId: 'event_wpt_2025',
-      categoryId: 'cat_focaccia',
-      date: day2ISO,
-      startTime: Timestamp.fromDate(new Date(2025, 10, 5, 10, 0)),
-      endTime: Timestamp.fromDate(new Date(2025, 10, 5, 10, 10)),
-      status: 'available',
-      stripeSessionId: null,
-    },
-  ];
-         
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
 
 export default function BookingPage({ params }: { params: { lang: string } }) {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [event, setEvent] = useState<WPTEvent | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   const currentLang = params.lang || 'fr';
+
+  // Load data from Firebase
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        console.log('📍 [BookingPage] START: Loading data from Firebase');
+
+        // Find the active event (status === 'open')
+        const eventsQuery = query(collection(db, 'events'), where('status', '==', 'open'));
+        const eventsSnapshot = await getDocs(eventsQuery);
+        
+        if (eventsSnapshot.empty) {
+          console.warn('⚠️  [BookingPage] No active events found');
+          toast.error("Aucun événement actif", {
+            description: "Aucun événement n'est actuellement disponible pour la réservation.",
+          });
+          setPageLoading(false);
+          return;
+        }
+
+        const eventData = eventsSnapshot.docs[0].data() as WPTEvent;
+        const eventId = eventsSnapshot.docs[0].id;
+        const eventWithId = { ...eventData, id: eventId };
+        setEvent(eventWithId);
+        console.log('✅ [BookingPage] Event loaded:', { id: eventId, name: eventData.name });
+
+        // Load categories for this event
+        const categoriesQuery = query(collection(db, 'categories'), where('eventId', '==', eventId));
+        const categoriesSnapshot = await getDocs(categoriesQuery);
+        const categoriesData = categoriesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Category[];
+        
+        // 🔧 DEBUG: Log raw category data to see structure
+        console.log('📋 [BookingPage] Raw category data from Firestore:');
+        categoriesSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          console.log(`   - ${data.name} (${doc.id}):`, {
+            activeDates: data.activeDates,
+            activeDatesType: typeof data.activeDates,
+            activeDatesLength: Array.isArray(data.activeDates) ? data.activeDates.length : 'N/A',
+            allKeys: Object.keys(data)
+          });
+        });
+        
+        setCategories(categoriesData);
+        console.log('✅ [BookingPage] Categories loaded:', categoriesData.length, 'categories');
+        categoriesData.forEach(cat => {
+          console.log(`   - ${cat.name} (${cat.id}): activeDates = ${cat.activeDates?.join(', ') || '(EMPTY OR MISSING)'}`);
+        });
+
+        // Load slots for this event
+        const slotsQuery = query(collection(db, 'slots'), where('eventId', '==', eventId));
+        const slotsSnapshot = await getDocs(slotsQuery);
+        const slotsData = slotsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Slot[];
+        setSlots(slotsData);
+        console.log('✅ [BookingPage] Slots loaded:', slotsData.length, 'total slots');
+        
+        // Log slots by category and status for debugging
+        const slotsByCategory: Record<string, Slot[]> = {};
+        slotsData.forEach(slot => {
+          if (!slotsByCategory[slot.categoryId]) {
+            slotsByCategory[slot.categoryId] = [];
+          }
+          slotsByCategory[slot.categoryId].push(slot);
+        });
+        
+        Object.entries(slotsByCategory).forEach(([catId, catSlots]) => {
+          const availableCount = catSlots.filter(s => s.status === 'available').length;
+          const totalCount = catSlots.length;
+          console.log(`   - Category ${catId}: ${availableCount}/${totalCount} available`);
+          
+          // Log sample slots for first category
+          if (catSlots.length > 0) {
+            const sample = catSlots[0];
+            console.log(`      Sample slot: date=${sample.date}, status=${sample.status}`);
+          }
+        });
+
+        // 🔧 FIX: Enrich categories with activeDates from slots if missing
+        const enrichedCategories = categoriesData.map(category => {
+          // If category has empty or missing activeDates, extract from slots
+          if (!category.activeDates || category.activeDates.length === 0) {
+            const datesFromSlots = Array.from(
+              new Set(
+                slotsData
+                  .filter(slot => slot.categoryId === category.id && slot.status === 'available')
+                  .map(slot => slot.date)
+              )
+            ).sort();
+            
+            console.log(`🔧 [BookingPage] Enriching category ${category.name}: extracted dates from slots:`, datesFromSlots);
+            
+            return {
+              ...category,
+              activeDates: datesFromSlots
+            };
+          }
+          return category;
+        });
+        
+        setCategories(enrichedCategories);
+        console.log('✅ [BookingPage] Categories enriched:', enrichedCategories.length, 'categories');
+        enrichedCategories.forEach(cat => {
+          console.log(`   - ${cat.name} (${cat.id}): activeDates = ${cat.activeDates?.join(', ') || '(EMPTY)'}`);
+        });
+
+        // Load products for this event
+        const productsQuery = query(collection(db, 'products'), where('eventId', '==', eventId));
+        const productsSnapshot = await getDocs(productsQuery);
+        const productsData = productsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Product[];
+        setProducts(productsData);
+        console.log('✅ [BookingPage] Products loaded:', productsData.length, 'products');
+
+        setPageLoading(false);
+        console.log('✅ [BookingPage] COMPLETE: All data loaded successfully');
+      } catch (err: any) {
+        console.error("❌ [BookingPage] ERROR loading booking data:", err);
+        toast.error("Erreur de chargement", {
+          description: "Impossible de charger les données de réservation.",
+        });
+        setPageLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   const handleError = (msg: string) => {
     toast.error("Une erreur est survenue", {
@@ -150,7 +164,7 @@ export default function BookingPage({ params }: { params: { lang: string } }) {
   };
 
   const handleCheckout = async (
-    slots: { slotId: string; categoryId: string }[]
+    slotsToCheckout: { slotId: string; categoryId: string }[]
   ) => {
     if (!user) {
       const loginUrl = `/${currentLang}/auth/login?redirect=/booking`;
@@ -169,9 +183,10 @@ export default function BookingPage({ params }: { params: { lang: string } }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          slotsToReserve: slots,
+          slotsToReserve: slotsToCheckout,
           userId: user.uid,
           userEmail: user.email,
+          eventId: event?.id,
         }),
       });
 
@@ -188,7 +203,7 @@ export default function BookingPage({ params }: { params: { lang: string } }) {
 
   const handlePackCheckout = async (
     product: Product,
-    slots: { slotId: string; categoryId: string }[]
+    slotsToCheckout: { slotId: string; categoryId: string }[]
   ) => {
     if (!user) {
       const loginUrl = `/${currentLang}/auth/login?redirect=/booking`;
@@ -205,9 +220,10 @@ export default function BookingPage({ params }: { params: { lang: string } }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productStripePriceId: product.stripePriceId,
-          slotsToReserve: slots,
+          slotsToReserve: slotsToCheckout,
           userId: user.uid,
           userEmail: user.email,
+          eventId: event?.id,
         }),
       });
 
@@ -222,13 +238,27 @@ export default function BookingPage({ params }: { params: { lang: string } }) {
     }
   };
 
-  const registrationClosed =
-    Date.now() > MOCK_EVENT.registrationDeadline.toMillis();
+  const registrationClosed = event
+    ? Date.now() > (event.registrationDeadline instanceof Date 
+        ? event.registrationDeadline.getTime() 
+        : event.registrationDeadline.toDate?.().getTime?.() || 0)
+    : false;
 
-  if (loading) {
+  if (loading || pageLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
         Chargement...
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Aucun événement disponible</h1>
+          <p className="text-muted-foreground">Revenez plus tard pour des réservations.</p>
+        </div>
       </div>
     );
   }
@@ -240,10 +270,10 @@ export default function BookingPage({ params }: { params: { lang: string } }) {
       }`}
     >
       <SlotBookingView
-        availableSlots={MOCK_SLOTS}
-        categories={MOCK_CATEGORIES}
-        settings={MOCK_EVENT}
-        products={MOCK_PRODUCTS.filter(p => p.isActive)}
+        availableSlots={slots}
+        categories={categories}
+        settings={event}
+        products={products.filter(p => p.isActive)}
         registrationClosed={registrationClosed}
         onCheckout={handleCheckout}
         onPackCheckout={handlePackCheckout}

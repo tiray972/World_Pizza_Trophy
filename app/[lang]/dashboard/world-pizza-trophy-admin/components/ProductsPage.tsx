@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
-import { Product } from "../types";
+import { Product } from "@/types/firestore";
 import { ProductFormModal } from "./ProductFormModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Plus, CreditCard, Layers, Utensils, AlertTriangle, Trash2 } from "lucide-react";
@@ -13,10 +13,11 @@ interface ProductsPageProps {
   products: Product[];
   selectedEventId: string;
   onCreateProduct: (productData: Omit<Product, "id">) => Promise<void>;
+  onUpdateProduct: (productId: string, data: Partial<Product>) => Promise<void>;
   onDeleteProduct: (productId: string) => Promise<void>;
 }
 
-export function ProductsPage({ products, selectedEventId, onCreateProduct, onDeleteProduct }: ProductsPageProps) {
+export function ProductsPage({ products, selectedEventId, onCreateProduct, onUpdateProduct, onDeleteProduct }: ProductsPageProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);

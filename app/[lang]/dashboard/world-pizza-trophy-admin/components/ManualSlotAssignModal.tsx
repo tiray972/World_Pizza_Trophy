@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Button } from "./ui/Button";
-import { Slot, User, Category } from "../types";
+import { Slot, User, Category } from "@/types/firestore";
 import { X } from "lucide-react";
 import { cn, formatTime, formatUser } from "../lib/utils";
 

@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
-import { Payment, User, WPTEvent, Slot } from "../types";
+import { Payment, User, WPTEvent, Slot } from "@/types/firestore";
 import { AlertTriangle, CheckCircle2, RefreshCw, Filter, CreditCard, UserCheck, AlertOctagon } from "lucide-react";
 import { formatCurrency, formatUser, cn } from "../lib/utils";
 import { Timestamp } from "firebase/firestore";

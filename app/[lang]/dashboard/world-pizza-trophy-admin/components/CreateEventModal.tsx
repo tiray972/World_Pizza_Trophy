@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Button } from "./ui/Button";
-import { WPTEvent } from "../types";
+import { WPTEvent } from "@/types/firestore";
 import { X, Calendar, Copy, Star, FileText } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 

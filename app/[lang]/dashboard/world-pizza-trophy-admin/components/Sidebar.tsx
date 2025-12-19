@@ -1,7 +1,7 @@
 import React from "react";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/Button";
-import { NavItem, ViewType, WPTEvent } from "../types";
+import { NavItem, ViewType, WPTEvent } from "@/types/firestore";
 import { 
   LayoutDashboard, 
   Calendar, 

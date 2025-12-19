@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "./ui/Button";
-import { Category } from "../types";
+import { Category } from "@/types/firestore";
 import { X, Clock, Users, FileText, Check, Trophy, Calendar } from "lucide-react";
 import { formatCurrency } from "../lib/utils";
 import { Badge } from "./ui/Badge";

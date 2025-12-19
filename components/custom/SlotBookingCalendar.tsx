@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slot, Category, WPTEvent, Product } from '@/types/firestore';
@@ -79,6 +79,14 @@ export function SlotBookingView({
   const [selectedPackSlots, setSelectedPackSlots] = useState<SelectedPackSlot[]>([]);
   const [activePackCategoryId, setActivePackCategoryId] = useState<string | null>(null);
 
+  // 🔧 DEBUG LOG: Track prop changes
+  useEffect(() => {
+    console.log('📊 [SlotBookingView] Props updated:');
+    console.log(`   - availableSlots: ${availableSlots.length} slots`);
+    console.log(`   - categories: ${categories.length} categories`);
+    console.log(`   - State: activeCategoryId=${activeCategoryId}, activeDate=${activeDate}`);
+  }, [availableSlots, categories, activeCategoryId, activeDate]);
+
   const eventStartDate = useMemo(() => timestampToDate(settings.eventStartDate), [settings.eventStartDate]);
   const registrationDeadlineDate = useMemo(() => timestampToDate(settings.registrationDeadline), [settings.registrationDeadline]);
 
@@ -87,39 +95,72 @@ export function SlotBookingView({
     return id ? categories.find(c => c.id === id) || null : null;
   }, [activeCategoryId, activePackCategoryId, categories, isPackSelectionSheetOpen]);
 
+  // 🔧 FIX: Correct filter logic with proper debugging
   const filteredSlots = useMemo(() => {
-    const currentActiveDate = isPackSelectionSheetOpen ? activeDate : activeDate;
+    // Determine which category and date we're filtering for
     const currentActiveCategoryId = isPackSelectionSheetOpen ? activePackCategoryId : activeCategoryId;
+    const currentActiveDate = activeDate; // Use activeDate directly (works for both modes)
 
-    if (!currentActiveCategoryId || !currentActiveDate) return [];
+    // 🔧 DEBUG: Log filter inputs
+    if (currentActiveCategoryId && currentActiveDate) {
+      console.log(`🔍 [filteredSlots] Filtering: categoryId=${currentActiveCategoryId}, date=${currentActiveDate}`);
+      console.log(`   - Total slots in props: ${availableSlots.length}`);
+    }
+
+    // Early return if filters are not set
+    if (!currentActiveCategoryId || !currentActiveDate) {
+      return [];
+    }
 
     const slotsInStandardCart = new Set(selectedSlots.map(s => s.slotId));
     const slotsInPackSelection = new Set(selectedPackSlots.map(s => s.slotId));
 
-    return availableSlots
-      .filter(slot =>
-        slot.categoryId === currentActiveCategoryId &&
-        slot.date === currentActiveDate &&
-        slot.status === 'available' &&
-        !slotsInStandardCart.has(slot.id) &&
-        !slotsInPackSelection.has(slot.id)
-      )
+    const filtered = availableSlots
+      .filter(slot => {
+        // Check each condition separately for debugging
+        const categoryMatch = slot.categoryId === currentActiveCategoryId;
+        const dateMatch = slot.date === currentActiveDate;
+        const statusMatch = slot.status === 'available';
+        const notInStandardCart = !slotsInStandardCart.has(slot.id);
+        const notInPackSelection = !slotsInPackSelection.has(slot.id);
+
+        // Log first non-matching slot for debugging
+        if (!categoryMatch || !dateMatch || !statusMatch) {
+          console.log(`   ❌ Slot ${slot.id}: categoryMatch=${categoryMatch}, dateMatch=${dateMatch}, statusMatch=${slot.status}`);
+        }
+
+        return categoryMatch && dateMatch && statusMatch && notInStandardCart && notInPackSelection;
+      })
       .sort((a, b) => {
         const timeA = timestampToDate(a.startTime).getTime();
         const timeB = timestampToDate(b.startTime).getTime();
         return timeA - timeB;
       });
+
+    console.log(`   ✅ Filtered result: ${filtered.length} slots match`);
+    return filtered;
   }, [availableSlots, activeCategoryId, activePackCategoryId, activeDate, selectedSlots, selectedPackSlots, isPackSelectionSheetOpen]);
 
+  // 🔧 FIX: When category is clicked, automatically set the first available date
   const handleCategoryClick = (category: Category) => {
+    console.log(`📌 [handleCategoryClick] Category clicked: ${category.name} (${category.id})`);
+    console.log(`   - activeDates: ${category.activeDates.join(', ')}`);
+    
     setActiveCategoryId(category.id);
-    setActiveDate(category.activeDates.length > 0 ? category.activeDates[0] : null);
+    // ⭐ CRITICAL FIX: Set the first date IMMEDIATELY when category is clicked
+    const firstDate = category.activeDates.length > 0 ? category.activeDates[0] : null;
+    setActiveDate(firstDate);
+    console.log(`   - activeDate set to: ${firstDate}`);
+    
     setIsSlotSheetOpen(true);
   };
 
   const handlePackSelectionStart = (product: Product) => {
+    console.log(`📦 [handlePackSelectionStart] Pack selected: ${product.name}`);
     setPackToPurchase(product);
     setSelectedPackSlots([]);
+    setActivePackCategoryId(null); // Reset to category selection view
+    setActiveDate(null); // Reset date when starting pack selection
     setIsPackSelectionSheetOpen(true);
   };
 
@@ -317,6 +358,7 @@ export function SlotBookingView({
                     }`}
                     onClick={() => {
                       setActivePackCategoryId(category.id);
+                      // ⭐ Set first date when entering pack category selection
                       setActiveDate(
                         category.activeDates.length > 0 ? category.activeDates[0] : null
                       );

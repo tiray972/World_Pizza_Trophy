@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "./ui/Button";
-import { Category } from "../types";
+import { Category } from "@/types/firestore";
 import { X } from "lucide-react";
 
 interface CategoryFormModalProps {

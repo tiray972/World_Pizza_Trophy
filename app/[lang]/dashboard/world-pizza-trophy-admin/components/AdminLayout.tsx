@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Sidebar, NAV_ITEMS } from "./Sidebar";
 import { Header } from "./Header";
-import { ViewType, WPTEvent } from "../types";
+import { ViewType, WPTEvent } from "@/types/firestore";
 import { cn } from "../lib/utils";
 
 interface AdminLayoutProps {

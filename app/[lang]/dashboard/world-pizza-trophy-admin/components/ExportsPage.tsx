@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Button } from "./ui/Button";
 import { Download, FileSpreadsheet, CheckCircle2, Loader2, Link as LinkIcon, RefreshCw, ExternalLink, Grid } from "lucide-react";
 import { cn, formatTime, formatUser } from "../lib/utils";
-import { Slot, Category, User } from "../types";
+import { Slot, Category, User } from "@/types/firestore";
 
 // Needed to look up user names in export preview
 // We'll mock a user lookup for now or just rely on IDs since we don't have users prop here in original design

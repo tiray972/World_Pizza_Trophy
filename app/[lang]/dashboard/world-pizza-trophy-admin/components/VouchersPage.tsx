@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
-import { Voucher } from "../types";
+import { Voucher } from "@/types/firestore";
 import { VoucherFormModal } from "./VoucherFormModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Plus, Tag, Copy, CalendarOff, AlertTriangle, Trash2 } from "lucide-react";

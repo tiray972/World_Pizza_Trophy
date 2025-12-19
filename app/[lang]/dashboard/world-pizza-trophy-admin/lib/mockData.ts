@@ -1,4 +1,4 @@
-import { Category, Slot, User, Product, Voucher, WPTEvent, Payment } from "../types";
+import { Category, Slot, User, Product, Voucher, WPTEvent, Payment } from "@/types/firestore";
 import { Timestamp } from "firebase/firestore";
 
 // Helper to create timestamp from JS Date
