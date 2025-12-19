@@ -14,17 +14,51 @@ export interface NavItem {
 
 export type ViewType =
   | 'dashboard'
+  | 'settings'
+  | 'categories'
   | 'slots'
   | 'products'
   | 'vouchers'
   | 'users'
+  | 'payments' // Added payments view
   | 'exports';
+
+/* ---------------------------------
+   EVENTS
+---------------------------------- */
+
+/**
+ * Event Lifecycle Status:
+ * - 'draft': Initial setup. Configuration mode. Public registrations hidden. Slot creation disabled.
+ * - 'open': Active event. Registrations open. Slot creation and assignment allowed.
+ * - 'closed': Event finished or registrations stopped. Read-only for participants. No new assignments.
+ * - 'archived': Old event. Strictly read-only for history. Hidden from main lists.
+ */
+export type EventStatus = 'draft' | 'open' | 'closed' | 'archived';
+
+export interface WPTEvent {
+  id: string;
+  name: string;
+  eventYear: number;
+  eventStartDate: Timestamp;
+  eventEndDate: Timestamp;
+  registrationDeadline: Timestamp;
+  status: EventStatus; // Replaces isActive
+}
 
 /* ---------------------------------
    USERS
 ---------------------------------- */
 
 export type UserRole = 'user' | 'admin' | 'jury';
+
+export interface EventRegistration {
+  paid: boolean;
+  categoryIds: string[];
+  stripeCustomerId?: string;
+  paymentId?: string; // Link to the proof of payment
+  registeredAt: Timestamp;
+}
 
 export interface User {
   id: string;
@@ -33,23 +67,14 @@ export interface User {
   email: string;
   country: string;
   phone: string;
-  role: UserRole;
-  categoryIds: string[];
-  paid: boolean;
-  stripeCustomerId?: string;
+  role: UserRole; // Global role (e.g. is this person an admin?)
   createdAt: Timestamp;
-}
-
-/* ---------------------------------
-   GLOBAL SETTINGS
----------------------------------- */
-
-export interface Settings {
-  id: 'config';
-  eventStartDate: Timestamp;
-  eventEndDate: Timestamp;
-  registrationDeadline: Timestamp;
-  eventYear: number;
+  
+  /**
+   * Status per event.
+   * Key = eventId
+   */
+  registrations: Record<string, EventRegistration>;
 }
 
 /* ---------------------------------
@@ -58,17 +83,15 @@ export interface Settings {
 
 export interface Category {
   id: string;
+  eventId: string; // Linked to specific event
   name: string;
   description: string;
+  rules?: string; // HTML or Text rules/regulations
   unitPrice: number;
   maxSlots: number;
   durationMinutes: number;
-
-  /**
-   * Dates ISO (YYYY-MM-DD) où la catégorie est active
-   * Permet N jours d'événement sans refactor
-   */
   activeDates: string[];
+  isActive: boolean; // Controls visibility for slot creation
 }
 
 /* ---------------------------------
@@ -76,25 +99,23 @@ export interface Category {
 ---------------------------------- */
 
 export type SlotStatus = 'available' | 'locked' | 'paid' | 'offered';
+export type AssignmentType = 'manual' | 'payment' | 'voucher';
 
 export interface Slot {
   id: string;
-
-  /** Relation Firestore */
+  eventId: string;
   categoryId: string;
-
-  /** Date réelle du slot (ISO YYYY-MM-DD) */
   date: string;
-
-  /** Heures réelles stockées en Timestamp */
   startTime: Timestamp;
   endTime: Timestamp;
-
   status: SlotStatus;
-
-  /** Booking */
   userId?: string;
   stripeSessionId: string | null;
+  
+  // Traceability Fields
+  assignedByAdminId?: string; // If assigned manually by admin
+  assignedAt?: Timestamp; // When the assignment happened
+  assignmentType?: AssignmentType;
 }
 
 /* ---------------------------------
@@ -103,6 +124,7 @@ export interface Slot {
 
 export interface Product {
   id: string;
+  eventId: string; // Linked to specific event
   name: string;
   description: string;
   stripePriceId: string;
@@ -119,6 +141,7 @@ export interface Product {
 
 export interface Voucher {
   id: string;
+  eventId: string; // Linked to specific event
   code: string;
   productId: string;
   isSingleUse: boolean;
@@ -132,15 +155,21 @@ export interface Voucher {
    PAYMENTS
 ---------------------------------- */
 
+export type PaymentSource = 'stripe' | 'manual' | 'admin';
+
 export interface Payment {
   id: string;
+  eventId: string; // CRITICAL: Links payment to specific event year
   userId: string;
-  stripeSessionId: string;
-  amount: number; // EUR
-  status: 'paid' | 'refunded' | 'failed';
-  slotIds: string[];
+  stripeSessionId: string | null; // Null if manual/admin
+  amount: number; // Amount in cents
+  status: 'paid' | 'refunded' | 'failed' | 'pending';
+  source: PaymentSource;
+  
+  slotIds: string[]; // Slots reserved by this payment
   isPack: boolean;
   packName?: string;
+  
   metadata: Record<string, any>;
   createdAt: Timestamp;
   updatedAt: Timestamp;

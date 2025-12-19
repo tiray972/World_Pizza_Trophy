@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Slot, Category, Settings, Product } from '@/types/firestore';
+import { Slot, Category, WPTEvent, Product } from '@/types/firestore';
 import { Badge } from '@/components/ui/badge';
 import { CalendarIcon, ShoppingCartIcon, XCircleIcon, ClockIcon, PizzaIcon, PackageIcon, UtensilsCrossedIcon, CheckCircleIcon, ArrowLeftIcon } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -24,7 +24,7 @@ interface SelectedPackSlot extends SelectedSlot {
 interface SlotBookingViewProps {
   availableSlots: Slot[];
   categories: Category[];
-  settings: Settings;
+  settings: WPTEvent;
   products: Product[];
   registrationClosed: boolean;
   onCheckout: (slots: SelectedSlot[]) => void;
