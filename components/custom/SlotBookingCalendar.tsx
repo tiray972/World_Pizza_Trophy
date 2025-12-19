@@ -31,8 +31,23 @@ interface SlotBookingViewProps {
   onPackCheckout: (product: Product, slots: SelectedPackSlot[]) => void;
 }
 
-const formatTime = (date: Date): string => 
-  date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const formatTime = (date: Date | string): string => {
+  let dateObj: Date;
+  
+  if (typeof date === 'string') {
+    dateObj = new Date(date);
+  } else if (date instanceof Date) {
+    dateObj = date;
+  } else if (date && typeof date === 'object' && 'toDate' in date) {
+    // Firestore Timestamp
+    dateObj = (date as any).toDate();
+  } else {
+    // Fallback
+    dateObj = new Date(date as any);
+  }
+  
+  return dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+};
 
 const formatDateDisplay = (date: Date): string =>
   date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
@@ -122,8 +137,26 @@ export function SlotBookingView({
         return categoryMatch && dateMatch && statusMatch && notInStandardCart && notInPackSelection;
       })
       .sort((a, b) => {
-        const timeA = new Date(a.startTime).getTime();
-        const timeB = new Date(b.startTime).getTime();
+        // Convert startTime to Date if needed
+        let timeA: number;
+        let timeB: number;
+        
+        if (a.startTime instanceof Date) {
+          timeA = a.startTime.getTime();
+        } else if (a.startTime && typeof a.startTime === 'object' && 'toDate' in a.startTime) {
+          timeA = (a.startTime as any).toDate().getTime();
+        } else {
+          timeA = new Date(a.startTime as any).getTime();
+        }
+        
+        if (b.startTime instanceof Date) {
+          timeB = b.startTime.getTime();
+        } else if (b.startTime && typeof b.startTime === 'object' && 'toDate' in b.startTime) {
+          timeB = (b.startTime as any).toDate().getTime();
+        } else {
+          timeB = new Date(b.startTime as any).getTime();
+        }
+        
         return timeA - timeB;
       });
 
@@ -156,7 +189,16 @@ export function SlotBookingView({
 
   const handleToggleSelect = (slot: Slot) => {
     const isCurrentlySelected = selectedSlots.some(s => s.slotId === slot.id);
-    const startTime = new Date(slot.startTime);
+    
+    // Convert startTime to Date if it's a Firestore Timestamp
+    let startTime: Date;
+    if (slot.startTime instanceof Date) {
+      startTime = slot.startTime;
+    } else if (slot.startTime && typeof slot.startTime === 'object' && 'toDate' in slot.startTime) {
+      startTime = (slot.startTime as any).toDate();
+    } else {
+      startTime = new Date(slot.startTime as any);
+    }
 
     if (isCurrentlySelected) {
       setSelectedSlots(selectedSlots.filter(s => s.slotId !== slot.id));
@@ -176,7 +218,16 @@ export function SlotBookingView({
     if (!packToPurchase) return;
 
     const isCurrentlySelected = selectedPackSlots.some(s => s.slotId === slot.id);
-    const startTime = new Date(slot.startTime);
+    
+    // Convert startTime to Date if it's a Firestore Timestamp
+    let startTime: Date;
+    if (slot.startTime instanceof Date) {
+      startTime = slot.startTime;
+    } else if (slot.startTime && typeof slot.startTime === 'object' && 'toDate' in slot.startTime) {
+      startTime = (slot.startTime as any).toDate();
+    } else {
+      startTime = new Date(slot.startTime as any);
+    }
 
     if (isCurrentlySelected) {
       setSelectedPackSlots(selectedPackSlots.filter(s => s.slotId !== slot.id));
@@ -430,7 +481,15 @@ export function SlotBookingView({
                             ))}
 
                           {filteredSlots.map(slot => {
-                            const time = new Date(slot.startTime);
+                            // Convert startTime to Date if needed
+                            let time: Date;
+                            if (slot.startTime instanceof Date) {
+                              time = slot.startTime;
+                            } else if (slot.startTime && typeof slot.startTime === 'object' && 'toDate' in slot.startTime) {
+                              time = (slot.startTime as any).toDate();
+                            } else {
+                              time = new Date(slot.startTime as any);
+                            }
                             return (
                               <Button
                                 key={slot.id}
@@ -526,7 +585,16 @@ export function SlotBookingView({
                     <div className="space-y-2">
                       {filteredSlots.map(slot => {
                         const isSelected = selectedSlots.some(s => s.slotId === slot.id);
-                        const time = new Date(slot.startTime);
+                        
+                        // Convert startTime to Date if needed
+                        let time: Date;
+                        if (slot.startTime instanceof Date) {
+                          time = slot.startTime;
+                        } else if (slot.startTime && typeof slot.startTime === 'object' && 'toDate' in slot.startTime) {
+                          time = (slot.startTime as any).toDate();
+                        } else {
+                          time = new Date(slot.startTime as any);
+                        }
 
                         return (
                           <Button

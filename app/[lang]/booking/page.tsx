@@ -2,14 +2,14 @@
 
 import { SlotBookingView } from "@/components/custom/SlotBookingCalendar";
 import { Slot, Category, WPTEvent, Product } from "@/types/firestore";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 
-export default function BookingPage({ params }: { params: { lang: string } }) {
+export default function BookingPage({ params }: { params: Promise<{ lang: string }> }) {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -19,7 +19,8 @@ export default function BookingPage({ params }: { params: { lang: string } }) {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
-  const currentLang = params.lang || 'fr';
+  const { lang } = use(params);
+  const currentLang = lang || 'fr';
 
   // Load data from Firebase
   useEffect(() => {
@@ -40,11 +41,17 @@ export default function BookingPage({ params }: { params: { lang: string } }) {
           return;
         }
 
-        const eventData = eventsSnapshot.docs[0].data() as WPTEvent;
+        const rawEventData = eventsSnapshot.docs[0].data();
         const eventId = eventsSnapshot.docs[0].id;
-        const eventWithId = { ...eventData, id: eventId };
+        const eventWithId: WPTEvent = {
+          ...(rawEventData as WPTEvent),
+          id: eventId,
+          registrationDeadline: (rawEventData.registrationDeadline as Timestamp).toDate(),
+          eventStartDate: (rawEventData.eventStartDate as Timestamp).toDate(),
+          eventEndDate: (rawEventData.eventEndDate as Timestamp).toDate(),
+        };
         setEvent(eventWithId);
-        console.log('✅ [BookingPage] Event loaded:', { id: eventId, name: eventData.name });
+        console.log('✅ [BookingPage] Event loaded:', { id: eventId, name: rawEventData.name });
 
         // Load categories for this event
         const categoriesQuery = query(collection(db, 'categories'), where('eventId', '==', eventId));

@@ -52,6 +52,20 @@ function convertDateToTimestamp(value: Date | null): Timestamp | null {
 }
 
 /**
+ * Remove undefined values from an object.
+ * Firestore doesn't allow undefined values in documents.
+ */
+function removeUndefinedValues(obj: Record<string, any>): Record<string, any> {
+  const cleaned: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      cleaned[key] = value;
+    }
+  }
+  return cleaned;
+}
+
+/**
  * Recursively convert Firestore document data to domain types.
  * Handles Timestamp fields by converting them to Date.
  */
@@ -174,14 +188,14 @@ export const useEvents = () => {
 
   const createEvent = async (eventData: Omit<WPTEvent, 'id'>) => {
     try {
-      const dataToWrite = {
+      const dataToWrite = removeUndefinedValues({
         name: eventData.name,
         eventYear: eventData.eventYear,
         eventStartDate: convertDateToTimestamp(eventData.eventStartDate),
         eventEndDate: convertDateToTimestamp(eventData.eventEndDate),
         registrationDeadline: convertDateToTimestamp(eventData.registrationDeadline),
         status: eventData.status,
-      };
+      });
       const docRef = await addDoc(collection(db, 'events'), dataToWrite);
       return docRef.id;
     } catch (err) {
@@ -191,14 +205,14 @@ export const useEvents = () => {
 
   const updateEvent = async (eventId: string, data: Partial<WPTEvent>) => {
     try {
-      const dataToWrite: Record<string, any> = {};
-      
-      if ('eventStartDate' in data) dataToWrite.eventStartDate = convertDateToTimestamp(data.eventStartDate!);
-      if ('eventEndDate' in data) dataToWrite.eventEndDate = convertDateToTimestamp(data.eventEndDate!);
-      if ('registrationDeadline' in data) dataToWrite.registrationDeadline = convertDateToTimestamp(data.registrationDeadline!);
-      if ('name' in data) dataToWrite.name = data.name;
-      if ('eventYear' in data) dataToWrite.eventYear = data.eventYear;
-      if ('status' in data) dataToWrite.status = data.status;
+      const dataToWrite = removeUndefinedValues({
+        eventStartDate: data.eventStartDate ? convertDateToTimestamp(data.eventStartDate) : undefined,
+        eventEndDate: data.eventEndDate ? convertDateToTimestamp(data.eventEndDate) : undefined,
+        registrationDeadline: data.registrationDeadline ? convertDateToTimestamp(data.registrationDeadline) : undefined,
+        name: data.name,
+        eventYear: data.eventYear,
+        status: data.status,
+      });
       
       await updateDoc(doc(db, 'events', eventId), dataToWrite);
     } catch (err) {
@@ -258,27 +272,26 @@ export const useUsers = () => {
 
   const updateUser = async (userId: string, data: Partial<User>) => {
     try {
-      const dataToWrite: Record<string, any> = {};
-      
-      if ('createdAt' in data) dataToWrite.createdAt = convertDateToTimestamp(data.createdAt!);
-      if ('firstName' in data) dataToWrite.firstName = data.firstName;
-      if ('lastName' in data) dataToWrite.lastName = data.lastName;
-      if ('email' in data) dataToWrite.email = data.email;
-      if ('country' in data) dataToWrite.country = data.country;
-      if ('phone' in data) dataToWrite.phone = data.phone;
-      if ('role' in data) dataToWrite.role = data.role;
-      if ('registrations' in data) {
-        // Convert registrations timestamps
-        dataToWrite.registrations = Object.fromEntries(
-          Object.entries(data.registrations!).map(([key, reg]) => [
-            key,
-            {
-              ...reg,
-              registeredAt: convertDateToTimestamp(reg.registeredAt)
-            }
-          ])
-        );
-      }
+      const dataToWrite = removeUndefinedValues({
+        createdAt: data.createdAt ? convertDateToTimestamp(data.createdAt) : undefined,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        country: data.country,
+        phone: data.phone,
+        role: data.role,
+        registrations: data.registrations
+          ? Object.fromEntries(
+              Object.entries(data.registrations).map(([key, reg]) => [
+                key,
+                {
+                  ...reg,
+                  registeredAt: convertDateToTimestamp(reg.registeredAt)
+                }
+              ])
+            )
+          : undefined,
+      });
       
       await updateDoc(doc(db, 'users', userId), dataToWrite);
     } catch (err) {
@@ -331,12 +344,12 @@ export const useSlots = (eventId?: string) => {
   const createSlots = async (slotsData: Omit<Slot, 'id'>[]) => {
     try {
       const promises = slotsData.map(slot => {
-        const dataToWrite = {
+        const dataToWrite = removeUndefinedValues({
           ...slot,
           startTime: convertDateToTimestamp(slot.startTime),
           endTime: convertDateToTimestamp(slot.endTime),
           assignedAt: slot.assignedAt ? convertDateToTimestamp(slot.assignedAt) : undefined,
-        };
+        });
         return addDoc(collection(db, 'slots'), dataToWrite);
       });
       await Promise.all(promises);
@@ -347,16 +360,16 @@ export const useSlots = (eventId?: string) => {
 
   const updateSlot = async (slotId: string, data: Partial<Slot>) => {
     try {
-      const dataToWrite: Record<string, any> = {};
-      
-      if ('startTime' in data) dataToWrite.startTime = convertDateToTimestamp(data.startTime!);
-      if ('endTime' in data) dataToWrite.endTime = convertDateToTimestamp(data.endTime!);
-      if ('assignedAt' in data) dataToWrite.assignedAt = data.assignedAt ? convertDateToTimestamp(data.assignedAt) : null;
-      if ('status' in data) dataToWrite.status = data.status;
-      if ('userId' in data) dataToWrite.userId = data.userId;
-      if ('stripeSessionId' in data) dataToWrite.stripeSessionId = data.stripeSessionId;
-      if ('assignedByAdminId' in data) dataToWrite.assignedByAdminId = data.assignedByAdminId;
-      if ('assignmentType' in data) dataToWrite.assignmentType = data.assignmentType;
+      const dataToWrite = removeUndefinedValues({
+        startTime: data.startTime ? convertDateToTimestamp(data.startTime) : undefined,
+        endTime: data.endTime ? convertDateToTimestamp(data.endTime) : undefined,
+        assignedAt: data.assignedAt ? convertDateToTimestamp(data.assignedAt) : null,
+        status: data.status,
+        userId: data.userId,
+        stripeSessionId: data.stripeSessionId,
+        assignedByAdminId: data.assignedByAdminId,
+        assignmentType: data.assignmentType,
+      });
       
       await updateDoc(doc(db, 'slots', slotId), dataToWrite);
     } catch (err) {
@@ -591,11 +604,11 @@ export const useVouchers = (eventId?: string) => {
 
   const createVoucher = async (voucherData: Omit<Voucher, 'id'>) => {
     try {
-      const dataToWrite = {
+      const dataToWrite = removeUndefinedValues({
         ...voucherData,
         expiresAt: voucherData.expiresAt ? convertDateToTimestamp(voucherData.expiresAt) : null,
         createdAt: convertDateToTimestamp(voucherData.createdAt),
-      };
+      });
       const docRef = await addDoc(collection(db, 'vouchers'), dataToWrite);
       return docRef.id;
     } catch (err) {
@@ -655,13 +668,13 @@ export const usePayments = (eventId?: string) => {
 
   const updatePayment = async (paymentId: string, data: Partial<Payment>) => {
     try {
-      const dataToWrite: Record<string, any> = {};
-      
-      if ('createdAt' in data) dataToWrite.createdAt = convertDateToTimestamp(data.createdAt!);
-      if ('updatedAt' in data) dataToWrite.updatedAt = convertDateToTimestamp(data.updatedAt!);
-      if ('status' in data) dataToWrite.status = data.status;
-      if ('metadata' in data) dataToWrite.metadata = data.metadata;
-      if ('slotIds' in data) dataToWrite.slotIds = data.slotIds;
+      const dataToWrite = removeUndefinedValues({
+        createdAt: data.createdAt ? convertDateToTimestamp(data.createdAt) : undefined,
+        updatedAt: data.updatedAt ? convertDateToTimestamp(data.updatedAt) : undefined,
+        status: data.status,
+        metadata: data.metadata,
+        slotIds: data.slotIds,
+      });
       
       await updateDoc(doc(db, 'payments', paymentId), dataToWrite);
     } catch (err) {

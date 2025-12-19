@@ -2,11 +2,19 @@
 import React, { useState } from "react";
 import { Button } from "./ui/Button";
 import { WPTEvent } from "@/types/firestore";
-import { X, Calendar, Copy, Star, FileText } from "lucide-react";
+import { X, Calendar, Copy, Star, FileText, Zap } from "lucide-react";
 
 interface CreateEventModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Called when user confirms event creation.
+   * @param eventData - Base event info (name, year, dates)
+   * @param copyFromEventId - Source for duplication:
+   *   - "default_template": Use WPT_DEFAULT_TEMPLATE_* from mockData.ts
+   *   - null: Create empty event (no categories/products)
+   *   - "<eventId>": Copy from existing event
+   */
   onConfirm: (eventData: Omit<WPTEvent, "id" | "status">, copyFromEventId: string | null) => Promise<void>;
   existingEvents: WPTEvent[];
 }
@@ -74,7 +82,7 @@ export function CreateEventModal({
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
-            Configure a new edition of the World Pizza Trophy.
+            Configure a new edition of the World Pizza Trophy with categories, products, and settings.
           </p>
         </div>
 
@@ -83,131 +91,158 @@ export function CreateEventModal({
           {/* Content Initialization Strategy */}
           <div className="p-4 bg-muted/30 rounded-lg border mb-2 space-y-3">
               <div className="flex items-center gap-2">
-                  <Copy className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm font-medium">Initialize Content From:</span>
+                  <Zap className="h-4 w-4 text-amber-500" />
+                  <span className="text-sm font-medium">Quick Start - Initialize Content From:</span>
               </div>
               
-              <div className="grid gap-2">
+              <div className="grid gap-3">
                   <select
                       id="copyFrom"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-primary"
                       value={copyFromId}
                       onChange={(e) => setCopyFromId(e.target.value)}
                   >
-                      <optgroup label="Templates">
+                      <optgroup label="🎯 Official Template">
                         <option value="default_template">
-                           WPT Standard Template (Default)
+                           WPT Standard Template (Recommended)
                         </option>
+                      </optgroup>
+                      
+                      <optgroup label="📝 Manual Setup">
                         <option value="">
-                           Empty Event (Start Fresh)
+                           Empty Event (Custom Setup)
                         </option>
                       </optgroup>
                       
                       {existingEvents.length > 0 && (
-                        <optgroup label="History">
+                        <optgroup label="📋 Duplicate From History">
                           {existingEvents.map(evt => (
                               <option key={evt.id} value={evt.id}>
-                                  Copy from {evt.name} ({evt.eventYear})
+                                  {evt.name} ({evt.eventYear})
                               </option>
                           ))}
                         </optgroup>
                       )}
                   </select>
                   
-                  <div className="text-xs text-muted-foreground px-1 mt-1">
+                  {/* Dynamic Help Text based on selection */}
+                  <div className="text-xs text-muted-foreground px-1 mt-2 space-y-2">
                     {copyFromId === 'default_template' && (
-                      <div className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-100 dark:border-blue-800 text-blue-700 dark:text-blue-300">
-                        <Star className="h-4 w-4 fill-current shrink-0 mt-0.5" />
-                        <span>
-                          <strong>Recommended:</strong> Pre-loads the official WPT categories (Classique, Napolitaine, etc.) and standard packs.
-                        </span>
+                      <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <Star className="h-4 w-4 fill-blue-500 text-blue-500 shrink-0 mt-0.5" />
+                        <div className="flex flex-col gap-1">
+                          <strong className="text-blue-900 dark:text-blue-200">Recommended: WPT Standard</strong>
+                          <span className="text-blue-700 dark:text-blue-300">
+                            Pre-loads all official WPT categories (Classique, Napolitaine, Pala, etc.) and standard packs. Perfect for consistency across events.
+                          </span>
+                          <span className="text-blue-600 dark:text-blue-400 text-xs mt-1">
+                            ✓ Fully editable • All data is duplicated with new IDs
+                          </span>
+                        </div>
                       </div>
                     )}
                     {copyFromId === '' && (
-                      <div className="flex items-start gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-100 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300">
-                        <FileText className="h-4 w-4 shrink-0 mt-0.5" />
-                        <span>
-                          Creates a completely empty event. You will need to define all categories and products manually.
-                        </span>
+                      <div className="flex items-start gap-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                        <FileText className="h-4 w-4 text-yellow-600 dark:text-yellow-400 shrink-0 mt-0.5" />
+                        <div className="flex flex-col gap-1">
+                          <strong className="text-yellow-900 dark:text-yellow-200">Custom Setup</strong>
+                          <span className="text-yellow-700 dark:text-yellow-300">
+                            Creates a completely empty event. You will manually define all categories, products, and packs.
+                          </span>
+                          <span className="text-yellow-600 dark:text-yellow-400 text-xs mt-1">
+                            ⚠️ Requires full manual configuration
+                          </span>
+                        </div>
                       </div>
                     )}
                     {copyFromId !== '' && copyFromId !== 'default_template' && (
-                      <div className="flex items-start gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                        <Copy className="h-4 w-4 shrink-0 mt-0.5" />
-                        <span>
-                          Duplicates exact categories and products from the selected previous event.
-                        </span>
+                      <div className="flex items-start gap-3 p-3 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-700">
+                        <Copy className="h-4 w-4 text-slate-600 dark:text-slate-400 shrink-0 mt-0.5" />
+                        <div className="flex flex-col gap-1">
+                          <strong className="text-slate-900 dark:text-slate-100">Duplicate From Previous Event</strong>
+                          <span className="text-slate-700 dark:text-slate-300">
+                            Copies exact categories and products from the selected previous event. All IDs are regenerated.
+                          </span>
+                          <span className="text-slate-600 dark:text-slate-400 text-xs mt-1">
+                            ✓ Fully editable • Links and dates will be updated to new event
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
               </div>
           </div>
 
-          <div className="grid gap-2">
-            <label htmlFor="name" className="text-sm font-medium">Event Name</label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              required
-              placeholder="e.g. WPT 2027 Paris"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={formData.name}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <label htmlFor="eventYear" className="text-sm font-medium">Year</label>
-            <input
-              id="eventYear"
-              name="eventYear"
-              type="number"
-              required
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={formData.eventYear}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          {/* Event Details Section */}
+          <div className="space-y-4 pt-2">
+            <h3 className="text-sm font-semibold text-muted-foreground">Event Details</h3>
+            
             <div className="grid gap-2">
-              <label htmlFor="eventStartDate" className="text-sm font-medium">Start Date</label>
+              <label htmlFor="name" className="text-sm font-medium">Event Name</label>
               <input
-                id="eventStartDate"
-                name="eventStartDate"
-                type="date"
+                id="name"
+                name="name"
+                type="text"
                 required
+                placeholder="e.g. WPT 2027 Paris"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={formData.eventStartDate}
+                value={formData.name}
                 onChange={handleChange}
               />
             </div>
+
             <div className="grid gap-2">
-              <label htmlFor="eventEndDate" className="text-sm font-medium">End Date</label>
+              <label htmlFor="eventYear" className="text-sm font-medium">Year</label>
               <input
-                id="eventEndDate"
-                name="eventEndDate"
-                type="date"
+                id="eventYear"
+                name="eventYear"
+                type="number"
                 required
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={formData.eventEndDate}
+                value={formData.eventYear}
                 onChange={handleChange}
               />
             </div>
-          </div>
 
-          <div className="grid gap-2">
-             <label htmlFor="registrationDeadline" className="text-sm font-medium text-destructive">Registration Deadline</label>
-              <input
-                id="registrationDeadline"
-                name="registrationDeadline"
-                type="date"
-                required
-                className="flex h-10 w-full rounded-md border border-destructive/50 bg-background px-3 py-2 text-sm"
-                value={formData.registrationDeadline}
-                onChange={handleChange}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <label htmlFor="eventStartDate" className="text-sm font-medium">Start Date</label>
+                <input
+                  id="eventStartDate"
+                  name="eventStartDate"
+                  type="date"
+                  required
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={formData.eventStartDate}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="grid gap-2">
+                <label htmlFor="eventEndDate" className="text-sm font-medium">End Date</label>
+                <input
+                  id="eventEndDate"
+                  name="eventEndDate"
+                  type="date"
+                  required
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={formData.eventEndDate}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+               <label htmlFor="registrationDeadline" className="text-sm font-medium text-destructive">Registration Deadline</label>
+                <input
+                  id="registrationDeadline"
+                  name="registrationDeadline"
+                  type="date"
+                  required
+                  className="flex h-10 w-full rounded-md border border-destructive/50 bg-background px-3 py-2 text-sm"
+                  value={formData.registrationDeadline}
+                  onChange={handleChange}
+                />
+            </div>
           </div>
           
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
