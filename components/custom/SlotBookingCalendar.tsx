@@ -352,8 +352,8 @@ export function SlotBookingView({
     const availablePackCategories = categories.filter(c => c.activeDates.length > 0);
 
     return (
-      <SheetContent side="bottom" className="sm:max-w-xl h-[95vh] flex flex-col">
-        <SheetHeader>
+      <SheetContent side="bottom" className="sm:max-w-xl h-screen flex flex-col">
+        <SheetHeader className="shrink-0 pb-2">
           <SheetTitle>Configuration du Pack : {packToPurchase.name}</SheetTitle>
           <SheetDescription>
             Veuillez sélectionner {slotsNeeded} créneau(x) pour valider votre achat de pack.
@@ -361,7 +361,7 @@ export function SlotBookingView({
         </SheetHeader>
 
         <div
-          className={`p-3 rounded-lg ${
+          className={`shrink-0 p-3 rounded-lg ${
             selectionComplete ? 'bg-green-100 border-green-500' : 'bg-yellow-100 border-yellow-500'
           } border-2 mb-4`}
         >
@@ -378,153 +378,155 @@ export function SlotBookingView({
           </p>
         </div>
 
-        {!activePackCategoryId ? (
-          <div className="grow overflow-y-auto space-y-4">
-            <h3 className="font-bold text-lg">
-              1. Choisissez vos Catégories ({slotsNeeded} maximum)
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              {availablePackCategories.map(category => {
-                const selectedInThisCategory = selectedPackSlots.filter(
-                  s => s.categoryId === category.id
-                ).length;
+        <div className="flex-1 overflow-y-auto px-2 min-h-0">
+          {!activePackCategoryId ? (
+            <div className="space-y-4">
+              <h3 className="font-bold text-lg">
+                1. Choisissez vos Catégories ({slotsNeeded} maximum)
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {availablePackCategories.map(category => {
+                  const selectedInThisCategory = selectedPackSlots.filter(
+                    s => s.categoryId === category.id
+                  ).length;
 
-                return (
-                  <Card
-                    key={category.id}
-                    className={`cursor-pointer p-3 transition-all ${
-                      selectedInThisCategory > 0
-                        ? 'border-primary bg-primary/10'
-                        : 'border-gray-200 hover:shadow-md'
-                    }`}
-                    onClick={() => {
-                      setActivePackCategoryId(category.id);
-                      // ⭐ Set first date when entering pack category selection
-                      setActiveDate(
-                        category.activeDates.length > 0 ? category.activeDates[0] : null
-                      );
-                    }}
-                  >
-                    <CardTitle className="text-base truncate">{category.name}</CardTitle>
-                    <CardDescription className="text-xs mt-1">
-                      {selectedInThisCategory > 0 && (
-                        <span className="font-semibold text-primary">
-                          {selectedInThisCategory} sélectionné(s)
-                        </span>
-                      )}
-                    </CardDescription>
-                  </Card>
-                );
-              })}
+                  return (
+                    <Card
+                      key={category.id}
+                      className={`cursor-pointer p-3 transition-all ${
+                        selectedInThisCategory > 0
+                          ? 'border-primary bg-primary/10'
+                          : 'border-gray-200 hover:shadow-md'
+                      }`}
+                      onClick={() => {
+                        setActivePackCategoryId(category.id);
+                        // ⭐ Set first date when entering pack category selection
+                        setActiveDate(
+                          category.activeDates.length > 0 ? category.activeDates[0] : null
+                        );
+                      }}
+                    >
+                      <CardTitle className="text-base truncate">{category.name}</CardTitle>
+                      <CardDescription className="text-xs mt-1">
+                        {selectedInThisCategory > 0 && (
+                          <span className="font-semibold text-primary">
+                            {selectedInThisCategory} sélectionné(s)
+                          </span>
+                        )}
+                      </CardDescription>
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="grow flex flex-col">
-            <Button
-              variant="ghost"
-              className="mb-4 self-start"
-              onClick={() => setActivePackCategoryId(null)}
-            >
-              <ArrowLeftIcon className="w-4 h-4 mr-2" />
-              Retour à la sélection des catégories
-            </Button>
-
-            <h3 className="font-bold text-lg mb-4">
-              2. Choisissez les Créneaux pour {activeCategory?.name}
-            </h3>
-
-            {activeCategory && activeCategory.activeDates.length > 0 ? (
-              <Tabs
-                value={activeDate || ''}
-                onValueChange={setActiveDate}
-                className="w-full grow flex flex-col"
+          ) : (
+            <div className="space-y-4">
+              <Button
+                variant="ghost"
+                className="shrink-0"
+                onClick={() => setActivePackCategoryId(null)}
               >
-                <TabsList className="grid w-full shrink-0 mb-4" style={{ gridTemplateColumns: `repeat(${activeCategory.activeDates.length}, 1fr)` }}>
-                  {activeCategory.activeDates.map(dateStr => {
-                    const dateObj = new Date(dateStr + 'T00:00:00');
-                    const displayLabel = formatDateDisplay(dateObj);
-                    return (
-                      <TabsTrigger key={dateStr} value={dateStr}>
-                        {displayLabel}
-                      </TabsTrigger>
-                    );
-                  })}
-                </TabsList>
+                <ArrowLeftIcon className="w-4 h-4 mr-2" />
+                Retour à la sélection des catégories
+              </Button>
 
-                <div className="grow overflow-y-auto pr-2">
-                  {activeCategory.activeDates.map(dateStr => (
-                    <TabsContent key={dateStr} value={dateStr} className="mt-0">
-                      {filteredSlots.length > 0 ||
-                      selectedPackSlots.some(s => s.categoryId === activePackCategoryId && s.date === dateStr) ? (
-                        <div className="space-y-2">
-                          {selectedPackSlots
-                            .filter(s => s.categoryId === activePackCategoryId && s.date === dateStr)
-                            .map(slot => (
-                              <Button
-                                key={slot.slotId}
-                                variant="default"
-                                className="w-full justify-start transition-colors bg-primary/80 hover:bg-primary"
-                                onClick={() =>
-                                  handleTogglePackSlotSelect(
-                                    availableSlots.find(s => s.id === slot.slotId)!
-                                  )
-                                }
-                              >
-                                <CheckCircleIcon className="w-4 h-4 mr-2" />
-                                <span className="font-semibold">
-                                  {formatTime(slot.startTime)} (Sélectionné)
-                                </span>
-                                <Badge className="ml-auto bg-white text-primary hover:bg-white/90">
-                                  Retirer
-                                </Badge>
-                              </Button>
-                            ))}
+              <h3 className="font-bold text-lg">
+                2. Choisissez les Créneaux pour {activeCategory?.name}
+              </h3>
 
-                          {filteredSlots.map(slot => {
-                            // Convert startTime to Date if needed
-                            let time: Date;
-                            if (slot.startTime instanceof Date) {
-                              time = slot.startTime;
-                            } else if (slot.startTime && typeof slot.startTime === 'object' && 'toDate' in slot.startTime) {
-                              time = (slot.startTime as any).toDate();
-                            } else {
-                              time = new Date(slot.startTime as any);
-                            }
-                            return (
-                              <Button
-                                key={slot.id}
-                                variant="outline"
-                                className="w-full justify-start transition-colors"
-                                onClick={() => handleTogglePackSlotSelect(slot)}
-                                disabled={selectedPackSlots.length >= slotsNeeded}
-                              >
-                                <ClockIcon className="w-4 h-4 mr-2" />
-                                <span className="font-semibold">{formatTime(time)}</span>
-                                <Badge className="ml-auto bg-primary/10 text-primary hover:bg-primary/20">
-                                  Ajouter
-                                </Badge>
-                              </Button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-center text-sm text-gray-500 p-8 border border-dashed rounded-lg">
-                          Aucun créneau libre pour ce jour et cette catégorie.
-                        </p>
-                      )}
-                    </TabsContent>
-                  ))}
-                </div>
-              </Tabs>
-            ) : (
-              <p className="text-center text-sm text-gray-500 p-8 border border-dashed rounded-lg">
-                Aucune date disponible pour cette catégorie.
-              </p>
-            )}
-          </div>
-        )}
+              {activeCategory && activeCategory.activeDates.length > 0 ? (
+                <Tabs
+                  value={activeDate || ''}
+                  onValueChange={setActiveDate}
+                  className="w-full flex flex-col"
+                >
+                  <TabsList className="grid w-full shrink-0 mb-4" style={{ gridTemplateColumns: `repeat(${activeCategory.activeDates.length}, 1fr)` }}>
+                    {activeCategory.activeDates.map(dateStr => {
+                      const dateObj = new Date(dateStr + 'T00:00:00');
+                      const displayLabel = formatDateDisplay(dateObj);
+                      return (
+                        <TabsTrigger key={dateStr} value={dateStr}>
+                          {displayLabel}
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
 
-        <SheetFooter className="mt-4 shrink-0">
+                  <div className="space-y-2">
+                    {activeCategory.activeDates.map(dateStr => (
+                      <TabsContent key={dateStr} value={dateStr} className="mt-0 space-y-2">
+                        {filteredSlots.length > 0 ||
+                        selectedPackSlots.some(s => s.categoryId === activePackCategoryId && s.date === dateStr) ? (
+                          <>
+                            {selectedPackSlots
+                              .filter(s => s.categoryId === activePackCategoryId && s.date === dateStr)
+                              .map(slot => (
+                                <Button
+                                  key={slot.slotId}
+                                  variant="default"
+                                  className="w-full justify-start transition-colors bg-primary/80 hover:bg-primary"
+                                  onClick={() =>
+                                    handleTogglePackSlotSelect(
+                                      availableSlots.find(s => s.id === slot.slotId)!
+                                    )
+                                  }
+                                >
+                                  <CheckCircleIcon className="w-4 h-4 mr-2" />
+                                  <span className="font-semibold">
+                                    {formatTime(slot.startTime)} (Sélectionné)
+                                  </span>
+                                  <Badge className="ml-auto bg-white text-primary hover:bg-white/90">
+                                    Retirer
+                                  </Badge>
+                                </Button>
+                              ))}
+
+                            {filteredSlots.map(slot => {
+                              // Convert startTime to Date if needed
+                              let time: Date;
+                              if (slot.startTime instanceof Date) {
+                                time = slot.startTime;
+                              } else if (slot.startTime && typeof slot.startTime === 'object' && 'toDate' in slot.startTime) {
+                                time = (slot.startTime as any).toDate();
+                              } else {
+                                time = new Date(slot.startTime as any);
+                              }
+                              return (
+                                <Button
+                                  key={slot.id}
+                                  variant="outline"
+                                  className="w-full justify-start transition-colors"
+                                  onClick={() => handleTogglePackSlotSelect(slot)}
+                                  disabled={selectedPackSlots.length >= slotsNeeded}
+                                >
+                                  <ClockIcon className="w-4 h-4 mr-2" />
+                                  <span className="font-semibold">{formatTime(time)}</span>
+                                  <Badge className="ml-auto bg-primary/10 text-primary hover:bg-primary/20">
+                                    Ajouter
+                                  </Badge>
+                                </Button>
+                              );
+                            })}
+                          </>
+                        ) : (
+                          <p className="text-center text-sm text-gray-500 p-8 border border-dashed rounded-lg">
+                            Aucun créneau libre pour ce jour et cette catégorie.
+                          </p>
+                        )}
+                      </TabsContent>
+                    ))}
+                  </div>
+                </Tabs>
+              ) : (
+                <p className="text-center text-sm text-gray-500 p-8 border border-dashed rounded-lg">
+                  Aucune date disponible pour cette catégorie.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <SheetFooter className="shrink-0 mt-4 border-t pt-3">
           <Button
             type="button"
             className="w-full h-12 text-lg"
@@ -549,8 +551,8 @@ export function SlotBookingView({
     if (!activeCategory) return null;
 
     return (
-      <SheetContent side="bottom" className="sm:max-w-xl h-[90vh] flex flex-col">
-        <SheetHeader>
+      <SheetContent side="bottom" className="sm:max-w-xl h-screen flex flex-col">
+        <SheetHeader className="shrink-0 pb-2">
           <SheetTitle>{activeCategory.name}</SheetTitle>
           <SheetDescription>
             Sélectionnez vos créneaux horaires pour cette catégorie.
@@ -561,7 +563,7 @@ export function SlotBookingView({
           <Tabs
             value={activeDate || ''}
             onValueChange={setActiveDate}
-            className="w-full grow flex flex-col"
+            className="flex flex-col flex-1 min-h-0"
           >
             <TabsList
               className="grid w-full shrink-0 mb-4"
@@ -578,11 +580,11 @@ export function SlotBookingView({
               })}
             </TabsList>
 
-            <div className="grow overflow-y-auto pr-2">
+            <div className="flex-1 overflow-y-auto px-2">
               {activeCategory.activeDates.map(dateStr => (
-                <TabsContent key={dateStr} value={dateStr} className="mt-0">
+                <TabsContent key={dateStr} value={dateStr} className="mt-0 space-y-2">
                   {filteredSlots.length > 0 ? (
-                    <div className="space-y-2">
+                    <>
                       {filteredSlots.map(slot => {
                         const isSelected = selectedSlots.some(s => s.slotId === slot.id);
                         
@@ -617,7 +619,8 @@ export function SlotBookingView({
                           </Button>
                         );
                       })}
-                    </div>
+                      <div className="h-6" />
+                    </>
                   ) : (
                     <p className="text-center text-sm text-gray-500 p-8 border border-dashed rounded-lg">
                       Aucun créneau libre pour ce jour et cette catégorie.
@@ -633,7 +636,7 @@ export function SlotBookingView({
           </p>
         )}
 
-        <SheetFooter className="mt-4 shrink-0">
+        <SheetFooter className="shrink-0 mt-4 border-t pt-3">
           <SheetClose asChild>
             <Button type="button" className="w-full">
               OK, Créneaux Ajoutés au Panier
