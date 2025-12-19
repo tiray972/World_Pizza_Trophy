@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Button } from "./ui/Button";
-import { Slot, User } from "../types";
-import { X, Calendar } from "lucide-react";
-import { cn } from "../lib/utils";
+import { Slot, User, Category } from "../types";
+import { X } from "lucide-react";
+import { cn, formatTime, formatUser } from "../lib/utils";
 
 interface ManualSlotAssignModalProps {
   isOpen: boolean;
@@ -10,6 +10,7 @@ interface ManualSlotAssignModalProps {
   onConfirm: (userId: string, slotIds: string[]) => Promise<void>;
   user: User | null;
   slots: Slot[];
+  categories?: Category[]; // Made optional to preserve types if parent hasn't updated yet, but logic uses it
 }
 
 export function ManualSlotAssignModal({
@@ -18,12 +19,16 @@ export function ManualSlotAssignModal({
   onConfirm,
   user,
   slots,
+  categories = []
 }: ManualSlotAssignModalProps) {
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Available slots are those not assigned to anyone (or assigned to this user)
   const availableSlots = slots.filter(s => !s.userId || s.userId === user?.id);
+
+  const getCategoryName = (categoryId: string) => {
+    return categories.find(c => c.id === categoryId)?.name || categoryId;
+  };
 
   const toggleSlot = (slotId: string) => {
     setSelectedSlotIds(prev => 
@@ -51,19 +56,16 @@ export function ManualSlotAssignModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-opacity" 
         onClick={onClose}
       />
       
-      {/* Dialog */}
       <div className="fixed z-50 grid w-full max-w-2xl scale-100 gap-4 border bg-card text-card-foreground p-0 shadow-lg duration-200 sm:rounded-lg md:w-full overflow-hidden max-h-[90vh] flex flex-col">
-        {/* Header */}
         <div className="flex flex-col space-y-1.5 p-6 pb-2">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold leading-none tracking-tight">
-              Assign Slots to {user.fullName}
+              Assign Slots to {formatUser(user)}
             </h2>
             <Button variant="ghost" size="icon" className="h-6 w-6 text-foreground" onClick={onClose}>
               <X className="h-4 w-4" />
@@ -74,7 +76,6 @@ export function ManualSlotAssignModal({
           </p>
         </div>
 
-        {/* Content (Scrollable) */}
         <div className="flex-1 overflow-y-auto p-6 pt-2">
            <div className="space-y-4">
             {availableSlots.length === 0 ? (
@@ -95,17 +96,17 @@ export function ManualSlotAssignModal({
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={() => {}} // handled by div click
+                        onChange={() => {}} 
                         className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-background"
                       />
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-sm">
-                            {slot.date} | {slot.startTime}
+                            {slot.date} | {formatTime(slot.startTime)}
                           </span>
-                          <span className="text-xs text-muted-foreground">({slot.endTime})</span>
+                          <span className="text-xs text-muted-foreground">({formatTime(slot.endTime)})</span>
                         </div>
-                        <p className="text-xs text-muted-foreground">{slot.category}</p>
+                        <p className="text-xs text-muted-foreground">{getCategoryName(slot.categoryId)}</p>
                       </div>
                       <div className="text-xs font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground">
                         {slot.status}
@@ -118,7 +119,6 @@ export function ManualSlotAssignModal({
            </div>
         </div>
         
-        {/* Footer */}
         <div className="border-t bg-muted/40 p-4 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel

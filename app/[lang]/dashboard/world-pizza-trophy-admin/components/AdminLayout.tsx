@@ -1,16 +1,30 @@
 import React, { useState } from "react";
 import { Sidebar, NAV_ITEMS } from "./Sidebar";
 import { Header } from "./Header";
-import { ViewType } from "../types";
+import { ViewType, WPTEvent } from "../types";
 import { cn } from "../lib/utils";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
   activeView: ViewType;
   onNavigate: (view: ViewType) => void;
+  
+  // Event props
+  events: WPTEvent[];
+  selectedEventId: string;
+  onEventChange: (id: string) => void;
+  onCreateEvent: () => void;
 }
 
-export function AdminLayout({ children, activeView, onNavigate }: AdminLayoutProps) {
+export function AdminLayout({ 
+  children, 
+  activeView, 
+  onNavigate,
+  events,
+  selectedEventId,
+  onEventChange,
+  onCreateEvent
+}: AdminLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const activeTitle = NAV_ITEMS.find(i => i.href === activeView)?.title || "Dashboard";
@@ -35,6 +49,10 @@ export function AdminLayout({ children, activeView, onNavigate }: AdminLayoutPro
         <Sidebar 
           activeView={activeView} 
           onNavigate={onNavigate} 
+          events={events}
+          selectedEventId={selectedEventId}
+          onEventChange={onEventChange}
+          onCreateEvent={onCreateEvent}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
         />
       </aside>

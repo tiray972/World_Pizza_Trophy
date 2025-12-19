@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "./ui/Button";
-import { Slot, User } from "../types";
+import { Slot, User, Category } from "../types";
 import { X } from "lucide-react";
+import { formatTime, formatUser } from "../lib/utils";
 
 interface AssignSlotModalProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface AssignSlotModalProps {
   onConfirm: (userId: string) => Promise<void>;
   slot: Slot | null;
   users: User[];
+  categories: Category[];
 }
 
 export function AssignSlotModal({
@@ -17,11 +19,11 @@ export function AssignSlotModal({
   onConfirm,
   slot,
   users,
+  categories,
 }: AssignSlotModalProps) {
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset selection when modal opens or slot changes
   useEffect(() => {
     if (isOpen) {
       setSelectedUserId(slot?.userId || "");
@@ -30,6 +32,8 @@ export function AssignSlotModal({
   }, [isOpen, slot]);
 
   if (!isOpen || !slot) return null;
+
+  const categoryName = categories.find(c => c.id === slot.categoryId)?.name || slot.categoryId;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,13 +52,10 @@ export function AssignSlotModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-opacity" 
         onClick={onClose}
       />
-      
-      {/* Dialog */}
       <div className="fixed z-50 grid w-full max-w-lg scale-100 gap-4 border bg-card text-card-foreground p-6 shadow-lg duration-200 sm:rounded-lg md:w-full">
         <div className="flex flex-col space-y-1.5 text-center sm:text-left">
           <div className="flex items-center justify-between">
@@ -66,7 +67,7 @@ export function AssignSlotModal({
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">
-            Select a competitor to assign to {slot.category} at {slot.startTime}.
+            Select a competitor to assign to {categoryName} at {formatTime(slot.startTime)}.
           </p>
         </div>
 
@@ -78,7 +79,7 @@ export function AssignSlotModal({
             <div className="col-span-3">
               <select
                 id="user"
-                className="flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background"
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(e.target.value)}
                 required
@@ -86,7 +87,7 @@ export function AssignSlotModal({
                 <option value="" disabled className="bg-background text-foreground">Select a user...</option>
                 {users.map((user) => (
                   <option key={user.id} value={user.id} className="bg-background text-foreground">
-                    {user.fullName} ({user.email})
+                    {formatUser(user)} ({user.email})
                   </option>
                 ))}
               </select>

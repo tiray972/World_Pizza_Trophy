@@ -2,8 +2,13 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Download, FileSpreadsheet, CheckCircle2, Loader2, Link as LinkIcon, RefreshCw, ExternalLink, Grid } from "lucide-react";
-import { cn } from "../lib/utils";
-import { Slot } from "../types";
+import { cn, formatTime, formatUser } from "../lib/utils";
+import { Slot, Category, User } from "../types";
+
+// Needed to look up user names in export preview
+// We'll mock a user lookup for now or just rely on IDs since we don't have users prop here in original design
+// But let's assume we might want to pass users in eventually. 
+// For now, let's just make sure it compiles with new types.
 
 interface ExportOption {
   id: string;
@@ -39,30 +44,31 @@ const EXPORT_OPTIONS: ExportOption[] = [
 
 interface ExportsPageProps {
   slots: Slot[];
+  categories: Category[];
 }
 
-export function ExportsPage({ slots }: ExportsPageProps) {
+export function ExportsPage({ slots, categories }: ExportsPageProps) {
   const [loadingState, setLoadingState] = useState<Record<string, boolean>>({});
   const [successState, setSuccessState] = useState<Record<string, boolean>>({});
   
-  // Google Sheets State - We use local state to mock the "connected" status
   const [isSheetConnected, setIsSheetConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
 
-  // Map the REAL app data to the "Sheet" row format
-  // Sort by date and then by startTime for a realistic schedule view
   const sortedSlots = [...slots].sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date);
-    return a.startTime.localeCompare(b.startTime);
+    return a.startTime.toMillis() - b.startTime.toMillis();
   });
+
+  const getCategoryName = (categoryId: string) => {
+    return categories.find(c => c.id === categoryId)?.name || categoryId;
+  };
 
   const handleExport = async (option: ExportOption) => {
     setLoadingState(prev => ({ ...prev, [option.id]: true }));
     setSuccessState(prev => ({ ...prev, [option.id]: false }));
 
     try {
-      // Mock API call delay
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       const mockCsvContent = `id,generated_at,type\n${Date.now()},${new Date().toISOString()},${option.id}`;
@@ -127,7 +133,6 @@ export function ExportsPage({ slots }: ExportsPageProps) {
   };
 
   const openFakeLink = () => {
-    // In a real app, this would be the actual spreadsheet URL
     window.open("https://docs.google.com/spreadsheets", "_blank");
   };
 
@@ -198,7 +203,7 @@ export function ExportsPage({ slots }: ExportsPageProps) {
                     </div>
                  </div>
 
-                 {/* LIVE PREVIEW WINDOW - DYNAMICALLY RENDERED FROM PROPS */}
+                 {/* LIVE PREVIEW WINDOW */}
                  <div className="border rounded-md overflow-hidden shadow-sm bg-background">
                     {/* Mock Toolbar */}
                     <div className="bg-gray-50 dark:bg-zinc-900 border-b px-3 py-2 flex items-center gap-4 overflow-x-auto">
@@ -206,9 +211,6 @@ export function ExportsPage({ slots }: ExportsPageProps) {
                             <span className="font-bold text-green-700 dark:text-green-500">Sheet1</span>
                             <span className="text-muted-foreground/50 mx-1">|</span>
                             <span className="font-mono">FX: =VLOOKUP(A2:B2)</span>
-                        </div>
-                        <div className="ml-auto flex gap-2">
-                             <div className="h-4 w-16 bg-gray-200 dark:bg-zinc-700 rounded animate-pulse" />
                         </div>
                     </div>
 
@@ -223,18 +225,17 @@ export function ExportsPage({ slots }: ExportsPageProps) {
                                     <th className="w-32 bg-gray-100 dark:bg-zinc-800 border px-2 py-1 text-left text-xs font-semibold text-muted-foreground">C (End)</th>
                                     <th className="w-48 bg-gray-100 dark:bg-zinc-800 border px-2 py-1 text-left text-xs font-semibold text-muted-foreground">D (Category)</th>
                                     <th className="w-32 bg-gray-100 dark:bg-zinc-800 border px-2 py-1 text-left text-xs font-semibold text-muted-foreground">E (Status)</th>
-                                    <th className="min-w-[150px] bg-gray-100 dark:bg-zinc-800 border px-2 py-1 text-left text-xs font-semibold text-muted-foreground">F (Competitor)</th>
+                                    <th className="min-w-[150px] bg-gray-100 dark:bg-zinc-800 border px-2 py-1 text-left text-xs font-semibold text-muted-foreground">F (User ID)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {/* Data Rows */}
                                 {sortedSlots.map((slot, idx) => (
                                     <tr key={slot.id} className="border-b hover:bg-muted/30">
                                         <td className="bg-gray-100 dark:bg-zinc-800 border-r text-center text-xs text-muted-foreground">{idx + 2}</td>
                                         <td className="border-r px-2 py-1 text-xs text-foreground text-center whitespace-nowrap">{slot.date}</td>
-                                        <td className="border-r px-2 py-1 text-xs text-foreground font-mono">{slot.startTime}</td>
-                                        <td className="border-r px-2 py-1 text-xs text-foreground font-mono">{slot.endTime}</td>
-                                        <td className="border-r px-2 py-1 text-xs text-foreground">{slot.category}</td>
+                                        <td className="border-r px-2 py-1 text-xs text-foreground font-mono">{formatTime(slot.startTime)}</td>
+                                        <td className="border-r px-2 py-1 text-xs text-foreground font-mono">{formatTime(slot.endTime)}</td>
+                                        <td className="border-r px-2 py-1 text-xs text-foreground">{getCategoryName(slot.categoryId)}</td>
                                         <td className="border-r px-2 py-1 text-xs">
                                             <span className={cn(
                                                 "px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase",
@@ -246,7 +247,7 @@ export function ExportsPage({ slots }: ExportsPageProps) {
                                             </span>
                                         </td>
                                         <td className="px-2 py-1 text-xs font-medium text-foreground">
-                                          {slot.userFullName || "-"}
+                                          {slot.userId || "-"}
                                         </td>
                                     </tr>
                                 ))}
@@ -277,7 +278,6 @@ export function ExportsPage({ slots }: ExportsPageProps) {
       <div className="border-t pt-8">
         <h2 className="text-2xl font-bold tracking-tight text-foreground mb-1">CSV Exports</h2>
         <p className="text-muted-foreground mb-6">Download static reports and data.</p>
-
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {EXPORT_OPTIONS.map((option) => (
             <Card key={option.id} className="flex flex-col">
@@ -293,7 +293,6 @@ export function ExportsPage({ slots }: ExportsPageProps) {
                 <CardDescription className="flex-1">
                   {option.description}
                 </CardDescription>
-                
                 <div className="mt-auto pt-2">
                   <Button 
                     className={cn(
