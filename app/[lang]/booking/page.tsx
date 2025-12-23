@@ -8,12 +8,20 @@ import { toast } from "sonner";
 import { useAuth } from "@/providers/AuthProvider";
 import { collection, query, where, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function BookingPage({ params }: { params: Promise<{ lang: string }> }) {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+
+  // Multi-event state
+  const [openEvents, setOpenEvents] = useState<WPTEvent[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+  // Data state (depends on selectedEventId)
   const [event, setEvent] = useState<WPTEvent | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -22,74 +30,130 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
   const { lang } = use(params);
   const currentLang = lang || 'fr';
 
-  // Load data from Firebase
+  // 🔥 Phase 1: Load all open events
   useEffect(() => {
-    const loadData = async () => {
+    const loadOpenEvents = async () => {
       try {
-        console.log('📍 [BookingPage] START: Loading data from Firebase');
+        console.log('📍 [BookingPage] Phase 1: Loading open events');
 
-        // Find the active event (status === 'open')
         const eventsQuery = query(collection(db, 'events'), where('status', '==', 'open'));
         const eventsSnapshot = await getDocs(eventsQuery);
-        
+
         if (eventsSnapshot.empty) {
-          console.warn('⚠️  [BookingPage] No active events found');
-          toast.error("Aucun événement actif", {
-            description: "Aucun événement n'est actuellement disponible pour la réservation.",
+          console.warn('⚠️  [BookingPage] No open events found');
+          toast.error("Aucun événement disponible", {
+            description: "Aucun événement n'est actuellement ouvert pour la réservation.",
+          });
+          setOpenEvents([]);
+          setPageLoading(false);
+          return;
+        }
+
+        const rawEvents: WPTEvent[] = eventsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.name,
+            eventYear: data.eventYear,
+            eventStartDate: (data.eventStartDate as Timestamp).toDate(),
+            eventEndDate: (data.eventEndDate as Timestamp).toDate(),
+            registrationDeadline: (data.registrationDeadline as Timestamp).toDate(),
+            status: data.status,
+          } as WPTEvent;
+        });
+
+        console.log(`✅ [BookingPage] Found ${rawEvents.length} open event(s):`, rawEvents.map(e => e.name));
+        setOpenEvents(rawEvents);
+
+        // Auto-select if only one event
+        if (rawEvents.length === 1) {
+          console.log(`✨ [BookingPage] Auto-selecting single event: ${rawEvents[0].name}`);
+          setSelectedEventId(rawEvents[0].id);
+        }
+      } catch (err: any) {
+        console.error("❌ [BookingPage] ERROR loading open events:", err);
+        toast.error("Erreur de chargement", {
+          description: "Impossible de charger les événements disponibles.",
+        });
+        setPageLoading(false);
+      }
+    };
+
+    loadOpenEvents();
+  }, []);
+
+  // 🔥 Phase 2: Load event-specific data when selectedEventId changes
+  useEffect(() => {
+    if (!selectedEventId) {
+      setPageLoading(false);
+      return;
+    }
+
+    const loadEventData = async () => {
+      try {
+        setPageLoading(true);
+        console.log(`📍 [BookingPage] Phase 2: Loading data for event ${selectedEventId}`);
+
+        // Find selected event from loaded events
+        const selectedEvent = openEvents.find(e => e.id === selectedEventId);
+        if (!selectedEvent) {
+          console.error(`❌ [BookingPage] Event ${selectedEventId} not found in openEvents`);
+          toast.error("Événement introuvable", {
+            description: "L'événement sélectionné n'a pas pu être chargé.",
           });
           setPageLoading(false);
           return;
         }
 
-        const rawEventData = eventsSnapshot.docs[0].data();
-        const eventId = eventsSnapshot.docs[0].id;
-        const eventWithId: WPTEvent = {
-          ...(rawEventData as WPTEvent),
-          id: eventId,
-          registrationDeadline: (rawEventData.registrationDeadline as Timestamp).toDate(),
-          eventStartDate: (rawEventData.eventStartDate as Timestamp).toDate(),
-          eventEndDate: (rawEventData.eventEndDate as Timestamp).toDate(),
-        };
-        setEvent(eventWithId);
-        console.log('✅ [BookingPage] Event loaded:', { id: eventId, name: rawEventData.name });
+        setEvent(selectedEvent);
+        console.log(`✅ [BookingPage] Event set: ${selectedEvent.name}`);
 
         // Load categories for this event
-        const categoriesQuery = query(collection(db, 'categories'), where('eventId', '==', eventId));
+        const categoriesQuery = query(
+          collection(db, 'categories'),
+          where('eventId', '==', selectedEventId)
+        );
         const categoriesSnapshot = await getDocs(categoriesQuery);
         const categoriesData = categoriesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as Category[];
-        
-        // 🔧 DEBUG: Log raw category data to see structure
-        console.log('📋 [BookingPage] Raw category data from Firestore:');
+
+        console.log(`📋 [BookingPage] Raw category data from Firestore (eventId: ${selectedEventId}):`);
         categoriesSnapshot.docs.forEach(doc => {
           const data = doc.data();
           console.log(`   - ${data.name} (${doc.id}):`, {
             activeDates: data.activeDates,
             activeDatesType: typeof data.activeDates,
             activeDatesLength: Array.isArray(data.activeDates) ? data.activeDates.length : 'N/A',
-            allKeys: Object.keys(data)
           });
-        });
-        
-        setCategories(categoriesData);
-        console.log('✅ [BookingPage] Categories loaded:', categoriesData.length, 'categories');
-        categoriesData.forEach(cat => {
-          console.log(`   - ${cat.name} (${cat.id}): activeDates = ${cat.activeDates?.join(', ') || '(EMPTY OR MISSING)'}`);
         });
 
         // Load slots for this event
-        const slotsQuery = query(collection(db, 'slots'), where('eventId', '==', eventId));
+        const slotsQuery = query(
+          collection(db, 'slots'),
+          where('eventId', '==', selectedEventId)
+        );
         const slotsSnapshot = await getDocs(slotsQuery);
-        const slotsData = slotsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Slot[];
-        setSlots(slotsData);
-        console.log('✅ [BookingPage] Slots loaded:', slotsData.length, 'total slots');
-        
-        // Log slots by category and status for debugging
+        const slotsData = slotsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            eventId: data.eventId,
+            categoryId: data.categoryId,
+            date: data.date,
+            startTime: (data.startTime as Timestamp).toDate(),
+            endTime: (data.endTime as Timestamp).toDate(),
+            status: data.status,
+            userId: data.userId,
+            stripeSessionId: data.stripeSessionId,
+            assignedByAdminId: data.assignedByAdminId,
+            assignedAt: data.assignedAt ? (data.assignedAt as Timestamp).toDate() : undefined,
+            assignmentType: data.assignmentType,
+          } as Slot;
+        });
+
+        console.log(`✅ [BookingPage] Slots loaded: ${slotsData.length} total slots`);
         const slotsByCategory: Record<string, Slot[]> = {};
         slotsData.forEach(slot => {
           if (!slotsByCategory[slot.categoryId]) {
@@ -97,22 +161,15 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
           }
           slotsByCategory[slot.categoryId].push(slot);
         });
-        
+
         Object.entries(slotsByCategory).forEach(([catId, catSlots]) => {
           const availableCount = catSlots.filter(s => s.status === 'available').length;
           const totalCount = catSlots.length;
           console.log(`   - Category ${catId}: ${availableCount}/${totalCount} available`);
-          
-          // Log sample slots for first category
-          if (catSlots.length > 0) {
-            const sample = catSlots[0];
-            console.log(`      Sample slot: date=${sample.date}, status=${sample.status}`);
-          }
         });
 
         // 🔧 FIX: Enrich categories with activeDates from slots if missing
         const enrichedCategories = categoriesData.map(category => {
-          // If category has empty or missing activeDates, extract from slots
           if (!category.activeDates || category.activeDates.length === 0) {
             const datesFromSlots = Array.from(
               new Set(
@@ -121,9 +178,9 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
                   .map(slot => slot.date)
               )
             ).sort();
-            
+
             console.log(`🔧 [BookingPage] Enriching category ${category.name}: extracted dates from slots:`, datesFromSlots);
-            
+
             return {
               ...category,
               activeDates: datesFromSlots
@@ -131,36 +188,40 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
           }
           return category;
         });
-        
+
         setCategories(enrichedCategories);
-        console.log('✅ [BookingPage] Categories enriched:', enrichedCategories.length, 'categories');
+        setSlots(slotsData);
+        console.log(`✅ [BookingPage] Categories enriched: ${enrichedCategories.length} categories`);
         enrichedCategories.forEach(cat => {
           console.log(`   - ${cat.name} (${cat.id}): activeDates = ${cat.activeDates?.join(', ') || '(EMPTY)'}`);
         });
 
         // Load products for this event
-        const productsQuery = query(collection(db, 'products'), where('eventId', '==', eventId));
+        const productsQuery = query(
+          collection(db, 'products'),
+          where('eventId', '==', selectedEventId)
+        );
         const productsSnapshot = await getDocs(productsQuery);
         const productsData = productsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as Product[];
-        setProducts(productsData);
-        console.log('✅ [BookingPage] Products loaded:', productsData.length, 'products');
 
+        setProducts(productsData);
+        console.log(`✅ [BookingPage] Products loaded: ${productsData.length} products`);
         setPageLoading(false);
-        console.log('✅ [BookingPage] COMPLETE: All data loaded successfully');
+        console.log(`✅ [BookingPage] COMPLETE: All data loaded for event ${selectedEventId}`);
       } catch (err: any) {
-        console.error("❌ [BookingPage] ERROR loading booking data:", err);
+        console.error("❌ [BookingPage] ERROR loading event data:", err);
         toast.error("Erreur de chargement", {
-          description: "Impossible de charger les données de réservation.",
+          description: "Impossible de charger les données de l'événement.",
         });
         setPageLoading(false);
       }
     };
 
-    loadData();
-  }, []);
+    loadEventData();
+  }, [selectedEventId, openEvents]);
 
   const handleError = (msg: string) => {
     toast.error("Une erreur est survenue", {
@@ -193,7 +254,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
           slotsToReserve: slotsToCheckout,
           userId: user.uid,
           userEmail: user.email,
-          eventId: event?.id,
+          eventId: selectedEventId,
         }),
       });
 
@@ -230,7 +291,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
           slotsToReserve: slotsToCheckout,
           userId: user.uid,
           userEmail: user.email,
-          eventId: event?.id,
+          eventId: selectedEventId,
         }),
       });
 
@@ -249,6 +310,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
     ? Date.now() > event.registrationDeadline.getTime()
     : false;
 
+  // Loading state
   if (loading || pageLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -257,7 +319,8 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
     );
   }
 
-  if (!event) {
+  // No open events
+  if (openEvents.length === 0) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="text-center">
@@ -268,12 +331,82 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
     );
   }
 
+  // Multiple events: show selector
+  if (openEvents.length > 1 && !selectedEventId) {
+    return (
+      <div className="container mx-auto py-10">
+        <div className="max-w-2xl mx-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">Sélectionnez un Événement</CardTitle>
+              <CardDescription>
+                Plusieurs événements sont actuellement ouverts pour la réservation.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {openEvents.map(evt => (
+                  <Card
+                    key={evt.id}
+                    className="cursor-pointer transition-all hover:shadow-lg border-gray-200 hover:border-primary"
+                    onClick={() => setSelectedEventId(evt.id)}
+                  >
+                    <CardHeader className="p-4">
+                      <CardTitle className="text-lg">{evt.name}</CardTitle>
+                      <CardDescription className="text-sm">
+                        Année: {evt.eventYear} | Du{' '}
+                        {evt.eventStartDate.toLocaleDateString('fr-FR')} au{' '}
+                        {evt.eventEndDate.toLocaleDateString('fr-FR')}
+                      </CardDescription>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Deadline: {evt.registrationDeadline.toLocaleDateString('fr-FR')}
+                      </p>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // No event selected (shouldn't happen with auto-select, but safety check)
+  if (!event) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Événement non trouvé</h1>
+          <p className="text-muted-foreground">Veuillez réessayer.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Render booking view
   return (
     <div
       className={`container mx-auto py-10 ${
         isProcessing ? 'opacity-50 pointer-events-none' : ''
       }`}
     >
+      {/* Event selector for multiple events (shown if user navigates back) */}
+      {openEvents.length > 1 && (
+        <div className="mb-6 pb-6 border-b">
+          <p className="text-sm font-semibold text-gray-600 mb-3">Événement actif:</p>
+          <Tabs value={selectedEventId || ''} onValueChange={setSelectedEventId}>
+            <TabsList className="grid" style={{ gridTemplateColumns: `repeat(${openEvents.length}, 1fr)` }}>
+              {openEvents.map(evt => (
+                <TabsTrigger key={evt.id} value={evt.id}>
+                  {evt.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
+      )}
+
       <SlotBookingView
         availableSlots={slots}
         categories={categories}
