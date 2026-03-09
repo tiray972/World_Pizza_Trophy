@@ -46,5 +46,23 @@
     "description": "The international championship dedicated to professional pizza chefs: skills, creativity and excellence.",
     "keywords": "pizza, trophy, competition, pizzaiolo, professional, international, multi-category, creativity, excellence",
     "site_name": "World Pizza Trophy"
+  },
+  "rules": {
+    "title": "Rules & Categories",
+    "subtitle": "Discover the 12 official categories of the World Pizza Trophy.",
+    "categories": [
+      { "id": "classique", "name": "Classic Pizza", "description": "Excellence in tradition." },
+      { "id": "calzone", "name": "Calzone", "description": "Mastery of folding and baking." },
+      { "id": "napolitaine", "name": "Neapolitan", "description": "The art of Vera Pizza Napoletana." },
+      { "id": "dessert", "name": "Dessert Pizza", "description": "Sweet creativity on pizza dough." },
+      { "id": "focaccia", "name": "Focaccia", "description": "Soft, crispy, and fragrant." },
+      { "id": "pala", "name": "Pala", "description": "Paddle pizza, long and generous." },
+      { "id": "teglia", "name": "Teglia", "description": "Pan pizza, al taglio." },
+      { "id": "doue", "name": "The Pizza d'Oue", "description": "Special technical category." },
+      { "id": "pasta", "name": "Pasta", "description": "The art of Italian pasta." },
+      { "id": "glutenfree", "name": "Gluten Free Pizza", "description": "Excellence without compromise." },
+      { "id": "fritta", "name": "Fried Pizza", "description": "Naples' frying tradition." },
+      { "id": "acrobatica", "name": "Acrobatic Pizza / Show", "description": "The dough spinning show." }
+    ]
   }
 }

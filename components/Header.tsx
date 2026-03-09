@@ -42,6 +42,16 @@ export default function Header({
   const router = useRouter();
   const pathname = usePathname() || `/${lang}`;
 
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser: FBUser | null) => {
       if (!firebaseUser) {
@@ -81,51 +91,79 @@ export default function Header({
   };
 
   return (
-    <header className="bg-white text-black shadow-md sticky top-0 z-50">
-      <div className="container mx-auto px-4 flex items-center justify-between py-4">
-
+    <header
+      className={`sticky top-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "bg-white/90 backdrop-blur-md py-2 shadow-lg border-b border-gray-100"
+          : "bg-white py-4"
+      }`}
+    >
+      <div className="container mx-auto px-4 lg:px-8 flex items-center justify-between">
         {/* Logo */}
-        <Link href={`/${lang}`} className="flex items-center gap-2">
+        <Link href={`/${lang}`} className="relative group shrink-0">
           <Image
             src="/images/logo.png"
-            alt="Logo"
-            width={140}
-            height={90}
-            className="object-contain hover:scale-110 transition-transform"
+            alt="World Pizza Trophy Logo"
+            width={120}
+            height={80}
+            className="object-contain transition-transform duration-300 group-hover:scale-105"
+            priority
           />
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex space-x-6 font-medium">
-          <Link href={`/${lang}`} className="hover:text-teal-600">Home</Link>
-          <Link href={`/${lang}/blog`} className="hover:text-teal-600">About</Link>
-          <Link href={`/${lang}/accompagnement`} className="hover:text-teal-600">Visa & Business</Link>
-          <Link href={`/${lang}/location`} className="hover:text-teal-600">Properties</Link>
+        <nav className="hidden xl:flex items-center space-x-8 font-semibold text-gray-800">
+          {[
+            { name: "Home", href: `/${lang}` },
+            { name: "The Trophy", href: `/${lang}/trophy` },
+            { name: "Rules", href: `/${lang}/rules` },
+            { name: "Academy", href: `/${lang}/academy` },
+            { name: "Previous Editions", href: `/${lang}/editions` },
+            { name: "Gallery", href: `/${lang}/gallery` },
+            { name: "Contact", href: `/${lang}/contact` },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="relative py-2 hover:text-[#8B0000] transition-colors group"
+            >
+              {item.name}
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#8B0000] transition-all duration-300 group-hover:w-full"></span>
+            </Link>
+          ))}
           {isLoggedIn && (
-            <Link href={`/${lang}/dashboard`} className="hover:text-teal-600">
+            <Link
+              href={`/${lang}/dashboard`}
+              className="py-2 text-[#006400] hover:text-[#8B0000] transition-colors"
+            >
               Dashboard
             </Link>
           )}
-          <Link href={`/${lang}/contact`} className="hover:text-teal-600">Contact</Link>
         </nav>
 
         {/* Right Side */}
-        <div className="hidden md:flex items-center gap-4">
-
-          {/* language Switcher */}
+        <div className="hidden md:flex items-center gap-6">
+          {/* Language Switcher */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-gray-700">
-                <Globe className="h-5 w-5" />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-2 text-gray-700 hover:text-[#8B0000] hover:bg-gray-50 px-3"
+              >
+                <Globe className="h-4 w-4" />
+                <span className="text-sm font-bold uppercase">{lang}</span>
               </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-32">
               {locales.map((locale) => (
                 <DropdownMenuItem key={locale} asChild>
                   <Link
                     href={switchLocaleUrl(locale)}
-                    className={locale === lang ? "font-bold" : ""}
+                    className={`cursor-pointer ${
+                      locale === lang ? "text-[#8B0000] font-bold" : ""
+                    }`}
                   >
                     {localeNames[locale]}
                   </Link>
@@ -134,19 +172,31 @@ export default function Header({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Auth Buttons */}
-          {isLoggedIn ? (
-            <>
-              <span className="text-sm font-medium">👋 {userData?.name || "User"}</span>
-              <Button variant="outline" onClick={handleLogout}>
-                Logout
+          {/* Auth Section */}
+          <div className="flex items-center gap-3">
+            {isLoggedIn ? (
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-600 hidden lg:inline-block">
+                  Hello, <span className="font-bold">{userData?.name || "User"}</span>
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="border-[#8B0000] text-[#8B0000] hover:bg-[#8B0000] hover:text-white font-bold"
+                >
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={() => router.push(`/${lang}/auth/signup`)}
+                className="bg-[#8B0000] hover:bg-[#A50000] text-white font-bold px-6 shadow-md transition-all hover:shadow-lg active:scale-95"
+              >
+                REGISTER NOW
               </Button>
-            </>
-          ) : (
-            <Button onClick={() => router.push(`/${lang}/auth/signup`)}>
-              Sign Up
-            </Button>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Mobile Hamburger */}
@@ -176,54 +226,109 @@ function MobileMenu({
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
+  // Close menu on route change
+  useEffect(() => {
+    setOpen(false);
+  }, [router]);
+
   return (
-    <>
+    <div className="xl:hidden flex items-center gap-4">
+      {/* Mobile Register CTA (Visible when not logged in) */}
+      {!isLoggedIn && !open && (
+        <Button
+          size="sm"
+          onClick={() => router.push(`/${lang}/auth/signup`)}
+          className="bg-[#8B0000] text-white font-bold px-4 text-xs"
+        >
+          JOIN
+        </Button>
+      )}
+
       <button
-        className="md:hidden text-gray-700"
+        className="p-2 text-gray-800 focus:outline-none z-[100]"
         onClick={() => setOpen(!open)}
+        aria-label="Toggle menu"
       >
-        <svg className="h-7 w-7" fill="none" stroke="currentColor">
-          {open ? (
-            <path strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-          ) : (
-            <path strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-          )}
-        </svg>
+        <div className="relative w-6 h-5">
+          <span
+            className={`absolute block h-0.5 w-full bg-current transform transition-all duration-300 ${
+              open ? "rotate-45 top-2" : "top-0"
+            }`}
+          />
+          <span
+            className={`absolute block h-0.5 w-full bg-current transition-all duration-300 ${
+              open ? "opacity-0" : "top-2"
+            }`}
+          />
+          <span
+            className={`absolute block h-0.5 w-full bg-current transform transition-all duration-300 ${
+              open ? "-rotate-45 top-2" : "top-4"
+            }`}
+          />
+        </div>
       </button>
 
-      {open && (
-        <nav className="absolute top-16 left-0 w-full bg-white shadow-lg p-6 flex flex-col gap-5 text-lg font-medium md:hidden">
-          <Link href={`/${lang}`} onClick={() => setOpen(false)}>Home</Link>
-          <Link href={`/${lang}/blog`} onClick={() => setOpen(false)}>About</Link>
-          <Link href={`/${lang}/accompagnement`} onClick={() => setOpen(false)}>Visa & Business</Link>
-          <Link href={`/${lang}/location`} onClick={() => setOpen(false)}>Properties</Link>
-          {isLoggedIn && (
-            <Link href={`/${lang}/dashboard`} onClick={() => setOpen(false)}>
-              Dashboard
-            </Link>
-          )}
-          <Link href={`/${lang}/contact`} onClick={() => setOpen(false)}>Contact</Link>
-
-          <div className="flex flex-col gap-3">
-            {locales.map((locale: string) => (
-              <Link
-                key={locale}
-                href={switchLocaleUrl(locale)}
-                className="text-sm"
-                onClick={() => setOpen(false)}
-              >
-                🌍 {localeNames[locale]}
+      {/* Modern Overlay Menu */}
+      <div
+        className={`fixed inset-0 bg-white z-[90] flex flex-col transition-transform duration-500 ease-in-out ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="p-8 mt-20 flex flex-col h-full overflow-y-auto">
+          <nav className="flex flex-col gap-6 text-2xl font-bold text-gray-900 border-b border-gray-100 pb-8">
+            <Link href={`/${lang}`} onClick={() => setOpen(false)}>Home</Link>
+            <Link href={`/${lang}/trophy`} onClick={() => setOpen(false)}>The Trophy</Link>
+            <Link href={`/${lang}/rules`} onClick={() => setOpen(false)}>Rules</Link>
+            <Link href={`/${lang}/academy`} onClick={() => setOpen(false)}>Academy</Link>
+            <Link href={`/${lang}/editions`} onClick={() => setOpen(false)}>Previous Editions</Link>
+            <Link href={`/${lang}/gallery`} onClick={() => setOpen(false)}>Gallery</Link>
+            {isLoggedIn && (
+              <Link href={`/${lang}/dashboard`} className="text-[#006400]" onClick={() => setOpen(false)}>
+                Dashboard
               </Link>
-            ))}
-          </div>
+            )}
+            <Link href={`/${lang}/contact`} onClick={() => setOpen(false)}>Contact</Link>
+          </nav>
 
-          {isLoggedIn ? (
-            <Button variant="outline" onClick={handleLogout}>Logout</Button>
-          ) : (
-            <Button onClick={() => router.push(`/${lang}/auth/signup`)}>Sign Up</Button>
-          )}
-        </nav>
-      )}
-    </>
+          <div className="mt-8 flex flex-col gap-6">
+            <div className="flex flex-col gap-3">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Select Language</span>
+              <div className="flex gap-4">
+                {locales.map((locale: string) => (
+                  <Link
+                    key={locale}
+                    href={switchLocaleUrl(locale)}
+                    className={`px-4 py-2 border rounded-full text-sm font-bold ${
+                      locale === lang ? "bg-[#8B0000] text-white border-[#8B0000]" : "border-gray-200 text-gray-600"
+                    }`}
+                    onClick={() => setOpen(false)}
+                  >
+                    {locale.toUpperCase()}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-auto pb-12 pt-8">
+              {isLoggedIn ? (
+                <div className="flex flex-col gap-4">
+                  <p className="text-gray-600 font-medium text-lg">Logged in as <span className="text-gray-900 font-bold">{userName}</span></p>
+                  <Button variant="outline" className="w-full border-[#8B0000] text-[#8B0000] font-bold py-6 text-lg" onClick={() => { handleLogout(); setOpen(false); }}>
+                    Logout
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  className="w-full bg-[#8B0000] hover:bg-[#A50000] text-white font-bold py-6 text-xl shadow-xl"
+                  onClick={() => { router.push(`/${lang}/auth/signup`); setOpen(false); }}
+                >
+                  REGISTER NOW
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
