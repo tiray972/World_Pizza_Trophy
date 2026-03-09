@@ -43,10 +43,10 @@ export default async function Home({ params }: Props) {
       title: dictionary.home.hero.title,
       content: dictionary.home.hero.subtitle,
       images: [
-        "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1920&q=80",
-        "https://images.unsplash.com/photo-1511689984-6c7a80667a5a?w=1920&q=80",
-        "https://images.unsplash.com/photo-1600891964093-4316c288032e?w=1920&q=80", // pizza competition style
-        "https://images.unsplash.com/photo-1594007654729-407eedc4be3f?w=1920&q=80"
+        "/images/DW4A3087.JPG",
+        "/images/victoire.JPG",
+        "/images/christofaro.JPG",
+        "/images/degerine.JPG"
       ],
       component: HeroImageBackground,
     },
@@ -54,9 +54,9 @@ export default async function Home({ params }: Props) {
       title: dictionary.home.intro.title,
       content: dictionary.home.intro.text,
       images: [
-        "https://images.unsplash.com/photo-1593504049359-74330189a345?q=80&w=627&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=962&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        "https://images.unsplash.com/photo-1594007654729-407eedc4be3f?w=1920&q=80",
+        "/images/victoire.JPG",
+        "/images/christofaro.JPG",
+        "/images/DW4A3087.JPG",
       ],
       component: ImageTextImage,
     },
@@ -64,9 +64,9 @@ export default async function Home({ params }: Props) {
       title: dictionary.home.numbers.title,
       content: `${dictionary.home.numbers.pizzaiolos} | ${dictionary.home.numbers.countries} | ${dictionary.home.numbers.categories}`,
       images: [
-        "https://images.unsplash.com/photo-1571997478779-2adcbbe9ab2f?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        "https://images.unsplash.com/photo-1571997478779-2adcbbe9ab2f?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-        "https://images.unsplash.com/photo-1600891964599-f61ba0e24092?w=1920&q=80"
+        "/images/degerine.JPG",
+        "/images/christofaro.JPG",
+        "/images/victoire.JPG"
       ],
       component: ThreeColumnFeatures,
     },
@@ -74,8 +74,8 @@ export default async function Home({ params }: Props) {
       title: dictionary.home.why.title,
       content: dictionary.home.why.items.map(i => i.title + ': ' + i.text).join('\n'),
       images: [
-        "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1920&q=80",
-        "https://images.unsplash.com/photo-1534939554772-54585f0a60b7?w=1920&q=80"
+        "/images/DW4A3087.JPG",
+        "/images/degerine.JPG"
       ],
       component: Text4ImagesSection,
     },
@@ -83,7 +83,7 @@ export default async function Home({ params }: Props) {
       title: dictionary.home.cta.title,
       content: dictionary.home.cta.subtitle,
       images: [
-        "https://images.unsplash.com/photo-1600891964373-fb57c60d1f30?w=1920&q=80"
+        "/images/victoire.JPG"
       ],
       component: FullWidthBanner,
     },
