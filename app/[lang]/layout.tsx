@@ -3,6 +3,7 @@ import "../globals.css";
 import { locales } from "@/lib/i18n/config";
 import { TriggerRefreshProvider } from "@/providers/TriggerRefreshprovider";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { SlotSyncProvider } from "@/providers/SlotSyncProvider";
 
 const francois = localFont({
   src: "../../fonts/FrancoisOne-Regular.ttf",
@@ -70,7 +71,9 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
 
       <body className={`${francois.variable} antialiased`} suppressHydrationWarning>
         <AuthProvider>
-          <TriggerRefreshProvider>{children}</TriggerRefreshProvider>
+          <SlotSyncProvider>
+            <TriggerRefreshProvider>{children}</TriggerRefreshProvider>
+          </SlotSyncProvider>
         </AuthProvider>
       </body>
     </html>
