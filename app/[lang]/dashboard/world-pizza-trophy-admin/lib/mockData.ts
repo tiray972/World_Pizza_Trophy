@@ -165,7 +165,7 @@ export const WPT_DEFAULT_TEMPLATE_PRODUCTS: Omit<Product, "id" | "eventId">[] = 
     name: 'Pack Compétiteur OR',
     description: '3 catégories + repas VIP',
     stripePriceId: '', // Placeholder: Updated in Settings after creation
-    unitAmount: 30000,
+    unitAmount: 300,
     slotsRequired: 3,
     isPack: true,
     includesMeal: true,
@@ -175,7 +175,7 @@ export const WPT_DEFAULT_TEMPLATE_PRODUCTS: Omit<Product, "id" | "eventId">[] = 
     name: 'Pack Duo',
     description: '2 catégories pour 2 personnes',
     stripePriceId: '', // Placeholder: Updated in Settings after creation
-    unitAmount: 18000,
+    unitAmount: 180,
     slotsRequired: 2,
     isPack: true,
     includesMeal: false,
@@ -189,7 +189,7 @@ export const CATEGORY_TEMPLATES = WPT_DEFAULT_TEMPLATE_CATEGORIES;
 // ============================================================================
 // ⚠️ DEPRECATED: Real event data has been removed from this file
 // ============================================================================
-// 
+//
 // The following data structures were previously in this file and have been
 // removed to enforce clean separation between templates and real data:
 //

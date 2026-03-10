@@ -24,13 +24,13 @@ export function ProductsPage({ products, selectedEventId, onCreateProduct, onUpd
 
   const handleCreateProduct = async (productData: Omit<Product, "id" | "eventId">) => {
     if (!selectedEventId) {
-        console.error("No event selected");
-        return;
+      console.error("No event selected");
+      return;
     }
     // The modal gives us data without eventId, the parent/handler appends it
     await onCreateProduct({
-        ...productData,
-        eventId: selectedEventId
+      ...productData,
+      eventId: selectedEventId
     });
   };
 
@@ -92,7 +92,7 @@ export function ProductsPage({ products, selectedEventId, onCreateProduct, onUpd
               <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                 <div className="flex items-center space-x-2 text-sm">
                   <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold">{formatCurrency(product.unitAmount / 100)}</span>
+                  <span className="font-semibold">{formatCurrency(product.unitAmount)}</span>
                 </div>
                 <div className="flex items-center space-x-2 text-sm">
                   <Layers className="h-4 w-4 text-muted-foreground" />
@@ -106,26 +106,26 @@ export function ProductsPage({ products, selectedEventId, onCreateProduct, onUpd
                 )}
               </div>
             </CardContent>
-            
+
             {/* Delete Button (Always visible now for better usability) */}
             <div className="absolute top-4 right-14">
-                <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      initiateDelete(product);
-                    }}
-                    title="Delete Product"
-                >
-                    <Trash2 className="h-4 w-4" />
-                </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  initiateDelete(product);
+                }}
+                title="Delete Product"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </Card>
         ))}
-        
-        <button 
+
+        <button
           onClick={() => setIsModalOpen(true)}
           className="flex flex-col items-center justify-center rounded-xl border border-dashed p-8 text-center hover:bg-accent/50 transition-colors h-full min-h-[250px]"
         >
@@ -150,7 +150,7 @@ export function ProductsPage({ products, selectedEventId, onCreateProduct, onUpd
         title="Delete Product?"
         description={
           <span>
-            Are you sure you want to delete <strong>{productToDelete?.name}</strong>? 
+            Are you sure you want to delete <strong>{productToDelete?.name}</strong>?
             This will likely affect reporting if users have already purchased it.
           </span>
         }

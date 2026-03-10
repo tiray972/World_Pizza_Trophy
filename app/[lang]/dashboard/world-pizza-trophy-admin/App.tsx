@@ -14,13 +14,13 @@ import { PaymentsPage } from './components/PaymentsPage';
 import { CreateEventModal } from './components/CreateEventModal';
 import { ThemeProvider } from './components/ThemeProvider';
 import { formatCurrency } from './lib/utils';
-import { 
-  useEvents, 
-  useUsers, 
-  useSlots, 
-  useCategories, 
-  useProducts, 
-  useVouchers, 
+import {
+  useEvents,
+  useUsers,
+  useSlots,
+  useCategories,
+  useProducts,
+  useVouchers,
   usePayments,
 } from './lib/useFirebase';
 // Import direct des templates depuis mockData.ts
@@ -30,25 +30,25 @@ import {
 } from './lib/mockData';
 import { Timestamp } from 'firebase/firestore';
 
-const DashboardStats = ({ 
-  slots, 
-  users, 
+const DashboardStats = ({
+  slots,
+  users,
   products,
-  eventId 
-}: { 
-  slots: Slot[], 
-  users: User[], 
+  eventId
+}: {
+  slots: Slot[],
+  users: User[],
   products: Product[],
   eventId: string
 }) => {
   const registeredUsers = users.filter(u => u.registrations[eventId]);
   const paidUsers = registeredUsers.filter(u => u.registrations[eventId].paid);
-  
-  const avgProductPrice = products.length > 0 
-    ? products.reduce((acc, p) => acc + p.unitAmount, 0) / products.length 
-    : 30000;
-  
-  const estimatedRevenue = (paidUsers.length * avgProductPrice) / 100;
+
+  const avgProductPrice = products.length > 0
+    ? products.reduce((acc, p) => acc + p.unitAmount, 0) / products.length
+    : 300;
+
+  const estimatedRevenue = (paidUsers.length * avgProductPrice);
   const totalSlots = slots.length;
   const bookedSlots = slots.filter(s => s.status !== 'available').length;
 
@@ -79,7 +79,7 @@ const DashboardStats = ({
         </div>
       </div>
       <div className="rounded-xl border bg-card shadow-sm p-12 text-center text-muted-foreground">
-         Detailed Analytics Charts would appear here.
+        Detailed Analytics Charts would appear here.
       </div>
     </div>
   );
@@ -98,7 +98,7 @@ export default function App() {
   const { products, createProduct, updateProduct, deleteProduct } = useProducts(selectedEventId);
   const { vouchers, createVoucher, deleteVoucher } = useVouchers(selectedEventId);
   const { payments, updatePayment } = usePayments(selectedEventId);
-  
+
   // Set default event on first load
   React.useEffect(() => {
     if (events.length > 0 && !selectedEventId) {
@@ -178,7 +178,7 @@ export default function App() {
       if (copyFromEventId === 'default_template') {
         // --- DUPLICATE FROM WPT STANDARD TEMPLATE ---
         // Source: WPT_DEFAULT_TEMPLATE_CATEGORIES & WPT_DEFAULT_TEMPLATE_PRODUCTS in mockData.ts
-        
+
         // Categories: duplicate with new IDs and new eventId
         for (const tpl of WPT_DEFAULT_TEMPLATE_CATEGORIES) {
           const newCatData: Omit<Category, 'id'> = {
@@ -213,7 +213,7 @@ export default function App() {
       } else if (copyFromEventId) {
         // --- DUPLICATE FROM EXISTING EVENT ---
         // All categories and products from the source event are copied with new IDs
-        
+
         // Categories: filter by source eventId, duplicate with new IDs
         const sourceCategories = categories.filter(c => c.eventId === copyFromEventId);
         for (const sourceCat of sourceCategories) {
@@ -274,14 +274,14 @@ export default function App() {
       alert("No event selected. Cannot create slots.");
       return;
     }
-    
+
     const newSlots: Omit<Slot, "id">[] = slotsData.map(data => ({
       ...data,
       eventId: selectedEventId,
       status: 'available' as const,
       stripeSessionId: null,
     }));
-    
+
     await createSlots(newSlots);
   };
 
@@ -344,20 +344,20 @@ export default function App() {
 
   const renderContent = () => {
     switch (activeView) {
-      case 'dashboard': 
+      case 'dashboard':
         return (
-          <DashboardStats 
-            slots={eventSlots} 
-            users={users} 
-            products={eventProducts} 
-            eventId={selectedEventId} 
+          <DashboardStats
+            slots={eventSlots}
+            users={users}
+            products={eventProducts}
+            eventId={selectedEventId}
           />
         );
-      case 'settings': 
+      case 'settings':
         return (
-          <SettingsPage 
-            event={selectedEvent} 
-            onUpdateEvent={handleUpdateEvent} 
+          <SettingsPage
+            event={selectedEvent}
+            onUpdateEvent={handleUpdateEvent}
             onCreateEvent={() => setIsCreateEventModalOpen(true)}
           />
         );
@@ -372,43 +372,43 @@ export default function App() {
             onDeleteCategory={handleDeleteCategory}
           />
         );
-      case 'slots': 
+      case 'slots':
         return (
-          <SlotsPage 
-            slots={eventSlots} 
-            users={users} 
+          <SlotsPage
+            slots={eventSlots}
+            users={users}
             categories={eventCategories}
             selectedEvent={selectedEvent}
-            onUpdateSlot={handleUpdateSlot} 
+            onUpdateSlot={handleUpdateSlot}
             onCreateSlot={handleCreateSlots}
             onDeleteSlot={handleDeleteSlot}
             onDeleteDate={handleDeleteDate}
           />
         );
-      case 'products': 
+      case 'products':
         return (
-          <ProductsPage 
-            products={eventProducts} 
+          <ProductsPage
+            products={eventProducts}
             selectedEventId={selectedEventId}
             onCreateProduct={handleCreateProduct}
             onUpdateProduct={handleUpdateProduct}
             onDeleteProduct={handleDeleteProduct}
           />
         );
-      case 'vouchers': 
+      case 'vouchers':
         return (
-          <VouchersPage 
-            vouchers={eventVouchers} 
+          <VouchersPage
+            vouchers={eventVouchers}
             selectedEventId={selectedEventId}
             onCreateVoucher={handleCreateVoucher}
             onDeleteVoucher={handleDeleteVoucher}
           />
         );
-      case 'users': 
+      case 'users':
         return (
-          <UsersPage 
-            users={users} 
-            slots={eventSlots} 
+          <UsersPage
+            users={users}
+            slots={eventSlots}
             categories={eventCategories}
             selectedEventId={selectedEventId}
             onUpdateSlots={handleUpdateSlotsBulk}
@@ -417,7 +417,7 @@ export default function App() {
         );
       case 'payments':
         return (
-          <PaymentsPage 
+          <PaymentsPage
             payments={payments}
             users={users}
             slots={eventSlots}
@@ -426,11 +426,11 @@ export default function App() {
             onUpdatePayment={handleUpdatePayment}
           />
         );
-      case 'exports': 
+      case 'exports':
         return (
-          <ExportsPage 
+          <ExportsPage
             slots={eventSlots}
-            categories={eventCategories} 
+            categories={eventCategories}
           />
         );
       default: return null;
@@ -439,8 +439,8 @@ export default function App() {
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="wpt-admin-theme">
-      <AdminLayout 
-        activeView={activeView} 
+      <AdminLayout
+        activeView={activeView}
         onNavigate={setActiveView}
         events={events}
         selectedEventId={selectedEventId}
@@ -449,7 +449,7 @@ export default function App() {
       >
         {renderContent()}
 
-        <CreateEventModal 
+        <CreateEventModal
           isOpen={isCreateEventModalOpen}
           onClose={() => setIsCreateEventModalOpen(false)}
           onConfirm={handleCreateEvent}
