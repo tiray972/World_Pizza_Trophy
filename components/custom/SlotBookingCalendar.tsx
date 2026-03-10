@@ -3,11 +3,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Slot, Category, WPTEvent, Product } from '@/types/firestore';
+import { Slot, Category, WPTEvent, Product, Participant } from '@/types/firestore';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, ShoppingCartIcon, XCircleIcon, ClockIcon, PizzaIcon, PackageIcon, UtensilsCrossedIcon, CheckCircleIcon, ArrowLeftIcon } from 'lucide-react';
+import { CalendarIcon, ShoppingCartIcon, XCircleIcon, ClockIcon, PizzaIcon, PackageIcon, UtensilsCrossedIcon, CheckCircleIcon, ArrowLeftIcon, UserIcon } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose } from '@/components/ui/sheet';
+import { ParticipantModal } from './ParticipantModal';
 
 interface SelectedSlot {
   slotId: string;
@@ -15,6 +16,7 @@ interface SelectedSlot {
   categoryName: string;
   startTime: Date;
   date: string;
+  participant?: Participant; // 👈 Ajouter info du participant
 }
 
 interface SelectedPackSlot extends SelectedSlot {
@@ -83,6 +85,10 @@ export function SlotBookingView({
   const [packToPurchase, setPackToPurchase] = useState<Product | null>(null);
   const [selectedPackSlots, setSelectedPackSlots] = useState<SelectedPackSlot[]>([]);
   const [activePackCategoryId, setActivePackCategoryId] = useState<string | null>(null);
+  
+  // 👤 Participant info states
+  const [isParticipantModalOpen, setIsParticipantModalOpen] = useState(false);
+  const [currentSlotForParticipant, setCurrentSlotForParticipant] = useState<SelectedSlot | null>(null);
 
   // 🔧 DEBUG LOG: Track prop changes
   useEffect(() => {
@@ -671,27 +677,60 @@ export function SlotBookingView({
             selectedSlots.map(slot => {
               const dateObj = new Date(slot.date + 'T00:00:00');
               const displayDate = formatDateDisplay(dateObj);
+              const hasParticipant = !!slot.participant;
 
               return (
-                <Card key={slot.slotId} className="p-3 flex justify-between items-center bg-gray-50 shadow-sm">
-                  <div>
-                    <p className="font-semibold">{slot.categoryName}</p>
-                    <p className="text-sm text-gray-500 flex items-center">
-                      <ClockIcon className="w-3 h-3 mr-1" />
-                      {formatTime(slot.startTime)} - {displayDate}
-                    </p>
-                  </div>
+                <Card key={slot.slotId} className={`p-3 bg-gray-50 shadow-sm ${hasParticipant ? 'border-green-200 border-2' : 'border-yellow-200 border-2'}`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <p className="font-semibold">{slot.categoryName}</p>
+                      <p className="text-sm text-gray-500 flex items-center">
+                        <ClockIcon className="w-3 h-3 mr-1" />
+                        {formatTime(slot.startTime)} - {displayDate}
+                      </p>
+                      
+                      {/* 👤 Afficher les infos du participant si disponibles */}
+                      {hasParticipant && (
+                        <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
+                          <p className="text-xs font-semibold text-green-700">
+                            <UserIcon className="w-3 h-3 inline mr-1" />
+                            {slot.participant!.firstName} {slot.participant!.lastName}
+                          </p>
+                          {slot.participant!.email && (
+                            <p className="text-xs text-green-600">{slot.participant!.email}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() =>
-                      handleToggleSelect(availableSlots.find(s => s.id === slot.slotId)!)
-                    }
-                  >
-                    <XCircleIcon className="w-4 h-4" />
-                  </Button>
+                    <div className="flex flex-col gap-1">
+                      {/* Bouton pour ajouter/modifier les infos du participant */}
+                      <Button
+                        size="sm"
+                        variant={hasParticipant ? "default" : "outline"}
+                        className={`h-8 text-xs ${hasParticipant ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                        onClick={() => {
+                          setCurrentSlotForParticipant(slot);
+                          setIsParticipantModalOpen(true);
+                        }}
+                      >
+                        <UserIcon className="w-3 h-3 mr-1" />
+                        {hasParticipant ? 'Modifier' : 'Ajouter'}
+                      </Button>
+
+                      {/* Bouton pour supprimer le créneau */}
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() =>
+                          handleToggleSelect(availableSlots.find(s => s.id === slot.slotId)!)
+                        }
+                      >
+                        <XCircleIcon className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </Card>
               );
             })
@@ -703,6 +742,16 @@ export function SlotBookingView({
             <span>Total à Payer:</span>
             <span className="text-2xl text-primary">{formatPrice(totalPrice)}</span>
           </div>
+
+          {/* ⚠️ Vérifier que tous les participants sont remplis */}
+          {selectedSlots.some(slot => !slot.participant) && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-3">
+              <p className="text-xs text-yellow-700 font-semibold">
+                ⚠️ Veuillez ajouter les informations du participant pour tous les créneaux
+              </p>
+            </div>
+          )}
+
           <SheetClose asChild>
             <Button type="button" variant="outline" className="w-full mb-2">
               Continuer la Sélection
@@ -711,7 +760,7 @@ export function SlotBookingView({
           <Button
             type="button"
             className="w-full h-12 text-lg"
-            disabled={selectedSlots.length === 0}
+            disabled={selectedSlots.length === 0 || selectedSlots.some(slot => !slot.participant)}
             onClick={() => {
               onCheckout(selectedSlots);
               setIsCartSheetOpen(false);
@@ -788,6 +837,28 @@ export function SlotBookingView({
       <Sheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen}>
         {renderCartSheetContent()}
       </Sheet>
+
+      {/* 👤 Participant Modal */}
+      <ParticipantModal
+        open={isParticipantModalOpen}
+        onClose={() => {
+          setIsParticipantModalOpen(false);
+          setCurrentSlotForParticipant(null);
+        }}
+        onConfirm={(participant) => {
+          if (currentSlotForParticipant) {
+            // Mettre à jour le slot avec les infos du participant
+            setSelectedSlots(selectedSlots.map(slot =>
+              slot.slotId === currentSlotForParticipant.slotId
+                ? { ...slot, participant }
+                : slot
+            ));
+          }
+          setIsParticipantModalOpen(false);
+          setCurrentSlotForParticipant(null);
+        }}
+        slotInfo={currentSlotForParticipant ? `${currentSlotForParticipant.categoryName} - ${formatTime(currentSlotForParticipant.startTime)}, ${formatDateDisplay(new Date(currentSlotForParticipant.date + 'T00:00:00'))}` : undefined}
+      />
     </div>
   );
 }

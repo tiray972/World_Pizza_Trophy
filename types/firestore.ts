@@ -106,21 +106,40 @@ export interface Category {
 export type SlotStatus = 'available' | 'locked' | 'paid' | 'offered';
 export type AssignmentType = 'manual' | 'payment' | 'voucher';
 
+export interface Participant {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+}
+
 export interface Slot {
   id: string;
   eventId: string;
   categoryId: string;
   date: string; // ISO date string (YYYY-MM-DD)
-  startTime: Date; // Converted from Firestore Timestamp
-  endTime: Date;   // Converted from Firestore Timestamp
+  startTime: Date;
+  endTime: Date;
   status: SlotStatus;
-  userId?: string;
-  stripeSessionId: string | null;
   
-  // Traceability Fields
+  // 👤 Qui a réservé ce slot
+  buyerId: string; // L'utilisateur qui a payé
+  
+  // 👥 Qui va utiliser ce slot
+  participant?: Participant; // Le participant (peut être différent du buyerId)
+  
+  // 🔒 Lock temporaire (10 minutes)
+  lockedUntil?: Date; // Si le slot est verrouillé, jusqu'à quand?
+  lockedByUserId?: string; // Qui l'a verrouillé?
+  
+  // 💳 Paiement
+  stripeSessionId?: string | null;
+  
+  // Traceability
   assignedByAdminId?: string;
-  assignedAt?: Date; // Converted from Firestore Timestamp
+  assignedAt?: Date;
   assignmentType?: AssignmentType;
+  paidAt?: Date; // Quand a-t-il été payé?
 }
 
 /* ---------------------------------

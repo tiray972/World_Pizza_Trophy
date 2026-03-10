@@ -52,11 +52,10 @@ export async function POST(req: Request) {
 
         if (userId && slotsToReserveJson) {
             
-            let slotIds: string[] = [];
+            let slotsData: Array<{ slotId: string; participant?: any }> = [];
             try {
-                // Le contenu est un string JSON, on doit le parser
-                slotIds = JSON.parse(slotsToReserveJson);
-                if (!Array.isArray(slotIds) || slotIds.length === 0) {
+                slotsData = JSON.parse(slotsToReserveJson);
+                if (!Array.isArray(slotsData) || slotsData.length === 0) {
                     throw new Error("slotsToReserve is invalid or empty.");
                 }
             } catch (e) {
@@ -70,6 +69,7 @@ export async function POST(req: Request) {
                 const batch = adminDB.batch();
 
                 // 1️⃣ Enregistrer le paiement
+                const slotIds = slotsData.map((s: any) => s.slotId);
                 const paymentRecord: Payment = {
                     id: session.id,
                     eventId: eventId || "",
@@ -94,9 +94,12 @@ export async function POST(req: Request) {
 
                 console.log(`✅ Payment recorded: ${paymentRef.id} for user ${userId}`);
 
-                // 2️⃣ Récupérer les catégories des slots pour mettre à jour l'utilisateur
+                // 2️⃣ Récupérer les catégories des slots et mettre à jour les slots
                 const categoryIds = new Set<string>();
-                for (const slotId of slotIds) {
+                for (const slotInfo of slotsData) {
+                    const slotId = slotInfo.slotId;
+                    const participant = slotInfo.participant;
+                    
                     const slotRef = adminDB.collection("slots").doc(slotId);
                     const slotDoc = await slotRef.get();
                     
@@ -104,13 +107,14 @@ export async function POST(req: Request) {
                         const slotData = slotDoc.data();
                         categoryIds.add(slotData?.categoryId || "");
                         
-                        // Mettre à jour le slot : pending -> paid
+                        // Mettre à jour le slot : locked -> paid
                         batch.update(slotRef, {
-                            userId: userId,
+                            buyerId: userId,
                             status: "paid",
+                            participant: participant || null,
                             stripeSessionId: session.id,
                             assignmentType: "payment",
-                            assignedAt: admin.firestore.Timestamp.fromDate(new Date()),
+                            paidAt: admin.firestore.Timestamp.fromDate(new Date()),
                         });
                     }
                 }
@@ -171,7 +175,7 @@ export async function POST(req: Request) {
     if (event.type === "charge.refunded") {
         const charge = event.data.object as Stripe.Charge;
         console.log(`⚠️ Charge refunded: ${charge.id}`);
-        // TODO: Implémenter la logique de remboursement complet
+        // TODO: Implémenter la logique de remboursement complet (slots back to available, etc.)
     }
 
     return new NextResponse(null, { status: 200 });
