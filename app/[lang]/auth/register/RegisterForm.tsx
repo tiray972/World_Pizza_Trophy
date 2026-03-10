@@ -32,10 +32,50 @@ export default function RegisterForm() {
     }
     setIsLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      const user = result.user;
+
+      console.log('👤 User created in Firebase:', user.uid);
+
+      // 👈 Créer le profil utilisateur dans Firestore
+      try {
+        const profileResponse = await fetch('/api/auth/create-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: user.uid,
+            email: user.email,
+            firstName: '',
+            lastName: '',
+            phone: '',
+            country: '',
+          }),
+        });
+
+        const profileData = await profileResponse.json();
+        console.log('🔹 Profile creation response:', profileResponse.status, profileData);
+
+        if (!profileResponse.ok) {
+          console.error('❌ Erreur lors de la création du profil:', profileData);
+          toast.error("Erreur lors de la création du profil", { 
+            description: profileData.details || "Veuillez réessayer" 
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('✅ Profil utilisateur créé avec succès');
+      } catch (profileError) {
+        console.error('❌ Erreur réseau lors de la création du profil:', profileError);
+        toast.error("Erreur réseau", { description: "Impossible de créer le profil" });
+        setIsLoading(false);
+        return;
+      }
+
       toast.success("Inscription réussie !");
       router.replace(redirectUrl);
     } catch (err: any) {
+      console.error('❌ Erreur lors de l\'inscription Firebase:', err);
       toast.error("Erreur lors de l'inscription", { description: err.message });
     } finally {
       setIsLoading(false);
@@ -46,10 +86,50 @@ export default function RegisterForm() {
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      console.log('👤 User created via Google:', user.uid);
+
+      // 👈 Créer le profil utilisateur dans Firestore
+      try {
+        const profileResponse = await fetch('/api/auth/create-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: user.uid,
+            email: user.email,
+            firstName: user.displayName?.split(' ')[0] || '',
+            lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+            phone: '',
+            country: '',
+          }),
+        });
+
+        const profileData = await profileResponse.json();
+        console.log('🔹 Profile creation response:', profileResponse.status, profileData);
+
+        if (!profileResponse.ok) {
+          console.error('❌ Erreur lors de la création du profil:', profileData);
+          toast.error("Erreur lors de la création du profil", { 
+            description: profileData.details || "Veuillez réessayer" 
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('✅ Profil utilisateur créé avec succès');
+      } catch (profileError) {
+        console.error('❌ Erreur réseau lors de la création du profil:', profileError);
+        toast.error("Erreur réseau", { description: "Impossible de créer le profil" });
+        setIsLoading(false);
+        return;
+      }
+
       toast.success("Inscription réussie avec Google !");
       router.replace(redirectUrl);
     } catch (err: any) {
+      console.error('❌ Erreur lors de l\'inscription Google:', err);
       toast.error("Erreur Google", { description: err.message });
     } finally {
       setIsLoading(false);

@@ -27,6 +27,8 @@ interface FirestoreUser {
   name?: string;
   email?: string;
   role?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 interface HeaderProps {
@@ -141,7 +143,7 @@ export default function Header({
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#8B0000] transition-all duration-300 group-hover:w-full"></span>
             </Link>
           ))}
-          {isLoggedIn && (
+          {isLoggedIn && userData?.role === 'admin' && (
             <Link
               href={`/${lang}/dashboard`}
               className="py-2 text-[#006400] hover:text-[#8B0000] transition-colors"
@@ -190,6 +192,14 @@ export default function Header({
                   {t.greeting} <span className="font-bold">{userData?.name || "User"}</span>
                 </span>
                 <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="border-[#006400] text-[#006400] hover:bg-[#006400] hover:text-white font-bold"
+                >
+                  <Link href={`/${lang}/account`}>Mon Compte</Link>
+                </Button>
+                <Button
                   variant="outline"
                   size="sm"
                   onClick={handleLogout}
@@ -215,6 +225,7 @@ export default function Header({
           locales={locales}
           isLoggedIn={isLoggedIn}
           userName={userData?.name}
+          userRole={userData?.role}
           handleLogout={handleLogout}
           switchLocaleUrl={switchLocaleUrl}
           dictionary={dictionary}
@@ -231,6 +242,7 @@ function MobileMenu({
   locales,
   isLoggedIn,
   userName,
+  userRole,
   handleLogout,
   switchLocaleUrl,
   dictionary,
@@ -296,7 +308,7 @@ function MobileMenu({
             <Link href={`/${lang}/academy`} onClick={() => setOpen(false)}>{t.navigation.academy}</Link>
             <Link href={`/${lang}/editions`} onClick={() => setOpen(false)}>{t.navigation.editions}</Link>
             <Link href={`/${lang}/gallery`} onClick={() => setOpen(false)}>{t.navigation.gallery}</Link>
-            {isLoggedIn && (
+            {isLoggedIn && userRole === 'admin' && (
               <Link href={`/${lang}/dashboard`} className="text-[#006400]" onClick={() => setOpen(false)}>
                 {t.buttons.dashboard}
               </Link>

@@ -26,7 +26,7 @@ export async function POST(req: Request) {
             process.env.STRIPE_WEBHOOK_SECRET!
         );
     } catch (err) {
-        console.error("Webhook signature verification failed:", (err as Error).message);
+        console.error("❌ Webhook signature verification failed:", (err as Error).message);
         return new NextResponse("Webhook signature verification failed", { status: 400 });
     }
 
@@ -60,69 +60,118 @@ export async function POST(req: Request) {
                     throw new Error("slotsToReserve is invalid or empty.");
                 }
             } catch (e) {
-                console.error("Failed to parse slotsToReserve metadata:", slotsToReserveJson, e);
+                console.error("❌ Failed to parse slotsToReserve metadata:", slotsToReserveJson, e);
                 return new NextResponse("Invalid slot data in metadata", { status: 400 });
             }
 
             const isPack = isPackString === 'true';
 
-            // Démarrer une transaction batch pour garantir l'atomicité
-            const batch = adminDB.batch();
+            try {
+                const batch = adminDB.batch();
 
-            // 1. Enregistrer le paiement
-            const paymentRecord: Payment = {
-                id: session.id, // Utilisé pour le typage, l'ID réel sera généré par addDoc
-                eventId: eventId || "", // Get from metadata or will need to fetch from slot
-                userId: userId,
-                stripeSessionId: session.id,
-                amount: amountTotal / 100, // Convertir les centimes en unité
-                status: "paid",
-                source: "stripe",
-                slotIds: slotIds,
-                isPack: isPack,
-                packName: isPack ? packName : undefined,
-                metadata: session.metadata as Record<string, any>,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            };
-            const paymentRef = adminDB.collection("payments").doc(); // Crée un nouvel ID auto-généré
-            // Convert Date to Firestore Timestamp when writing to database
-            batch.set(paymentRef, {
-                ...paymentRecord,
-                createdAt: admin.firestore.Timestamp.fromDate(paymentRecord.createdAt),
-                updatedAt: admin.firestore.Timestamp.fromDate(paymentRecord.updatedAt),
-            });
-
-            // 2. Mettre à jour TOUS les Slots : Passer de 'pending' à 'paid'
-            slotIds.forEach(slotId => {
-                const slotRef = adminDB.collection("slots").doc(slotId);
-                // Le statut était 'pending' (dans la route de checkout), on le passe à 'paid'
-                batch.update(slotRef, {
+                // 1️⃣ Enregistrer le paiement
+                const paymentRecord: Payment = {
+                    id: session.id,
+                    eventId: eventId || "",
                     userId: userId,
-                    status: "paid",
                     stripeSessionId: session.id,
+                    amount: amountTotal / 100,
+                    status: "paid",
+                    source: "stripe",
+                    slotIds: slotIds,
+                    isPack: isPack,
+                    packName: isPack ? packName : undefined,
+                    metadata: session.metadata as Record<string, any>,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                };
+                const paymentRef = adminDB.collection("payments").doc();
+                batch.set(paymentRef, {
+                    ...paymentRecord,
+                    createdAt: admin.firestore.Timestamp.fromDate(paymentRecord.createdAt),
+                    updatedAt: admin.firestore.Timestamp.fromDate(paymentRecord.updatedAt),
                 });
-            });
-            
-            // 3. Mettre à jour l'utilisateur : marquer l'utilisateur comme payé
-            const userRef = adminDB.collection("users").doc(userId);
-            batch.update(userRef, {
-                paid: true, 
-                // Idéalement, on mettrait à jour les categoryIds aussi ici
-            });
 
-            // Exécuter le batch
-            await batch.commit();
-            console.log(`Checkout Session COMPLETED (ID: ${session.id}). ${slotIds.length} slots marked as paid for user ${userId}.`);
+                console.log(`✅ Payment recorded: ${paymentRef.id} for user ${userId}`);
+
+                // 2️⃣ Récupérer les catégories des slots pour mettre à jour l'utilisateur
+                const categoryIds = new Set<string>();
+                for (const slotId of slotIds) {
+                    const slotRef = adminDB.collection("slots").doc(slotId);
+                    const slotDoc = await slotRef.get();
+                    
+                    if (slotDoc.exists) {
+                        const slotData = slotDoc.data();
+                        categoryIds.add(slotData?.categoryId || "");
+                        
+                        // Mettre à jour le slot : pending -> paid
+                        batch.update(slotRef, {
+                            userId: userId,
+                            status: "paid",
+                            stripeSessionId: session.id,
+                            assignmentType: "payment",
+                            assignedAt: admin.firestore.Timestamp.fromDate(new Date()),
+                        });
+                    }
+                }
+
+                console.log(`✅ ${slotIds.length} slots updated to 'paid' status`);
+
+                // 3️⃣ Mettre à jour l'utilisateur avec la structure EventRegistration
+                const userRef = adminDB.collection("users").doc(userId);
+                const userDoc = await userRef.get();
+                
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    const registrations = userData.registrations || {};
+                    
+                    // Créer ou mettre à jour l'enregistrement pour cet événement
+                    if (!registrations[eventId]) {
+                        registrations[eventId] = {
+                            paid: true,
+                            categoryIds: Array.from(categoryIds).filter(id => id),
+                            stripeCustomerId: session.customer || undefined,
+                            paymentId: paymentRef.id,
+                            registeredAt: admin.firestore.Timestamp.fromDate(new Date()),
+                        };
+                    } else {
+                        // Merger avec les catégories existantes
+                        const existingCategoryIds = registrations[eventId].categoryIds || [];
+                        const allCategoryIds = Array.from(
+                            new Set([...existingCategoryIds, ...Array.from(categoryIds).filter(id => id)])
+                        );
+                        
+                        registrations[eventId] = {
+                            ...registrations[eventId],
+                            paid: true,
+                            categoryIds: allCategoryIds,
+                            paymentId: paymentRef.id,
+                            registeredAt: registrations[eventId].registeredAt || admin.firestore.Timestamp.fromDate(new Date()),
+                        };
+                    }
+
+                    batch.update(userRef, { registrations });
+                    console.log(`✅ User ${userId} registrations updated for event ${eventId}`);
+                } else {
+                    console.warn(`⚠️ User document not found: ${userId}`);
+                }
+
+                // Exécuter le batch
+                await batch.commit();
+                console.log(`✅ Webhook processing COMPLETED for session ${session.id}`);
+                
+            } catch (batchError) {
+                console.error("❌ Error processing webhook batch:", batchError);
+                return new NextResponse("Error processing payment", { status: 500 });
+            }
         }
     }
 
     // Gérer les remboursements
     if (event.type === "charge.refunded") {
-        // La logique de remboursement complète nécessite une recherche avancée dans la collection 'payments' 
-        // et la réinitialisation des slots associés.
         const charge = event.data.object as Stripe.Charge;
-        console.log(`Charge refunded: ${charge.id}`);
+        console.log(`⚠️ Charge refunded: ${charge.id}`);
+        // TODO: Implémenter la logique de remboursement complet
     }
 
     return new NextResponse(null, { status: 200 });
