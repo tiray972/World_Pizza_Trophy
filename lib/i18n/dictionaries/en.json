@@ -64,5 +64,23 @@
       { "id": "fritta", "name": "Fried Pizza", "description": "Naples' frying tradition." },
       { "id": "acrobatica", "name": "Acrobatic Pizza / Show", "description": "The dough spinning show." }
     ]
+  },
+  "header": {
+    "navigation": {
+      "home": "Home",
+      "trophy": "The Trophy",
+      "rules": "Rules",
+      "academy": "Academy",
+      "editions": "Previous Editions",
+      "gallery": "Gallery",
+      "contact": "Contact"
+    },
+    "buttons": {
+      "register": "REGISTER",
+      "logout": "Logout",
+      "dashboard": "Dashboard",
+      "language": "Language"
+    },
+    "greeting": "Hello,"
   }
 }

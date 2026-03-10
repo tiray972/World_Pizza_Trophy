@@ -1,93 +1,114 @@
-import { NextResponse, NextRequest } from "next/server"; // Importation corrigée
-import { adminDB } from "@/lib/firebase/admin"; // Chemin corrigé
+import { NextResponse, NextRequest } from "next/server";
+import { adminDB } from "@/lib/firebase/admin";
 import Stripe from 'stripe';
 
-// Initialisation de Stripe (utilisation de la variable d'environnement)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-    apiVersion: '2023-10-16' as any, // Correction du typage strict pour la version d'API
+    apiVersion: '2023-10-16' as any,
 });
 
-// Le chemin d'API est /api/booking/checkout
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { slotsToReserve, userId, userEmail } = body;
+        const { slotsToReserve, userId, userEmail, eventId, totalAmount, lang } = body;
 
-        // 1. Validation des données d'entrée
-        if (!slotsToReserve || slotsToReserve.length === 0 || !userId || !userEmail) {
-            return NextResponse.json({ error: "Données de créneaux manquantes." }, { status: 400 });
+        // Validation des données d'entrée
+        if (!slotsToReserve || slotsToReserve.length === 0 || !userId || !userEmail || !totalAmount || !lang) {
+            return NextResponse.json({ error: "Données manquantes." }, { status: 400 });
         }
 
-        const lineItems = [];
+        console.log(`🔵 [Checkout] Starting checkout for user ${userId}, event ${eventId}, slots: ${slotsToReserve.length}, total: ${totalAmount}€, lang: ${lang}`);
+
         const availableSlots = [];
         
-        // 2. Vérification de la disponibilité des slots et préparation des line items Stripe
+        // Vérification de la disponibilité des slots
         for (const slot of slotsToReserve) {
-            const slotRef = adminDB.collection("slots").doc(slot.slotId);
-            const slotDoc = await slotRef.get();
+            try {
+                const slotRef = adminDB.collection("slots").doc(slot.slotId);
+                const slotDoc = await slotRef.get();
 
-            if (!slotDoc.exists || slotDoc.data()?.status !== 'available') {
-                return NextResponse.json({ error: `Créneau non disponible ou inexistant: ${slot.slotId}` }, { status: 400 });
+                if (!slotDoc.exists) {
+                    console.error(`❌ Slot ${slot.slotId} does not exist`);
+                    return NextResponse.json({ error: `Créneau inexistant: ${slot.slotId}` }, { status: 400 });
+                }
+
+                const slotData = slotDoc.data();
+                if (slotData?.status !== 'available') {
+                    console.warn(`⚠️ Slot ${slot.slotId} is not available (status: ${slotData?.status})`);
+                    return NextResponse.json({ error: `Créneau non disponible: ${slot.slotId}` }, { status: 400 });
+                }
+
+                availableSlots.push({ ref: slotRef, data: slotData });
+                console.log(`✅ Slot ${slot.slotId} validated for checkout`);
+
+            } catch (slotError) {
+                console.error(`❌ Error validating slot ${slot.slotId}:`, slotError);
+                return NextResponse.json({ error: `Erreur lors de la vérification du créneau: ${slot.slotId}` }, { status: 500 });
             }
-
-            // Récupérer le prix du produit associé à cette catégorie (pour les line items Stripe)
-            const categoryId = slotDoc.data()!.categoryId;
-            const categoryDoc = await adminDB.collection("categories").doc(categoryId).get();
-
-            if (!categoryDoc.exists) {
-                return NextResponse.json({ error: `Catégorie non trouvée pour le slot ${slot.slotId}` }, { status: 404 });
-            }
-
-            const categoryPrice = categoryDoc.data()?.unitPrice;
-            const categoryStripePriceId = categoryDoc.data()?.stripePriceId; // Assurez-vous d'avoir cet ID dans Firestore
-
-            if (!categoryStripePriceId) {
-                return NextResponse.json({ error: `Prix Stripe manquant pour la catégorie ${categoryId}` }, { status: 500 });
-            }
-
-            lineItems.push({
-                price: categoryStripePriceId, // ID du prix Stripe
-                quantity: 1,
-            });
-            availableSlots.push({ ref: slotRef, data: slotDoc.data() });
         }
 
+        console.log(`📊 Creating Stripe session with total amount: ${totalAmount}€`);
 
-        // 3. Création de la Session Stripe
+        const origin = req.headers.get('origin') || 'http://localhost:3000';
+
+        // Création de la Session Stripe avec le montant total
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
-            line_items: lineItems,
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'eur',
+                        product_data: {
+                            name: `Réservation - ${slotsToReserve.length} créneau(x)`,
+                            description: `Réservation de ${slotsToReserve.length} créneau(x) de compétition`,
+                        },
+                        unit_amount: Math.round(totalAmount * 100), // Montant en centimes
+                    },
+                    quantity: 1,
+                },
+            ],
             mode: 'payment',
-            success_url: `${req.headers.get('origin')}/booking/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${req.headers.get('origin')}/booking?canceled=true`,
+            success_url: `${origin}/${lang}/booking/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${origin}/${lang}/booking?canceled=true`,
             
-            // Stocker les métadonnées pour le fulfillment (créneaux + utilisateur)
             metadata: {
                 userId: userId,
                 userEmail: userEmail,
-                // Stocker les IDs des slots en chaîne JSON
-                slotsToReserve: JSON.stringify(slotsToReserve.map((s: any) => s.slotId)), 
+                eventId: eventId || '',
+                slotsToReserve: JSON.stringify(slotsToReserve.map((s: any) => s.slotId)),
                 isPack: 'false',
             },
         });
 
-        // 4. Temporairement, marquer les slots comme 'pending' (ou 'locked') en les liant à la session Stripe
-        // Cette étape est critique pour éviter qu'un autre utilisateur les prenne pendant le paiement.
+        console.log(`✅ Stripe session created: ${session.id}`);
+
+        // Marquer les slots comme 'pending' pour éviter les réservations multiples
         const batch = adminDB.batch();
         availableSlots.forEach(({ ref }) => {
             batch.update(ref, {
-                status: 'pending', // Statut "en attente de paiement"
+                status: 'pending',
                 stripeSessionId: session.id,
-                userId: userId, // On pré-réserve pour cet utilisateur
+                userId: userId,
+                updatedAt: new Date(),
             });
         });
         await batch.commit();
 
+        console.log(`✅ ${availableSlots.length} slots marked as pending`);
 
         return NextResponse.json({ sessionId: session.id, url: session.url });
 
     } catch (error) {
-        console.error("Erreur lors de la création de la session Stripe:", error);
-        return NextResponse.json({ error: "Erreur interne du serveur lors de la création de la session Stripe." }, { status: 500 });
+        console.error("❌ Erreur lors de la création de la session Stripe:", error);
+        
+        if (error instanceof Stripe.errors.StripeInvalidRequestError) {
+            return NextResponse.json({ 
+                error: `Erreur Stripe: ${error.message}`,
+                details: error.param 
+            }, { status: 400 });
+        }
+        
+        return NextResponse.json({ 
+            error: "Erreur interne du serveur lors de la création de la session Stripe." 
+        }, { status: 500 });
     }
 }

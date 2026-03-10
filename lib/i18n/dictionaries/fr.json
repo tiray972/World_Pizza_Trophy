@@ -64,5 +64,23 @@
       { "id": "fritta", "name": "Pizza Fritta", "description": "La tradition friture de Naples." },
       { "id": "acrobatica", "name": "Pizza Acrobatica / Show", "description": "Le spectacle du lancer de pâte." }
     ]
+  },
+  "header": {
+    "navigation": {
+      "home": "Accueil",
+      "trophy": "Le Trophée",
+      "rules": "Règles",
+      "academy": "Académie",
+      "editions": "Éditions Précédentes",
+      "gallery": "Galerie",
+      "contact": "Contact"
+    },
+    "buttons": {
+      "register": "S'INSCRIRE",
+      "logout": "Déconnexion",
+      "dashboard": "Tableau de bord",
+      "language": "Langue"
+    },
+    "greeting": "Bonjour,"
   }
 }

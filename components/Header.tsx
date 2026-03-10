@@ -9,6 +9,7 @@ import { signOut, onAuthStateChanged, User as FBUser } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { Globe } from "lucide-react";
 import { Button } from "./ui/button";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +40,7 @@ export default function Header({
 }: HeaderProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState<FirestoreUser | null>(null);
+  const [dictionary, setDictionary] = useState<any>(null);
   const router = useRouter();
   const pathname = usePathname() || `/${lang}`;
 
@@ -51,6 +53,10 @@ export default function Header({
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    getDictionary(lang).then(setDictionary);
+  }, [lang]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser: FBUser | null) => {
@@ -90,6 +96,10 @@ export default function Header({
     }
   };
 
+  if (!dictionary) return null;
+
+  const t = dictionary.header;
+
   return (
     <header
       className={`sticky top-0 z-50 transition-all duration-300 ${
@@ -114,13 +124,13 @@ export default function Header({
         {/* Desktop Nav */}
         <nav className="hidden xl:flex items-center space-x-8 font-semibold text-gray-800">
           {[
-            { name: "Home", href: `/${lang}` },
-            { name: "The Trophy", href: `/${lang}/trophy` },
-            { name: "Rules", href: `/${lang}/rules` },
-            { name: "Academy", href: `/${lang}/academy` },
-            { name: "Previous Editions", href: `/${lang}/editions` },
-            { name: "Gallery", href: `/${lang}/gallery` },
-            { name: "Contact", href: `/${lang}/contact` },
+            { name: t.navigation.home, href: `/${lang}` },
+            // { name: t.navigation.trophy, href: `/${lang}/trophy` },
+            { name: t.navigation.rules, href: `/${lang}/rules` },
+            // { name: t.navigation.academy, href: `/${lang}/academy` },
+            { name: t.navigation.editions, href: `/${lang}/editions` },
+            { name: t.navigation.gallery, href: `/${lang}/gallery` },
+            { name: t.navigation.contact, href: `/${lang}/contact` },
           ].map((item) => (
             <Link
               key={item.href}
@@ -136,7 +146,7 @@ export default function Header({
               href={`/${lang}/dashboard`}
               className="py-2 text-[#006400] hover:text-[#8B0000] transition-colors"
             >
-              Dashboard
+              {t.buttons.dashboard}
             </Link>
           )}
         </nav>
@@ -177,7 +187,7 @@ export default function Header({
             {isLoggedIn ? (
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-600 hidden lg:inline-block">
-                  Hello, <span className="font-bold">{userData?.name || "User"}</span>
+                  {t.greeting} <span className="font-bold">{userData?.name || "User"}</span>
                 </span>
                 <Button
                   variant="outline"
@@ -185,15 +195,15 @@ export default function Header({
                   onClick={handleLogout}
                   className="border-[#8B0000] text-[#8B0000] hover:bg-[#8B0000] hover:text-white font-bold"
                 >
-                  Logout
+                  {t.buttons.logout}
                 </Button>
               </div>
             ) : (
               <Button
-                onClick={() => router.push(`/${lang}/auth/signup`)}
+                onClick={() => router.push(`/${lang}/auth/register`)}
                 className="bg-[#8B0000] hover:bg-[#A50000] text-white font-bold px-6 shadow-md transition-all hover:shadow-lg active:scale-95"
               >
-                REGISTER NOW
+                {t.buttons.register}
               </Button>
             )}
           </div>
@@ -207,6 +217,7 @@ export default function Header({
           userName={userData?.name}
           handleLogout={handleLogout}
           switchLocaleUrl={switchLocaleUrl}
+          dictionary={dictionary}
         />
       </div>
     </header>
@@ -222,6 +233,7 @@ function MobileMenu({
   userName,
   handleLogout,
   switchLocaleUrl,
+  dictionary,
 }: any) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -231,16 +243,18 @@ function MobileMenu({
     setOpen(false);
   }, [router]);
 
+  const t = dictionary.header;
+
   return (
     <div className="xl:hidden flex items-center gap-4">
       {/* Mobile Register CTA (Visible when not logged in) */}
       {!isLoggedIn && !open && (
         <Button
           size="sm"
-          onClick={() => router.push(`/${lang}/auth/signup`)}
+          onClick={() => router.push(`/${lang}/auth/register`)}
           className="bg-[#8B0000] text-white font-bold px-4 text-xs"
         >
-          JOIN
+          {t.buttons.register}
         </Button>
       )}
 
@@ -276,23 +290,23 @@ function MobileMenu({
       >
         <div className="p-8 mt-20 flex flex-col h-full overflow-y-auto">
           <nav className="flex flex-col gap-6 text-2xl font-bold text-gray-900 border-b border-gray-100 pb-8">
-            <Link href={`/${lang}`} onClick={() => setOpen(false)}>Home</Link>
-            <Link href={`/${lang}/trophy`} onClick={() => setOpen(false)}>The Trophy</Link>
-            <Link href={`/${lang}/rules`} onClick={() => setOpen(false)}>Rules</Link>
-            <Link href={`/${lang}/academy`} onClick={() => setOpen(false)}>Academy</Link>
-            <Link href={`/${lang}/editions`} onClick={() => setOpen(false)}>Previous Editions</Link>
-            <Link href={`/${lang}/gallery`} onClick={() => setOpen(false)}>Gallery</Link>
+            <Link href={`/${lang}`} onClick={() => setOpen(false)}>{t.navigation.home}</Link>
+            <Link href={`/${lang}/trophy`} onClick={() => setOpen(false)}>{t.navigation.trophy}</Link>
+            <Link href={`/${lang}/rules`} onClick={() => setOpen(false)}>{t.navigation.rules}</Link>
+            <Link href={`/${lang}/academy`} onClick={() => setOpen(false)}>{t.navigation.academy}</Link>
+            <Link href={`/${lang}/editions`} onClick={() => setOpen(false)}>{t.navigation.editions}</Link>
+            <Link href={`/${lang}/gallery`} onClick={() => setOpen(false)}>{t.navigation.gallery}</Link>
             {isLoggedIn && (
               <Link href={`/${lang}/dashboard`} className="text-[#006400]" onClick={() => setOpen(false)}>
-                Dashboard
+                {t.buttons.dashboard}
               </Link>
             )}
-            <Link href={`/${lang}/contact`} onClick={() => setOpen(false)}>Contact</Link>
+            <Link href={`/${lang}/contact`} onClick={() => setOpen(false)}>{t.navigation.contact}</Link>
           </nav>
 
           <div className="mt-8 flex flex-col gap-6">
             <div className="flex flex-col gap-3">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Select Language</span>
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t.buttons.language}</span>
               <div className="flex gap-4">
                 {locales.map((locale: string) => (
                   <Link
@@ -312,17 +326,17 @@ function MobileMenu({
             <div className="mt-auto pb-12 pt-8">
               {isLoggedIn ? (
                 <div className="flex flex-col gap-4">
-                  <p className="text-gray-600 font-medium text-lg">Logged in as <span className="text-gray-900 font-bold">{userName}</span></p>
+                  <p className="text-gray-600 font-medium text-lg">{t.greeting} <span className="text-gray-900 font-bold">{userName}</span></p>
                   <Button variant="outline" className="w-full border-[#8B0000] text-[#8B0000] font-bold py-6 text-lg" onClick={() => { handleLogout(); setOpen(false); }}>
-                    Logout
+                    {t.buttons.logout}
                   </Button>
                 </div>
               ) : (
                 <Button
                   className="w-full bg-[#8B0000] hover:bg-[#A50000] text-white font-bold py-6 text-xl shadow-xl"
-                  onClick={() => { router.push(`/${lang}/auth/signup`); setOpen(false); }}
+                  onClick={() => { router.push(`/${lang}/auth/register`); setOpen(false); }}
                 >
-                  REGISTER NOW
+                  {t.buttons.register}
                 </Button>
               )}
             </div>

@@ -46,5 +46,23 @@
     "description": "El campeonato internacional dedicado a pizzaiolos profesionales: técnica, creatividad y excelencia.",
     "keywords": "pizza, trofeo, concurso, pizzaiolo, profesional, internacional, multicategoría, creatividad, excelencia",
     "site_name": "World Pizza Trophy"
+  },
+  "header": {
+    "navigation": {
+      "home": "Inicio",
+      "trophy": "El Trofeo",
+      "rules": "Reglas",
+      "academy": "Academia",
+      "editions": "Ediciones Anteriores",
+      "gallery": "Galería",
+      "contact": "Contacto"
+    },
+    "buttons": {
+      "register": "INSCRIBIRSE",
+      "logout": "Cerrar Sesión",
+      "dashboard": "Panel de Control",
+      "language": "Idioma"
+    },
+    "greeting": "Hola,"
   }
 }

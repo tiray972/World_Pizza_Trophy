@@ -243,6 +243,12 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
       return;
     }
 
+    // Calculer le montant total
+    const totalAmount = slotsToCheckout.reduce((sum, slot) => {
+      const category = categories.find(c => c.id === slot.categoryId);
+      return sum + (category?.unitPrice || 0);
+    }, 0);
+
     setIsProcessing(true);
     toast.loading("Préparation du paiement...", { id: "checkout-loading" });
 
@@ -255,6 +261,8 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
           userId: user.uid,
           userEmail: user.email,
           eventId: selectedEventId,
+          totalAmount: totalAmount,
+          lang: currentLang, // 👈 Ajouter la langue
         }),
       });
 
