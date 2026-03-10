@@ -146,6 +146,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
             startTime: (data.startTime as Timestamp).toDate(),
             endTime: (data.endTime as Timestamp).toDate(),
             status: data.status,
+            buyerId: data.buyerId || '', // Add missing buyerId field
             userId: data.userId,
             stripeSessionId: data.stripeSessionId,
             assignedByAdminId: data.assignedByAdminId,

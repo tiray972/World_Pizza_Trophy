@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       const userSnap = await userRef.get();
       
       // Vérifier si le document existe
-      if (userSnap && userSnap.exists && userSnap.exists()) {
+      if (userSnap && userSnap.exists) {
         console.log(`⚠️ User profile already exists: ${uid}`);
         return NextResponse.json({ message: 'Profile already exists' }, { status: 200 });
       }

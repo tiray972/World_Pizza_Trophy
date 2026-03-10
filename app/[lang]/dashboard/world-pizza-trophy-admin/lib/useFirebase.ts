@@ -365,7 +365,7 @@ export const useSlots = (eventId?: string) => {
         endTime: data.endTime ? convertDateToTimestamp(data.endTime) : undefined,
         assignedAt: data.assignedAt ? convertDateToTimestamp(data.assignedAt) : null,
         status: data.status,
-        userId: data.userId,
+        buyerId: data.buyerId,
         stripeSessionId: data.stripeSessionId,
         assignedByAdminId: data.assignedByAdminId,
         assignmentType: data.assignmentType,

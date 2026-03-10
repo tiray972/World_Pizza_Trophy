@@ -47,6 +47,24 @@
     "keywords": "pizza, trofeo, concurso, pizzaiolo, profesional, internacional, multicategoría, creatividad, excelencia",
     "site_name": "World Pizza Trophy"
   },
+  "rules": {
+    "title": "Reglas y Categorías",
+    "subtitle": "Descubre las 12 categorías oficiales del Trofeo Mundial de la Pizza.",
+    "categories": [
+      { "id": "classique", "name": "Pizza Clásica", "description": "La excelencia de la tradición." },
+      { "id": "calzone", "name": "Calzone", "description": "Dominio del plegado y la cocción." },
+      { "id": "napolitaine", "name": "Napolitana", "description": "El arte de la Vera Pizza Napoletana." },
+      { "id": "dessert", "name": "Pizza Postre", "description": "Creatividad dulce en masa de pizza." },
+      { "id": "focaccia", "name": "Focaccia", "description": "Suave, crujiente y aromática." },
+      { "id": "pala", "name": "Pala", "description": "Pizza de pala, larga y generosa." },
+      { "id": "teglia", "name": "Teglia", "description": "Pizza en bandeja, al taglio." },
+      { "id": "doue", "name": "La Pizza d'Oue", "description": "Categoría técnica especial." },
+      { "id": "pasta", "name": "Pasta", "description": "El arte de la pasta italiana." },
+      { "id": "glutenfree", "name": "Pizza Sin Gluten", "description": "La excelencia sin compromisos." },
+      { "id": "fritta", "name": "Pizza Frita", "description": "La tradición de fritura de Nápoles." },
+      { "id": "acrobatica", "name": "Pizza Acrobática / Show", "description": "El espectáculo del lanzamiento de masa." }
+    ]
+  },
   "header": {
     "navigation": {
       "home": "Inicio",

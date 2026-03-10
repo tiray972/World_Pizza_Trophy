@@ -1,6 +1,10 @@
+import en from './dictionaries/en.json'
+import es from './dictionaries/es.json'
+import fr from './dictionaries/fr.json'
+
 export const defaultLocale = 'en'
 export const locales = ['en', 'fr', 'es'] as const
-export type ValidLocale = typeof locales[number]
+export type ValidLocale = 'en' | 'es' | 'fr'
 
 export const localeNames: Record<ValidLocale, string> = {
   en: 'English',
@@ -8,8 +12,10 @@ export const localeNames: Record<ValidLocale, string> = {
   es: 'Español',
 }
 
-export const dictionaries = {
-  en: () => import('./dictionaries/en.json').then((module) => module.default),
-  fr: () => import('./dictionaries/fr.json').then((module) => module.default),
-  es: () => import('./dictionaries/es.json').then((module) => module.default),
+const dictionaries = {
+  en,
+  es,
+  fr,
 }
+
+export { dictionaries }

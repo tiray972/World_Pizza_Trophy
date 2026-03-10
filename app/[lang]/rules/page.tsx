@@ -2,9 +2,13 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
-export default async function RulesPage({ params }: { params: { lang: string } }) {
-  const { lang } = params;
-  const dictionary = await getDictionary(lang as any);
+type RulesPageProps = {
+  params: Promise<{ lang: string }>;
+};
+
+export default async function RulesPage({ params }: RulesPageProps) {
+  const { lang } = await params;
+  const dictionary = await getDictionary(lang);
   const rules = dictionary.rules;
 
   return (

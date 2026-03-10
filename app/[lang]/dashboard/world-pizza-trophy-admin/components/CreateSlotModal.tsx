@@ -143,6 +143,7 @@ export function CreateSlotModal({
         categoryId: batchData.categoryId,
         startTime: createDateTime(batchData.date, startStr),
         endTime: createDateTime(batchData.date, endStr),
+        buyerId: '', // Add missing buyerId field
       });
 
       const nextStartTotalMinutes = nextEndTotalMinutes + breakTime;
@@ -166,6 +167,7 @@ export function CreateSlotModal({
           categoryId: singleData.categoryId,
           startTime: createDateTime(singleData.date, singleData.startTime),
           endTime: createDateTime(singleData.date, singleData.endTime),
+          buyerId: '', // Add missing buyerId field
         }]);
       } else {
         const slots = generateBatchSlots();
