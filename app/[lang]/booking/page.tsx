@@ -1,6 +1,7 @@
 'use client';
 
 import { SlotBookingView } from "@/components/custom/SlotBookingCalendar";
+import type { SelectedPackSlot } from "@/components/custom/SlotBookingCalendar";
 import { Slot, Category, WPTEvent, Product } from "@/types/firestore";
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
@@ -279,10 +280,13 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
 
   const handlePackCheckout = async (
     product: Product,
-    slotsToCheckout: { slotId: string; categoryId: string }[]
+    slotsToCheckout: SelectedPackSlot[]
   ) => {
     if (!user) {
       const loginUrl = `/${currentLang}/auth/login?redirect=/booking`;
+      toast.info("Connexion requise", {
+        description: "Vous devez être connecté pour réserver.",
+      });
       router.push(loginUrl);
       return;
     }
@@ -291,15 +295,28 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
     toast.loading("Configuration du pack...", { id: "pack-loading" });
 
     try {
+      // 📊 Calculer le montant total (prix du pack)
+      const totalAmount = product.unitAmount;
+
+      console.log(`📦 [PackCheckout] Pack: ${product.name}, Amount: ${totalAmount}€, Slots: ${slotsToCheckout.length}`);
+
       const res = await fetch('/api/booking/checkout-pack', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          productStripePriceId: product.stripePriceId,
-          slotsToReserve: slotsToCheckout,
+          // ✅ ALL REQUIRED FIELDS FOR ENDPOINT
+          slotsToReserve: slotsToCheckout.map(slot => ({
+            slotId: slot.slotId,
+            categoryId: slot.categoryId,
+            participant: slot.participant,  // 👤 IMPORTANT: Include participant data
+          })),
           userId: user.uid,
           userEmail: user.email,
           eventId: selectedEventId,
+          packId: product.id,  // ✅ ADD: Product/Pack ID
+          packName: product.name,  // ✅ ADD: Pack name
+          totalAmount: totalAmount,  // ✅ ADD: Total amount
+          lang: currentLang,  // ✅ ADD: Language
         }),
       });
 

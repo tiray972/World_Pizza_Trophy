@@ -2,11 +2,11 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
-import { Slot, User, SlotStatus, Category, WPTEvent } from "@/types/firestore";
+import { Slot, User, SlotStatus, Category, WPTEvent, Participant } from "@/types/firestore";
 import { AssignSlotModal } from "./AssignSlotModal";
 import { CreateSlotModal } from "./CreateSlotModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
-import { Clock, User as UserIcon, Loader2, FileSpreadsheet, Plus, CalendarDays, Trash2, Eraser, AlertTriangle, Lock, ShieldAlert, UserCog } from "lucide-react";
+import { Clock, User as UserIcon, Loader2, FileSpreadsheet, Plus, CalendarDays, Trash2, Eraser, AlertTriangle, Lock, ShieldAlert, UserCog, CheckCircle } from "lucide-react";
 import { formatTime, formatUser } from "../lib/utils";
 
 interface SlotsPageProps {
@@ -97,7 +97,7 @@ export function SlotsPage({
     }
   };
 
-  const handleAssignConfirm = async (userId: string) => {
+  const handleAssignConfirm = async (userId: string, participant?: Participant) => {
     setIsSyncing(true);
     setSyncMessage("Logging action...");
     
@@ -113,16 +113,17 @@ export function SlotsPage({
     if (selectedSlot) {
       const updatedSlot: Slot = {
         ...selectedSlot,
-        userId,
+        buyerId: userId,
+        participant, // ✅ Ajouter les infos du participant
         status: newStatus,
         // Traceability Fields
-        assignedByAdminId: 'admin_current', // Mock ID for the active admin
+        assignedByAdminId: 'admin_current',
         assignedAt: new Date(),
         assignmentType: 'manual'
       };
 
       onUpdateSlot(updatedSlot);
-      console.log(`[AUDIT] Slot ${selectedSlot.id} manually assigned to User ${userId} by admin.`);
+      console.log(`[AUDIT] Slot ${selectedSlot.id} manually assigned to User ${userId} with participant ${participant?.firstName} ${participant?.lastName} by admin.`);
     }
 
     setIsSyncing(false);
@@ -300,18 +301,22 @@ export function SlotsPage({
               </div>
             ) : (
               currentSlots.map((slot) => {
-                const assignedUser = users.find(u => u.id === slot.userId);
+                const assignedUser = users.find(u => u.id === slot.buyerId);
+                const hasParticipant = !!slot.participant;
+                
                 return (
                   <div 
                     key={slot.id} 
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors gap-4"
+                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors gap-4 ${
+                      hasParticipant ? 'border-green-200 bg-green-50/30 dark:bg-green-950/10' : 'border-yellow-200 bg-yellow-50/30 dark:bg-yellow-950/10'
+                    }`}
                   >
-                    <div className="flex items-start sm:items-center gap-4">
+                    <div className="flex items-start sm:items-center gap-4 flex-1">
                       <div className="flex flex-col items-center justify-center h-12 w-12 rounded bg-muted text-muted-foreground">
                         <Clock className="h-5 w-5" />
                       </div>
-                      <div className="space-y-1">
-                        <div className="font-semibold flex items-center gap-2 text-foreground">
+                      <div className="space-y-1 flex-1">
+                        <div className="font-semibold flex items-center gap-2 text-foreground flex-wrap">
                           {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
                           {getStatusBadge(slot.status)}
                           
@@ -321,16 +326,38 @@ export function SlotsPage({
                               <UserCog className="h-4 w-4 text-purple-500" />
                             </div>
                           )}
+                          
+                          {/* Participant Indicator */}
+                          {hasParticipant && (
+                            <div className="ml-1" title="Participant info attached">
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            </div>
+                          )}
                         </div>
                         <div className="text-sm text-muted-foreground flex items-center gap-2">
                           <span>{getCategoryName(slot.categoryId)}</span>
                         </div>
+                        
+                        {/* Participant Display */}
+                        {hasParticipant && slot.participant && (
+                          <div className="mt-2 p-2 bg-green-100/50 dark:bg-green-900/30 rounded text-xs">
+                            <p className="font-semibold text-green-700 dark:text-green-300">
+                              👤 {slot.participant.firstName} {slot.participant.lastName}
+                            </p>
+                            {slot.participant.email && (
+                              <p className="text-green-600 dark:text-green-400">{slot.participant.email}</p>
+                            )}
+                            {slot.participant.phone && (
+                              <p className="text-green-600 dark:text-green-400">{slot.participant.phone}</p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
                       {assignedUser ? (
-                        <div className="flex items-center gap-2 text-sm font-medium text-foreground mr-2">
+                        <div className="flex items-center gap-2 text-sm font-medium text-foreground mr-2 whitespace-nowrap">
                           <UserIcon className="h-4 w-4 text-muted-foreground" />
                           {formatUser(assignedUser)}
                         </div>

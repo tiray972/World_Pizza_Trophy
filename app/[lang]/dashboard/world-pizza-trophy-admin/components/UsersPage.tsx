@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
-import { Slot, User, Category, WPTEvent } from "@/types/firestore"; // Import WPTEvent to check status
+import { Slot, User, Category, WPTEvent, Participant } from "@/types/firestore"; // Import WPTEvent to check status
 import { ManualSlotAssignModal } from "./ManualSlotAssignModal";
 import { Plus, Search, Calendar, CheckCircle2, XCircle, Loader2, FileSpreadsheet, Globe, AlertTriangle, UserMinus, Lock } from "lucide-react";
 import { formatUser } from "../lib/utils";
@@ -14,13 +14,6 @@ interface UsersPageProps {
   categories: Category[];
   selectedEventId: string;
   onUpdateSlots: (slots: Slot[]) => void;
-  // We need to look up event status, but currently we only receive ID.
-  // Ideally, we should pass the full event object, or a 'canAssign' boolean.
-  // Since we don't want to refactor App.tsx's generic props too much, we will accept an optional status prop
-  // OR just assume App.tsx passes the event object.
-  // Let's modify App.tsx to pass the full selectedEvent to UsersPage or check logic there.
-  // For cleanliness, let's update UsersPageProps to accept the event object if possible, 
-  // but looking at App.tsx, it's easier to pass 'isAssignmentLocked' as a prop.
   isAssignmentLocked?: boolean; 
 }
 
@@ -35,26 +28,32 @@ export function UsersPage({ users, slots, categories, selectedEventId, onUpdateS
     setIsModalOpen(true);
   };
 
-  const handleAssignConfirm = async (userId: string, slotIds: string[]) => {
+  const handleAssignConfirm = async (userId: string, slotIds: string[], participants?: Record<string, Participant>) => {
     setIsSyncing(true);
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     const user = users.find(u => u.id === userId);
-    // Determine paid status for this specific event
-    const isPaid = user?.registrations[selectedEventId]?.paid || false;
+    if (!user) {
+      console.error("User not found");
+      setIsSyncing(false);
+      return;
+    }
+
+    const isPaid = user.registrations[selectedEventId]?.paid || false;
 
     const updatedSlots: Slot[] = [];
     
     slots.forEach(slot => {
       if (slotIds.includes(slot.id)) {
-        // Log action
         console.log(`[AUDIT] Slot ${slot.id} batch assigned to ${userId} by admin.`);
+        
+        const participant = participants?.[slot.id];
         
         updatedSlots.push({
           ...slot,
-          userId: user?.id,
+          buyerId: userId, // ✅ Use userId directly since we already verified user exists
+          participant,
           status: isPaid ? 'paid' : 'offered',
-          // Traceability
           assignedByAdminId: 'admin_current',
           assignedAt: new Date(),
           assignmentType: 'manual'
@@ -67,7 +66,7 @@ export function UsersPage({ users, slots, categories, selectedEventId, onUpdateS
   };
 
   const getAssignedSlotCount = (userId: string) => {
-    return slots.filter(s => s.userId === userId).length;
+    return slots.filter(s => s.buyerId === userId).length;
   };
 
   const filteredUsers = users.filter(user => {
@@ -113,7 +112,7 @@ export function UsersPage({ users, slots, categories, selectedEventId, onUpdateS
              <input
                 type="text"
                 placeholder="Search..."
-                className="flex h-10 w-full rounded-md border border-input bg-background text-foreground pl-9 pr-3 py-2 text-sm w-[250px]"
+                className="flex h-10 rounded-md border border-input bg-background text-foreground pl-9 pr-3 py-2 text-sm w-[250px]"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />

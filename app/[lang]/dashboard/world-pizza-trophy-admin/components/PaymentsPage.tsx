@@ -193,6 +193,7 @@ export function PaymentsPage({
                 <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Date</th>
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground">User</th>
+                  <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Participants</th>
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Pack / Item</th>
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Amount</th>
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Source</th>
@@ -204,12 +205,19 @@ export function PaymentsPage({
               <tbody className="[&_tr:last-child]:border-0 text-foreground">
                 {filteredPayments.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-4 text-center text-muted-foreground">
+                    <td colSpan={9} className="p-4 text-center text-muted-foreground">
                       No payments found matching criteria.
                     </td>
                   </tr>
                 ) : (
-                  filteredPayments.map(({ payment, user, issues, hasIssues }) => (
+                  filteredPayments.map(({ payment, user, issues, hasIssues }) => {
+                    // Get participants for this payment's slots
+                    const paymentSlots = slots.filter(s => payment.slotIds.includes(s.id));
+                    const participants = paymentSlots
+                      .filter(s => s.participant)
+                      .map(s => s.participant);
+
+                    return (
                     <tr key={payment.id} className={cn("border-b transition-colors hover:bg-muted/50", hasIssues && "bg-yellow-50/50 dark:bg-yellow-900/10")}>
                       <td className="p-4 align-middle text-muted-foreground whitespace-nowrap">
                          {payment.createdAt.toLocaleDateString()}
@@ -223,6 +231,22 @@ export function PaymentsPage({
                              </div>
                          ) : (
                              <span className="text-destructive">User Deleted ({payment.userId})</span>
+                         )}
+                      </td>
+                      <td className="p-4 align-middle text-sm">
+                         {participants.length > 0 ? (
+                             <div className="space-y-1">
+                                 {participants.map((p, idx) => (
+                                     <div key={idx} className="flex flex-col">
+                                         <span className="font-medium text-green-700 dark:text-green-300">
+                                             👤 {p!.firstName} {p!.lastName}
+                                         </span>
+                                         {p!.email && <span className="text-xs text-muted-foreground">{p!.email}</span>}
+                                     </div>
+                                 ))}
+                             </div>
+                         ) : (
+                             <span className="text-xs text-yellow-600 dark:text-yellow-400">No participants</span>
                          )}
                       </td>
                       <td className="p-4 align-middle">
@@ -279,7 +303,8 @@ export function PaymentsPage({
                           )}
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

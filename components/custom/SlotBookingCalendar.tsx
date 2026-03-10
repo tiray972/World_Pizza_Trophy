@@ -19,7 +19,7 @@ interface SelectedSlot {
   participant?: Participant; // 👈 Ajouter info du participant
 }
 
-interface SelectedPackSlot extends SelectedSlot {
+export interface SelectedPackSlot extends SelectedSlot {
   // Aucune propriété supplémentaire
 }
 

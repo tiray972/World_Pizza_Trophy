@@ -226,7 +226,9 @@ export function ExportsPage({ slots, categories }: ExportsPageProps) {
                                     <th className="w-32 bg-gray-100 dark:bg-zinc-800 border px-2 py-1 text-left text-xs font-semibold text-muted-foreground">C (End)</th>
                                     <th className="w-48 bg-gray-100 dark:bg-zinc-800 border px-2 py-1 text-left text-xs font-semibold text-muted-foreground">D (Category)</th>
                                     <th className="w-32 bg-gray-100 dark:bg-zinc-800 border px-2 py-1 text-left text-xs font-semibold text-muted-foreground">E (Status)</th>
-                                    <th className="min-w-[150px] bg-gray-100 dark:bg-zinc-800 border px-2 py-1 text-left text-xs font-semibold text-muted-foreground">F (User ID)</th>
+                                    <th className="min-w-[150px] bg-gray-100 dark:bg-zinc-800 border px-2 py-1 text-left text-xs font-semibold text-muted-foreground">F (Buyer)</th>
+                                    <th className="min-w-[150px] bg-gray-100 dark:bg-zinc-800 border px-2 py-1 text-left text-xs font-semibold text-muted-foreground">G (Participant)</th>
+                                    <th className="min-w-[120px] bg-gray-100 dark:bg-zinc-800 border px-2 py-1 text-left text-xs font-semibold text-muted-foreground">H (Email)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -247,8 +249,20 @@ export function ExportsPage({ slots, categories }: ExportsPageProps) {
                                                 {slot.status}
                                             </span>
                                         </td>
-                                        <td className="px-2 py-1 text-xs font-medium text-foreground">
-                                          {slot.userId || "-"}
+                                        <td className="border-r px-2 py-1 text-xs font-medium text-foreground">
+                                          {slot.buyerId || "-"}
+                                        </td>
+                                        <td className="border-r px-2 py-1 text-xs font-medium">
+                                          {slot.participant ? (
+                                            <span className="text-green-700 dark:text-green-300">
+                                              {slot.participant.firstName} {slot.participant.lastName}
+                                            </span>
+                                          ) : (
+                                            <span className="text-muted-foreground">-</span>
+                                          )}
+                                        </td>
+                                        <td className="px-2 py-1 text-xs text-foreground">
+                                          {slot.participant?.email || "-"}
                                         </td>
                                     </tr>
                                 ))}

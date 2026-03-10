@@ -1,17 +1,17 @@
 "use client";
 import React, { useState } from "react";
 import { Button } from "./ui/Button";
-import { Slot, User, Category } from "@/types/firestore";
-import { X } from "lucide-react";
+import { Slot, User, Category, Participant } from "@/types/firestore";
+import { X, UserPlus } from "lucide-react";
 import { cn, formatTime, formatUser } from "../lib/utils";
 
 interface ManualSlotAssignModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (userId: string, slotIds: string[]) => Promise<void>;
+  onConfirm: (userId: string, slotIds: string[], participants?: Record<string, Participant>) => Promise<void>;
   user: User | null;
   slots: Slot[];
-  categories?: Category[]; // Made optional to preserve types if parent hasn't updated yet, but logic uses it
+  categories?: Category[];
 }
 
 export function ManualSlotAssignModal({
@@ -24,8 +24,10 @@ export function ManualSlotAssignModal({
 }: ManualSlotAssignModalProps) {
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showParticipantForm, setShowParticipantForm] = useState(false);
+  const [participants, setParticipants] = useState<Record<string, Participant>>({});
 
-  const availableSlots = slots.filter(s => !s.userId || s.userId === user?.id);
+  const availableSlots = slots.filter(s => !s.buyerId || s.buyerId === user?.id);
 
   const getCategoryName = (categoryId: string) => {
     return categories.find(c => c.id === categoryId)?.name || categoryId;
@@ -39,12 +41,24 @@ export function ManualSlotAssignModal({
     );
   };
 
+  const handleParticipantChange = (slotId: string, field: string, value: string) => {
+    setParticipants(prev => ({
+      ...prev,
+      [slotId]: {
+        ...prev[slotId],
+        [field]: value
+      }
+    }));
+  };
+
   const handleSubmit = async () => {
     if (!user) return;
     setIsSubmitting(true);
     try {
-      await onConfirm(user.id, selectedSlotIds);
-      setSelectedSlotIds([]); // Reset selection
+      await onConfirm(user.id, selectedSlotIds, showParticipantForm ? participants : undefined);
+      setSelectedSlotIds([]);
+      setParticipants({});
+      setShowParticipantForm(false);
       onClose();
     } catch (error) {
       console.error("Failed to assign slots", error);
@@ -79,39 +93,91 @@ export function ManualSlotAssignModal({
 
         <div className="flex-1 overflow-y-auto p-6 pt-2">
            <div className="space-y-4">
+            {/* Participant Info Toggle */}
+            <Button
+              type="button"
+              variant={showParticipantForm ? "default" : "outline"}
+              size="sm"
+              className="w-full"
+              onClick={() => setShowParticipantForm(!showParticipantForm)}
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              {showParticipantForm ? "Hide Participant Info" : "Add Participant Info for Each Slot"}
+            </Button>
+
             {availableSlots.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">No available slots found.</p>
             ) : (
-              <div className="grid grid-cols-1 gap-2">
+              <div className="grid grid-cols-1 gap-3">
                 {availableSlots.map(slot => {
                   const isSelected = selectedSlotIds.includes(slot.id);
+                  const slotParticipant = participants[slot.id];
+                  
                   return (
                     <div
                       key={slot.id}
                       className={cn(
-                        "flex items-center space-x-3 rounded-lg border p-4 cursor-pointer transition-colors",
-                        isSelected ? "bg-accent border-primary/50" : "bg-card hover:bg-muted/50"
+                        "rounded-lg border p-4 transition-colors space-y-3",
+                        isSelected ? "border-green-500 bg-green-50/30 dark:bg-green-950/10" : "bg-card hover:bg-muted/50"
                       )}
-                      onClick={() => toggleSlot(slot.id)}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => {}} 
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-background"
-                      />
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">
-                            {slot.date} | {formatTime(slot.startTime)}
-                          </span>
-                          <span className="text-xs text-muted-foreground">({formatTime(slot.endTime)})</span>
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSlot(slot.id)}
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary bg-background mt-1"
+                        />
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">
+                              {slot.date} | {formatTime(slot.startTime)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">({formatTime(slot.endTime)})</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{getCategoryName(slot.categoryId)}</p>
                         </div>
-                        <p className="text-xs text-muted-foreground">{getCategoryName(slot.categoryId)}</p>
+                        <div className="text-xs font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground">
+                          {slot.status}
+                        </div>
                       </div>
-                      <div className="text-xs font-medium px-2 py-1 rounded bg-secondary text-secondary-foreground">
-                        {slot.status}
-                      </div>
+
+                      {/* Participant Form for Selected Slots */}
+                      {isSelected && showParticipantForm && (
+                        <div className="ml-7 p-3 bg-muted/30 rounded-lg border border-dashed space-y-2">
+                          <p className="text-xs font-semibold text-muted-foreground">👤 Participant Details</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              placeholder="First Name"
+                              className="h-8 rounded border border-input bg-background px-2 py-1 text-xs"
+                              value={slotParticipant?.firstName || ""}
+                              onChange={(e) => handleParticipantChange(slot.id, "firstName", e.target.value)}
+                            />
+                            <input
+                              type="text"
+                              placeholder="Last Name"
+                              className="h-8 rounded border border-input bg-background px-2 py-1 text-xs"
+                              value={slotParticipant?.lastName || ""}
+                              onChange={(e) => handleParticipantChange(slot.id, "lastName", e.target.value)}
+                            />
+                            <input
+                              type="email"
+                              placeholder="Email (optional)"
+                              className="h-8 rounded border border-input bg-background px-2 py-1 text-xs col-span-2"
+                              value={slotParticipant?.email || ""}
+                              onChange={(e) => handleParticipantChange(slot.id, "email", e.target.value)}
+                            />
+                            <input
+                              type="tel"
+                              placeholder="Phone (optional)"
+                              className="h-8 rounded border border-input bg-background px-2 py-1 text-xs col-span-2"
+                              value={slotParticipant?.phone || ""}
+                              onChange={(e) => handleParticipantChange(slot.id, "phone", e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
