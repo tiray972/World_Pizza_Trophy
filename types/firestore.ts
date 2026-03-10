@@ -193,6 +193,7 @@ export interface Payment {
   slotIds: string[];
   isPack: boolean;
   packName?: string;
+  packId?: string;
   
   metadata: Record<string, any>;
   createdAt: Date;  // Converted from Firestore Timestamp

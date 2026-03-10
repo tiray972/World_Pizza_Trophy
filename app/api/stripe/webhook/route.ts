@@ -50,7 +50,7 @@ export async function POST(req: Request) {
         
         const amountTotal = session.amount_total || 0;
 
-        if (userId && slotsToReserveJson) {
+        if (userId && slotsToReserveJson && eventId) {
             
             let slotsData: Array<{ slotId: string; participant?: any }> = [];
             try {
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
                 const slotIds = slotsData.map((s: any) => s.slotId);
                 const paymentRecord: Payment = {
                     id: session.id,
-                    eventId: eventId || "",
+                    eventId: eventId,
                     userId: userId,
                     stripeSessionId: session.id,
                     amount: amountTotal / 100,
@@ -127,35 +127,39 @@ export async function POST(req: Request) {
                 
                 if (userDoc.exists) {
                     const userData = userDoc.data();
-                    const registrations = userData.registrations || {};
-                    
-                    // Créer ou mettre à jour l'enregistrement pour cet événement
-                    if (!registrations[eventId]) {
-                        registrations[eventId] = {
-                            paid: true,
-                            categoryIds: Array.from(categoryIds).filter(id => id),
-                            stripeCustomerId: session.customer || undefined,
-                            paymentId: paymentRef.id,
-                            registeredAt: admin.firestore.Timestamp.fromDate(new Date()),
-                        };
-                    } else {
-                        // Merger avec les catégories existantes
-                        const existingCategoryIds = registrations[eventId].categoryIds || [];
-                        const allCategoryIds = Array.from(
-                            new Set([...existingCategoryIds, ...Array.from(categoryIds).filter(id => id)])
-                        );
+                    if (userData) {
+                        const registrations = userData.registrations || {};
                         
-                        registrations[eventId] = {
-                            ...registrations[eventId],
-                            paid: true,
-                            categoryIds: allCategoryIds,
-                            paymentId: paymentRef.id,
-                            registeredAt: registrations[eventId].registeredAt || admin.firestore.Timestamp.fromDate(new Date()),
-                        };
-                    }
+                        // Créer ou mettre à jour l'enregistrement pour cet événement
+                        if (!registrations[eventId]) {
+                            registrations[eventId] = {
+                                paid: true,
+                                categoryIds: Array.from(categoryIds).filter(id => id),
+                                stripeCustomerId: session.customer || undefined,
+                                paymentId: paymentRef.id,
+                                registeredAt: admin.firestore.Timestamp.fromDate(new Date()),
+                            };
+                        } else {
+                            // Merger avec les catégories existantes
+                            const existingCategoryIds = registrations[eventId].categoryIds || [];
+                            const allCategoryIds = Array.from(
+                                new Set([...existingCategoryIds, ...Array.from(categoryIds).filter(id => id)])
+                            );
+                            
+                            registrations[eventId] = {
+                                ...registrations[eventId],
+                                paid: true,
+                                categoryIds: allCategoryIds,
+                                paymentId: paymentRef.id,
+                                registeredAt: registrations[eventId].registeredAt || admin.firestore.Timestamp.fromDate(new Date()),
+                            };
+                        }
 
-                    batch.update(userRef, { registrations });
-                    console.log(`✅ User ${userId} registrations updated for event ${eventId}`);
+                        batch.update(userRef, { registrations });
+                        console.log(`✅ User ${userId} registrations updated for event ${eventId}`);
+                    } else {
+                        console.warn(`⚠️ User data is empty: ${userId}`);
+                    }
                 } else {
                     console.warn(`⚠️ User document not found: ${userId}`);
                 }
@@ -168,6 +172,8 @@ export async function POST(req: Request) {
                 console.error("❌ Error processing webhook batch:", batchError);
                 return new NextResponse("Error processing payment", { status: 500 });
             }
+        } else {
+            console.warn(`⚠️ Missing required metadata: userId=${userId}, slotsToReserveJson=${!!slotsToReserveJson}, eventId=${eventId}`);
         }
     }
 

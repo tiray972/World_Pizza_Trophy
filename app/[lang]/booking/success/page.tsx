@@ -15,6 +15,8 @@ export default function BookingSuccessPage({ params }: { params: Promise<{ lang:
   const [lang, setLang] = useState('fr');
   const [loading, setLoading] = useState(true);
   const [sessionData, setSessionData] = useState<any>(null);
+  const [paymentRecorded, setPaymentRecorded] = useState(false);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -32,21 +34,45 @@ export default function BookingSuccessPage({ params }: { params: Promise<{ lang:
       return;
     }
 
-    const fetchSessionData = async () => {
+    const processPayment = async () => {
       try {
-        const response = await fetch(`/api/booking/session-status?session_id=${sessionId}`);
-        if (response.ok) {
-          const data = await response.json();
+        // 1️⃣ Récupérer les infos de la session Stripe
+        console.log(`🔵 [Success] Fetching session data for ${sessionId}`);
+        const sessionResponse = await fetch(`/api/booking/session-status?session_id=${sessionId}`);
+        if (sessionResponse.ok) {
+          const data = await sessionResponse.json();
           setSessionData(data);
+          console.log(`✅ [Success] Session data retrieved:`, data);
+        }
+
+        // 2️⃣ Enregistrer le paiement en base de données
+        console.log(`🔵 [Success] Recording payment for session ${sessionId}`);
+        const recordResponse = await fetch('/api/booking/record-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ sessionId }),
+        });
+
+        if (recordResponse.ok) {
+          const recordData = await recordResponse.json();
+          console.log(`✅ [Success] Payment recorded:`, recordData);
+          setPaymentRecorded(true);
+        } else {
+          const errorData = await recordResponse.json();
+          console.error(`❌ [Success] Failed to record payment:`, errorData);
+          setRecordingError(errorData.error || 'Erreur lors de l\'enregistrement du paiement');
         }
       } catch (error) {
-        console.error('Erreur lors de la récupération des données de la session:', error);
+        console.error('❌ [Success] Error processing payment:', error);
+        setRecordingError('Erreur lors du traitement du paiement');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSessionData();
+    processPayment();
   }, [searchParams]);
 
   if (!user) {
@@ -81,24 +107,34 @@ export default function BookingSuccessPage({ params }: { params: Promise<{ lang:
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4 max-w-2xl">
-        <Card className="border-green-200 bg-green-50">
+        <Card className={`${recordingError ? 'border-yellow-200 bg-yellow-50' : 'border-green-200 bg-green-50'}`}>
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <CheckCircle className="h-16 w-16 text-green-600" />
+              <CheckCircle className={`h-16 w-16 ${recordingError ? 'text-yellow-600' : 'text-green-600'}`} />
             </div>
-            <CardTitle className="text-3xl text-green-700">
-              Paiement confirmé ! 🍕
+            <CardTitle className={`text-3xl ${recordingError ? 'text-yellow-700' : 'text-green-700'}`}>
+              {recordingError ? '⚠️ Paiement en cours de traitement' : 'Paiement confirmé ! 🍕'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center">
               <p className="text-lg font-semibold text-gray-800 mb-2">
-                Merci pour votre réservation !
+                {recordingError ? 'Votre paiement a été reçu' : 'Merci pour votre réservation !'}
               </p>
               <p className="text-gray-600">
-                Vos créneaux de participation ont été confirmés.
+                {recordingError 
+                  ? 'Il y a eu un léger problème lors de la sauvegarde, mais votre paiement est sécurisé. Contactez-nous si vous n\'avez pas reçu votre confirmation.'
+                  : 'Vos créneaux de participation ont été confirmés.'}
               </p>
             </div>
+
+            {recordingError && (
+              <div className="bg-yellow-100 border border-yellow-400 rounded-lg p-4">
+                <p className="text-sm text-yellow-900 font-semibold">
+                  ⚠️ Erreur lors de la sauvegarde : {recordingError}
+                </p>
+              </div>
+            )}
 
             {sessionData && (
               <div className="bg-white rounded-lg p-4 space-y-2">
@@ -126,12 +162,14 @@ export default function BookingSuccessPage({ params }: { params: Promise<{ lang:
               </div>
             )}
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-900">
-                📧 <strong>Un email de confirmation</strong> a été envoyé à votre adresse.
+            <div className={`${recordingError ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'} border rounded-lg p-4`}>
+              <p className={`text-sm ${recordingError ? 'text-yellow-900' : 'text-blue-900'} font-semibold`}>
+                {recordingError ? '⏳ Traitement en cours...' : '📧 Un email de confirmation'}
               </p>
-              <p className="text-sm text-blue-800 mt-2">
-                Conservez cet email pour vos références d'enregistrement.
+              <p className={`text-sm ${recordingError ? 'text-yellow-800' : 'text-blue-800'} mt-2`}>
+                {recordingError 
+                  ? 'Veuillez attendre quelques instants, votre commande sera finalisée très bientôt.'
+                  : 'a été envoyé à votre adresse. Conservez cet email pour vos références d\'enregistrement.'}
               </p>
             </div>
 
