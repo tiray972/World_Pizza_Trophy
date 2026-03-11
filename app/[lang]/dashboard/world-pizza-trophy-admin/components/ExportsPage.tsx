@@ -186,9 +186,9 @@ function generateFinancialDetail(slots: Slot[], payments: Payment[], users: User
       buyer ? formatUser(buyer) : "",
       buyer?.email || "",
       payment ? payment.amount : slot.status === "offered" ? "0" : "",
-      payment?.paymentMethod || "",
+      payment?.source || "",
       slot.stripeSessionId || "",
-      payment?.paidAt ? new Date(payment.paidAt).toLocaleString("fr-FR") : "",
+      payment?.createdAt ? new Date(payment.createdAt).toLocaleString("fr-FR") : "",
     ];
   });
 
