@@ -3,13 +3,13 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  addDoc,
+  updateDoc,
   deleteDoc,
   doc,
   getDocs,
@@ -74,14 +74,14 @@ function convertFirestoreDocumentData<T extends Record<string, any>>(
   timestampFields: (keyof T)[]
 ): T {
   const converted = { ...doc };
-  
+
   for (const field of timestampFields) {
     if (field in converted) {
       const value = converted[field];
       converted[field] = convertTimestampToDate(value) as any;
     }
   }
-  
+
   return converted;
 }
 
@@ -213,7 +213,7 @@ export const useEvents = () => {
         eventYear: data.eventYear,
         status: data.status,
       });
-      
+
       await updateDoc(doc(db, 'events', eventId), dataToWrite);
     } catch (err) {
       throw new Error(`Failed to update event: ${err}`);
@@ -243,7 +243,7 @@ export const useUsers = () => {
             { id: doc.id, ...raw } as User,
             ['createdAt']
           );
-          
+
           // Also convert timestamps in registrations (nested objects)
           if (converted.registrations) {
             const registrations: Record<string, any> = {};
@@ -255,7 +255,7 @@ export const useUsers = () => {
             }
             converted.registrations = registrations;
           }
-          
+
           return converted;
         });
         setUsers(data);
@@ -282,17 +282,17 @@ export const useUsers = () => {
         role: data.role,
         registrations: data.registrations
           ? Object.fromEntries(
-              Object.entries(data.registrations).map(([key, reg]) => [
-                key,
-                {
-                  ...reg,
-                  registeredAt: convertDateToTimestamp(reg.registeredAt)
-                }
-              ])
-            )
+            Object.entries(data.registrations).map(([key, reg]) => [
+              key,
+              {
+                ...reg,
+                registeredAt: convertDateToTimestamp(reg.registeredAt)
+              }
+            ])
+          )
           : undefined,
       });
-      
+
       await updateDoc(doc(db, 'users', userId), dataToWrite);
     } catch (err) {
       throw new Error(`Failed to update user: ${err}`);
@@ -369,8 +369,13 @@ export const useSlots = (eventId?: string) => {
         stripeSessionId: data.stripeSessionId,
         assignedByAdminId: data.assignedByAdminId,
         assignmentType: data.assignmentType,
+        // ✅ FIX: persist participant data written by admin reassignment
+        // If participant is explicitly null, clear it in Firestore; if defined, save it.
+        ...(data.participant !== undefined
+          ? { participant: data.participant ?? null }
+          : {}),
       });
-      
+
       await updateDoc(doc(db, 'slots', slotId), dataToWrite);
     } catch (err) {
       throw new Error(`Failed to update slot: ${err}`);
@@ -675,7 +680,7 @@ export const usePayments = (eventId?: string) => {
         metadata: data.metadata,
         slotIds: data.slotIds,
       });
-      
+
       await updateDoc(doc(db, 'payments', paymentId), dataToWrite);
     } catch (err) {
       throw new Error(`Failed to update payment: ${err}`);

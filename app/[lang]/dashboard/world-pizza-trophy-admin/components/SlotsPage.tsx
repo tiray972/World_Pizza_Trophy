@@ -6,7 +6,7 @@ import { Slot, User, SlotStatus, Category, WPTEvent, Participant } from "@/types
 import { AssignSlotModal } from "./AssignSlotModal";
 import { CreateSlotModal } from "./CreateSlotModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
-import { Clock, User as UserIcon, Loader2, FileSpreadsheet, Plus, CalendarDays, Trash2, Eraser, AlertTriangle, Lock, ShieldAlert, UserCog, CheckCircle } from "lucide-react";
+import { Clock, User as UserIcon, Loader2, FileSpreadsheet, Plus, CalendarDays, Trash2, Eraser, AlertTriangle, Lock, ShieldAlert, UserCog, CheckCircle, Gift } from "lucide-react";
 import { formatTime, formatUser } from "../lib/utils";
 
 interface SlotsPageProps {
@@ -20,17 +20,17 @@ interface SlotsPageProps {
   onDeleteDate: (date: string) => Promise<void>;
 }
 
-export function SlotsPage({ 
-  slots, 
-  users, 
-  categories, 
+export function SlotsPage({
+  slots,
+  users,
+  categories,
   selectedEvent,
-  onUpdateSlot, 
-  onCreateSlot, 
-  onDeleteSlot, 
-  onDeleteDate 
+  onUpdateSlot,
+  onCreateSlot,
+  onDeleteSlot,
+  onDeleteDate
 }: SlotsPageProps) {
-  
+
   // Only show slots belonging to current event (parent filters this, but good to be safe if parent didn't)
   const eventSlots = useMemo(() => {
     if (!selectedEvent) return [];
@@ -55,8 +55,9 @@ export function SlotsPage({
   }, [availableDates, activeDate]);
 
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  
+
   // Deletion State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [slotToDelete, setSlotToDelete] = useState<Slot | null>(null);
@@ -87,6 +88,13 @@ export function SlotsPage({
 
   const handleAssignClick = (slot: Slot) => {
     setSelectedSlot(slot);
+    setIsOfferModalOpen(false);
+    setIsAssignModalOpen(true);
+  };
+
+  const handleOfferClick = (slot: Slot) => {
+    setSelectedSlot(slot);
+    setIsOfferModalOpen(true);
     setIsAssignModalOpen(true);
   };
 
@@ -97,15 +105,22 @@ export function SlotsPage({
     }
   };
 
-  const handleAssignConfirm = async (userId: string, participant?: Participant) => {
+  const handleAssignConfirm = async (userId: string, participant?: Participant, forcedStatus?: SlotStatus) => {
     setIsSyncing(true);
-    setSyncMessage("Logging action...");
-    
+    setSyncMessage(isOfferModalOpen ? "Offering slot..." : "Logging action...");
+
     await new Promise(resolve => setTimeout(resolve, 600));
 
-    const user = users.find(u => u.id === userId);
-    const isPaid = (selectedEvent && user?.registrations[selectedEvent.id]?.paid) || false;
-    const newStatus: SlotStatus = isPaid ? 'paid' : 'offered';
+    let newStatus: SlotStatus;
+    if (forcedStatus) {
+      // Admin explicitly chose a status (Offer / Mark Paid)
+      newStatus = forcedStatus;
+    } else {
+      // Auto: derive from user's payment status
+      const user = users.find(u => u.id === userId);
+      const isPaid = (selectedEvent && user?.registrations[selectedEvent.id]?.paid) || false;
+      newStatus = isPaid ? 'paid' : 'offered';
+    }
 
     setSyncMessage("Syncing to Database...");
     await new Promise(resolve => setTimeout(resolve, 800));
@@ -114,18 +129,20 @@ export function SlotsPage({
       const updatedSlot: Slot = {
         ...selectedSlot,
         buyerId: userId,
-        participant, // ✅ Ajouter les infos du participant
+        participant,
         status: newStatus,
         // Traceability Fields
         assignedByAdminId: 'admin_current',
         assignedAt: new Date(),
-        assignmentType: 'manual'
+        assignmentType: newStatus === 'offered' ? 'manual' : 'manual',
       };
 
       onUpdateSlot(updatedSlot);
-      console.log(`[AUDIT] Slot ${selectedSlot.id} manually assigned to User ${userId} with participant ${participant?.firstName} ${participant?.lastName} by admin.`);
+      const action = newStatus === 'offered' ? 'OFFERED' : 'ASSIGNED';
+      console.log(`[AUDIT] Slot ${selectedSlot.id} ${action} to User ${userId} (participant: ${participant?.firstName} ${participant?.lastName}) by admin.`);
     }
 
+    setIsOfferModalOpen(false);
     setIsSyncing(false);
     setSyncMessage(null);
   };
@@ -161,10 +178,10 @@ export function SlotsPage({
         setIsDeleteModalOpen(false);
         return;
       }
-      
+
       console.log(`[AUDIT] Date ${activeDate} schedule deleted by admin.`);
       await onDeleteDate(activeDate);
-    } 
+    }
     // 3. Single Slot Deletion
     else if (slotToDelete) {
       console.log(`[AUDIT] Slot ${slotToDelete.id} deleted by admin.`);
@@ -175,10 +192,10 @@ export function SlotsPage({
   const formatDateLabel = (dateStr: string) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
-    return new Intl.DateTimeFormat("en-US", { 
-      month: "short", 
-      day: "numeric", 
-      weekday: "short" 
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      weekday: "short"
     }).format(date);
   };
 
@@ -216,27 +233,27 @@ export function SlotsPage({
           <h2 className="text-2xl font-bold tracking-tight text-foreground">Slots Management</h2>
           <p className="text-muted-foreground">Manage time slots for <strong>{selectedEvent.name}</strong>.</p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full text-xs font-medium border border-green-200 dark:border-green-800 mr-2">
-             <FileSpreadsheet className="h-3 w-3" />
-             Google Sheets Connected
+            <FileSpreadsheet className="h-3 w-3" />
+            Google Sheets Connected
           </div>
-          
+
           <div className="flex flex-col items-end">
-            <Button 
-                onClick={() => setIsCreateModalOpen(true)}
-                disabled={!canCreateSlots}
-                title={!canCreateSlots ? "Cannot create slots in current status" : "Add new slots"}
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              disabled={!canCreateSlots}
+              title={!canCreateSlots ? "Cannot create slots in current status" : "Add new slots"}
             >
-                <Plus className="mr-2 h-4 w-4" />
-                Create Slots
+              <Plus className="mr-2 h-4 w-4" />
+              Create Slots
             </Button>
             {!canCreateSlots && (
-                <span className="text-[10px] text-destructive mt-1 font-medium">Event is {selectedEvent.status}</span>
+              <span className="text-[10px] text-destructive mt-1 font-medium">Event is {selectedEvent.status}</span>
             )}
             {selectedEvent.status === 'draft' && (
-                <span className="text-[10px] text-yellow-600 dark:text-yellow-400 mt-1 font-medium">Draft Mode Active</span>
+              <span className="text-[10px] text-yellow-600 dark:text-yellow-400 mt-1 font-medium">Draft Mode Active</span>
             )}
           </div>
         </div>
@@ -245,9 +262,9 @@ export function SlotsPage({
       <div className="flex items-center space-x-2 border-b pb-4 overflow-x-auto">
         {availableDates.length > 0 ? (
           availableDates.map(date => (
-            <Button 
+            <Button
               key={date}
-              variant={activeDate === date ? "default" : "outline"} 
+              variant={activeDate === date ? "default" : "outline"}
               onClick={() => setActiveDate(date)}
               className="min-w-[120px]"
             >
@@ -256,8 +273,8 @@ export function SlotsPage({
           ))
         ) : (
           <div className="text-sm text-muted-foreground py-2 italic flex items-center gap-2">
-             <CalendarDays className="h-4 w-4" />
-             No slots created yet for this event.
+            <CalendarDays className="h-4 w-4" />
+            No slots created yet for this event.
           </div>
         )}
       </div>
@@ -274,9 +291,9 @@ export function SlotsPage({
               </CardDescription>
             </div>
             {currentSlots.length > 0 && canCreateSlots && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="text-muted-foreground hover:text-destructive text-xs h-8"
                 onClick={initiateDeleteDate}
               >
@@ -290,26 +307,25 @@ export function SlotsPage({
           <div className="space-y-1">
             {currentSlots.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground">
-                No slots available. <br/>
+                No slots available. <br />
                 {canCreateSlots ? (
-                    <Button variant="link" onClick={() => setIsCreateModalOpen(true)} className="mt-2">
+                  <Button variant="link" onClick={() => setIsCreateModalOpen(true)} className="mt-2">
                     Create slots for this date
-                    </Button>
+                  </Button>
                 ) : (
-                    <span className="text-sm mt-2 block">Ensure event is 'Open' or 'Draft' to create slots.</span>
+                  <span className="text-sm mt-2 block">Ensure event is 'Open' or 'Draft' to create slots.</span>
                 )}
               </div>
             ) : (
               currentSlots.map((slot) => {
                 const assignedUser = users.find(u => u.id === slot.buyerId);
                 const hasParticipant = !!slot.participant;
-                
+
                 return (
-                  <div 
-                    key={slot.id} 
-                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors gap-4 ${
-                      hasParticipant ? 'border-green-200 bg-green-50/30 dark:bg-green-950/10' : 'border-yellow-200 bg-yellow-50/30 dark:bg-yellow-950/10'
-                    }`}
+                  <div
+                    key={slot.id}
+                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors gap-4 ${hasParticipant ? 'border-green-200 bg-green-50/30 dark:bg-green-950/10' : 'border-yellow-200 bg-yellow-50/30 dark:bg-yellow-950/10'
+                      }`}
                   >
                     <div className="flex items-start sm:items-center gap-4 flex-1">
                       <div className="flex flex-col items-center justify-center h-12 w-12 rounded bg-muted text-muted-foreground">
@@ -319,14 +335,14 @@ export function SlotsPage({
                         <div className="font-semibold flex items-center gap-2 text-foreground flex-wrap">
                           {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
                           {getStatusBadge(slot.status)}
-                          
+
                           {/* Traceability Icon */}
                           {slot.assignmentType === 'manual' && (
                             <div className="ml-1" title={`Manually assigned by ${slot.assignedByAdminId || 'Admin'}`}>
                               <UserCog className="h-4 w-4 text-purple-500" />
                             </div>
                           )}
-                          
+
                           {/* Participant Indicator */}
                           {hasParticipant && (
                             <div className="ml-1" title="Participant info attached">
@@ -337,7 +353,7 @@ export function SlotsPage({
                         <div className="text-sm text-muted-foreground flex items-center gap-2">
                           <span>{getCategoryName(slot.categoryId)}</span>
                         </div>
-                        
+
                         {/* Participant Display */}
                         {hasParticipant && slot.participant && (
                           <div className="mt-2 p-2 bg-green-100/50 dark:bg-green-900/30 rounded text-xs">
@@ -360,34 +376,54 @@ export function SlotsPage({
                         <div className="flex items-center gap-2 text-sm font-medium text-foreground mr-2 whitespace-nowrap">
                           <UserIcon className="h-4 w-4 text-muted-foreground" />
                           {formatUser(assignedUser)}
+                          {slot.status === 'offered' && (
+                            <span className="text-xs font-normal text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/30 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800">
+                              🎁 Offered
+                            </span>
+                          )}
                         </div>
                       ) : (
                         <span className="text-sm text-muted-foreground italic mr-2">Unassigned</span>
                       )}
-                      
+
                       {canAssignSlots ? (
-                        <Button 
-                            size="sm" 
+                        <div className="flex items-center gap-1">
+                          {/* Offer button — only on available/unassigned slots for clarity */}
+                          {slot.status === 'available' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:text-purple-400 dark:border-purple-700 dark:hover:bg-purple-950/30"
+                              onClick={() => handleOfferClick(slot)}
+                              title="Offer this slot for free to a competitor"
+                            >
+                              <Gift className="h-3 w-3 mr-1" />
+                              Offer
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
                             variant={assignedUser ? "outline" : "default"}
                             onClick={() => handleAssignClick(slot)}
-                        >
+                          >
                             {assignedUser ? "Reassign" : "Assign"}
-                        </Button>
+                          </Button>
+                        </div>
                       ) : (
                         <Button size="sm" variant="outline" disabled className="opacity-50">
-                            <Lock className="h-3 w-3 mr-1" /> Locked
+                          <Lock className="h-3 w-3 mr-1" /> Locked
                         </Button>
                       )}
 
                       {canCreateSlots && (
                         <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => initiateDeleteSlot(slot)}
-                            title="Delete Slot"
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => initiateDeleteSlot(slot)}
+                          title="Delete Slot"
                         >
-                            <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
@@ -401,14 +437,15 @@ export function SlotsPage({
 
       <AssignSlotModal
         isOpen={isAssignModalOpen}
-        onClose={() => setIsAssignModalOpen(false)}
+        onClose={() => { setIsAssignModalOpen(false); setIsOfferModalOpen(false); }}
         onConfirm={handleAssignConfirm}
         slot={selectedSlot}
         users={users}
         categories={categories}
+        defaultMode={isOfferModalOpen ? 'offer' : 'assign'}
       />
 
-      <CreateSlotModal 
+      <CreateSlotModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onConfirm={handleCreateConfirm}
@@ -425,25 +462,25 @@ export function SlotsPage({
         description={
           isDeletingDate ? (
             <div className="flex flex-col gap-2">
-               <span>
-                 Are you sure you want to delete <strong>all {currentSlots.length} slots</strong> for {formatDateLabel(activeDate)}? 
-               </span>
-               <div className="flex items-center gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-xs rounded border border-yellow-200 dark:border-yellow-800">
-                  <ShieldAlert className="h-4 w-4 shrink-0" />
-                  Contains protection: Paid slots cannot be deleted.
-               </div>
+              <span>
+                Are you sure you want to delete <strong>all {currentSlots.length} slots</strong> for {formatDateLabel(activeDate)}?
+              </span>
+              <div className="flex items-center gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-xs rounded border border-yellow-200 dark:border-yellow-800">
+                <ShieldAlert className="h-4 w-4 shrink-0" />
+                Contains protection: Paid slots cannot be deleted.
+              </div>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-               <span>
-                 Are you sure you want to delete the <strong>{getCategoryName(slotToDelete?.categoryId || "")}</strong> slot at <strong>{formatTime(slotToDelete?.startTime!)}</strong>?
-               </span>
-               {slotToDelete?.status === 'paid' && (
-                 <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 text-xs rounded border border-red-200 dark:border-red-800 font-bold">
-                    <ShieldAlert className="h-4 w-4 shrink-0" />
-                    DELETION BLOCKED: This slot is PAID.
-                 </div>
-               )}
+              <span>
+                Are you sure you want to delete the <strong>{getCategoryName(slotToDelete?.categoryId || "")}</strong> slot at <strong>{formatTime(slotToDelete?.startTime!)}</strong>?
+              </span>
+              {slotToDelete?.status === 'paid' && (
+                <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 text-xs rounded border border-red-200 dark:border-red-800 font-bold">
+                  <ShieldAlert className="h-4 w-4 shrink-0" />
+                  DELETION BLOCKED: This slot is PAID.
+                </div>
+              )}
             </div>
           )
         }

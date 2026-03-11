@@ -431,6 +431,9 @@ export default function App() {
           <ExportsPage
             slots={eventSlots}
             categories={eventCategories}
+            users={users}
+            payments={payments}
+            selectedEvent={selectedEvent}
           />
         );
       default: return null;
