@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDB } from '@/lib/firebase/admin';
 import * as admin from 'firebase-admin';
 
-const LOCK_DURATION_MINUTES = 10;
+const LOCK_DURATION_MINUTES = 5;
 
 export async function POST(req: NextRequest) {
   try {
