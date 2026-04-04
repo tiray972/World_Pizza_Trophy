@@ -29,7 +29,7 @@ interface SlotBookingViewProps {
   settings: WPTEvent;
   products: Product[];
   registrationClosed: boolean;
-  onCheckout: (slots: SelectedSlot[]) => void;
+  onCheckout: (slots: SelectedSlot[], includeMeal: boolean, mealPrice: number) => void;
   onPackCheckout: (product: Product, slots: SelectedPackSlot[]) => void;
 }
 
@@ -89,6 +89,11 @@ export function SlotBookingView({
   // 👤 Participant info states
   const [isParticipantModalOpen, setIsParticipantModalOpen] = useState(false);
   const [currentSlotForParticipant, setCurrentSlotForParticipant] = useState<SelectedSlot | null>(null);
+  const [isPackParticipantModalOpen, setIsPackParticipantModalOpen] = useState(false);
+  const [currentPackSlotForParticipant, setCurrentPackSlotForParticipant] = useState<SelectedPackSlot | null>(null);
+
+  // 🍽️ Meal state
+  const [wantsMeal, setWantsMeal] = useState(false);
 
   // 🔧 DEBUG LOG: Track prop changes
   useEffect(() => {
@@ -532,11 +537,20 @@ export function SlotBookingView({
           )}
         </div>
 
-        <SheetFooter className="shrink-0 mt-4 border-t pt-3">
+        <SheetFooter className="shrink-0 mt-4 border-t pt-3 flex flex-col gap-3">
+          {/* ⚠️ Vérifier que tous les participants sont remplis */}
+          {selectedPackSlots.some(slot => !slot.participant) && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-xs text-yellow-700 font-semibold">
+                ⚠️ Veuillez ajouter les informations du participant pour tous les créneaux
+              </p>
+            </div>
+          )}
+
           <Button
             type="button"
             className="w-full h-12 text-lg"
-            disabled={!selectionComplete}
+            disabled={!selectionComplete || selectedPackSlots.some(slot => !slot.participant)}
             onClick={() => {
               onPackCheckout(packToPurchase, selectedPackSlots);
               setIsPackSelectionSheetOpen(false);
@@ -654,10 +668,15 @@ export function SlotBookingView({
   };
 
   const renderCartSheetContent = () => {
-    const totalPrice = selectedSlots.reduce((sum, slot) => {
+    // Calculer les totaux séparément
+    const slotTotal = selectedSlots.reduce((sum, slot) => {
       const category = categories.find(c => c.id === slot.categoryId);
       return sum + (category?.unitPrice || 0);
     }, 0);
+    
+    const mealPrice = settings.mealPrice || 0;
+    const mealCost = wantsMeal && mealPrice > 0 ? mealPrice : 0;
+    const totalPrice = slotTotal + mealCost;
 
     return (
       <SheetContent side="right" className="sm:max-w-lg flex flex-col">
@@ -735,10 +754,50 @@ export function SlotBookingView({
               );
             })
           )}
+          
+          {/* 🍽️ Option Repas */}
+          {selectedSlots.length > 0 && mealPrice > 0 && (
+            <Card className="p-4 bg-blue-50 border-2 border-blue-200">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="font-semibold text-blue-900 flex items-center">
+                    <UtensilsCrossedIcon className="w-4 h-4 mr-2" />
+                    Ajouter un Repas
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    {formatPrice(mealPrice)} par personne
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant={wantsMeal ? "default" : "outline"}
+                  className={wantsMeal ? "bg-blue-600 hover:bg-blue-700" : ""}
+                  onClick={() => setWantsMeal(!wantsMeal)}
+                >
+                  {wantsMeal ? "✓ Inclus" : "+ Ajouter"}
+                </Button>
+              </div>
+            </Card>
+          )}
         </div>
 
         <SheetFooter className="flex-col pt-4 border-t">
-          <div className="w-full flex justify-between items-center text-lg font-bold mb-3">
+          {/* Détail des coûts */}
+          <div className="w-full space-y-2 mb-4 text-sm">
+            <div className="flex justify-between">
+              <span>Créneaux ({selectedSlots.length}):</span>
+              <span>{formatPrice(slotTotal)}</span>
+            </div>
+            {wantsMeal && mealCost > 0 && (
+              <div className="flex justify-between text-blue-600 font-semibold">
+                <span>Repas:</span>
+                <span>{formatPrice(mealCost)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Total */}
+          <div className="w-full flex justify-between items-center text-lg font-bold mb-3 border-t pt-3">
             <span>Total à Payer:</span>
             <span className="text-2xl text-primary">{formatPrice(totalPrice)}</span>
           </div>
@@ -762,7 +821,7 @@ export function SlotBookingView({
             className="w-full h-12 text-lg"
             disabled={selectedSlots.length === 0 || selectedSlots.some(slot => !slot.participant)}
             onClick={() => {
-              onCheckout(selectedSlots);
+              onCheckout(selectedSlots, wantsMeal, mealPrice);
               setIsCartSheetOpen(false);
               setSelectedSlots([]);
             }}
@@ -838,7 +897,7 @@ export function SlotBookingView({
         {renderCartSheetContent()}
       </Sheet>
 
-      {/* 👤 Participant Modal */}
+      {/* 👤 Participant Modal - Créneaux Individuels */}
       <ParticipantModal
         open={isParticipantModalOpen}
         onClose={() => {
@@ -858,6 +917,28 @@ export function SlotBookingView({
           setCurrentSlotForParticipant(null);
         }}
         slotInfo={currentSlotForParticipant ? `${currentSlotForParticipant.categoryName} - ${formatTime(currentSlotForParticipant.startTime)}, ${formatDateDisplay(new Date(currentSlotForParticipant.date + 'T00:00:00'))}` : undefined}
+      />
+
+      {/* 👤 Participant Modal - Pack */}
+      <ParticipantModal
+        open={isPackParticipantModalOpen}
+        onClose={() => {
+          setIsPackParticipantModalOpen(false);
+          setCurrentPackSlotForParticipant(null);
+        }}
+        onConfirm={(participant) => {
+          if (currentPackSlotForParticipant) {
+            // Mettre à jour le slot du pack avec les infos du participant
+            setSelectedPackSlots(selectedPackSlots.map(slot =>
+              slot.slotId === currentPackSlotForParticipant.slotId
+                ? { ...slot, participant }
+                : slot
+            ));
+          }
+          setIsPackParticipantModalOpen(false);
+          setCurrentPackSlotForParticipant(null);
+        }}
+        slotInfo={currentPackSlotForParticipant ? `${currentPackSlotForParticipant.categoryName} - ${formatTime(currentPackSlotForParticipant.startTime)}, ${formatDateDisplay(new Date(currentPackSlotForParticipant.date + 'T00:00:00'))}` : undefined}
       />
     </div>
   );

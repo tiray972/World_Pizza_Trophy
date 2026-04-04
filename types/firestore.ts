@@ -49,6 +49,7 @@ export interface WPTEvent {
   eventEndDate: Date;
   registrationDeadline: Date;
   status: EventStatus;
+  mealPrice?: number; // 🍽️ Prix optionnel du repas par personne
 }
 
 /* ---------------------------------

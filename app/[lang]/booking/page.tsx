@@ -60,6 +60,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
             eventEndDate: (data.eventEndDate as Timestamp).toDate(),
             registrationDeadline: (data.registrationDeadline as Timestamp).toDate(),
             status: data.status,
+            mealPrice: data.mealPrice || 0, // 🍽️ Ajouter le prix du repas
           } as WPTEvent;
         });
 
@@ -234,7 +235,9 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
   };
 
   const handleCheckout = async (
-    slotsToCheckout: { slotId: string; categoryId: string }[]
+    slotsToCheckout: { slotId: string; categoryId: string }[],
+    includeMeal: boolean,
+    mealPrice: number
   ) => {
     if (!user) {
       const loginUrl = `/${currentLang}/auth/login?redirect=/booking`;
@@ -245,11 +248,13 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
       return;
     }
 
-    // Calculer le montant total
-    const totalAmount = slotsToCheckout.reduce((sum, slot) => {
+    // Calculer le montant total (slots + repas optionnel)
+    const slotTotal = slotsToCheckout.reduce((sum, slot) => {
       const category = categories.find(c => c.id === slot.categoryId);
       return sum + (category?.unitPrice || 0);
     }, 0);
+    const mealCost = includeMeal && mealPrice > 0 ? mealPrice : 0;
+    const totalAmount = slotTotal + mealCost;
 
     setIsProcessing(true);
     toast.loading("Préparation du paiement...", { id: "checkout-loading" });
@@ -264,7 +269,9 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
           userEmail: user.email,
           eventId: selectedEventId,
           totalAmount: totalAmount,
-          lang: currentLang, // 👈 Ajouter la langue
+          includeMeal: includeMeal,
+          mealPrice: mealPrice,
+          lang: currentLang,
         }),
       });
 

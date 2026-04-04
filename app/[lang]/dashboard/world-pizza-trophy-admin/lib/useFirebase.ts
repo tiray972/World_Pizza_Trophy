@@ -195,6 +195,7 @@ export const useEvents = () => {
         eventEndDate: convertDateToTimestamp(eventData.eventEndDate),
         registrationDeadline: convertDateToTimestamp(eventData.registrationDeadline),
         status: eventData.status,
+        mealPrice: eventData.mealPrice || 0, // 🍽️ Défaut à 0 si non fourni
       });
       const docRef = await addDoc(collection(db, 'events'), dataToWrite);
       return docRef.id;
@@ -212,6 +213,7 @@ export const useEvents = () => {
         name: data.name,
         eventYear: data.eventYear,
         status: data.status,
+        mealPrice: data.mealPrice, // 🍽️ Ajouter le prix du repas
       });
 
       await updateDoc(doc(db, 'events', eventId), dataToWrite);

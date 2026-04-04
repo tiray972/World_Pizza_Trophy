@@ -18,10 +18,21 @@ interface SlotWithParticipant {
   };
 }
 
+interface CheckoutBody {
+  slotsToReserve: SlotWithParticipant[];
+  userId: string;
+  userEmail: string;
+  eventId: string;
+  totalAmount: number;
+  includeMeal: boolean;
+  mealPrice: number;
+  lang: string;
+}
+
 export async function POST(req: NextRequest) {
     try {
-        const body = await req.json();
-        const { slotsToReserve, userId, userEmail, eventId, totalAmount, lang } = body;
+        const body = await req.json() as CheckoutBody;
+        const { slotsToReserve, userId, userEmail, eventId, totalAmount, includeMeal, mealPrice, lang } = body;
 
         if (!slotsToReserve || slotsToReserve.length === 0 || !userId || !userEmail || !totalAmount || !lang) {
             return NextResponse.json({ error: "Données manquantes." }, { status: 400 });
@@ -67,21 +78,41 @@ export async function POST(req: NextRequest) {
         const origin = req.headers.get('origin') || 'http://localhost:3000';
 
         // 2️⃣ Création de la Session Stripe avec le montant total
+        // Calculer le coût des slots (totalAmount - mealPrice si repas inclus)
+        const slotsCost = includeMeal && mealPrice > 0 ? totalAmount - mealPrice : totalAmount;
+        
+        const lineItems = [
+            {
+                price_data: {
+                    currency: 'eur',
+                    product_data: {
+                        name: `Créneaux de Compétition - ${slotsToReserve.length} créneau(x)`,
+                        description: `Réservation de ${slotsToReserve.length} créneau(x) de compétition`,
+                    },
+                    unit_amount: Math.round(slotsCost * 100),
+                },
+                quantity: 1,
+            },
+        ];
+
+        // Ajouter le line item du repas s'il est inclus
+        if (includeMeal && mealPrice > 0) {
+            lineItems.push({
+                price_data: {
+                    currency: 'eur',
+                    product_data: {
+                        name: 'Repas',
+                        description: 'Repas pendant l\'événement',
+                    },
+                    unit_amount: Math.round(mealPrice * 100),
+                },
+                quantity: 1,
+            });
+        }
+
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
-            line_items: [
-                {
-                    price_data: {
-                        currency: 'eur',
-                        product_data: {
-                            name: `Réservation - ${slotsToReserve.length} créneau(x)`,
-                            description: `Réservation de ${slotsToReserve.length} créneau(x) de compétition`,
-                        },
-                        unit_amount: Math.round(totalAmount * 100),
-                    },
-                    quantity: 1,
-                },
-            ],
+            line_items: lineItems,
             mode: 'payment',
             success_url: `${origin}/${lang}/booking/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${origin}/${lang}/booking?canceled=true`,
@@ -95,6 +126,8 @@ export async function POST(req: NextRequest) {
                   participant: s.participant
                 }))),
                 isPack: 'false',
+                includeMeal: includeMeal ? 'true' : 'false',
+                mealPrice: mealPrice.toString(),
             },
         });
 

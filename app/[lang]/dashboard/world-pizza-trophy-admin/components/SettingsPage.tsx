@@ -19,6 +19,7 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
     endDate: "",
     regDeadline: "",
     status: "draft" as EventStatus,
+    mealPrice: 0,
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -34,6 +35,7 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
         endDate: event.eventEndDate.toISOString().split('T')[0],
         regDeadline: event.registrationDeadline.toISOString().split('T')[0],
         status: event.status,
+        mealPrice: event.mealPrice || 0,
       });
     }
   }, [event]);
@@ -62,6 +64,7 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
         eventEndDate: new Date(formData.endDate),
         registrationDeadline: new Date(formData.regDeadline),
         status: formData.status,
+        mealPrice: Number(formData.mealPrice),
       };
 
       onUpdateEvent(updatedEvent);
@@ -183,6 +186,28 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
                   value={formData.eventYear}
                   onChange={handleChange}
                 />
+              </div>
+
+              {/* 🍽️ Meal Price */}
+              <div className="grid gap-2">
+                <label htmlFor="mealPrice" className="text-sm font-medium">
+                  🍽️ Meal Price (€)
+                </label>
+                <input
+                  id="mealPrice"
+                  name="mealPrice"
+                  type="number"
+                  min="0"
+                  step="0.50"
+                  required
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="e.g., 25.00"
+                  value={formData.mealPrice}
+                  onChange={handleChange}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter 0 or leave empty if no meal option available
+                </p>
               </div>
             </div>
 
