@@ -58,12 +58,105 @@
       { "id": "focaccia", "name": "Focaccia", "description": "Soffice, croccante e profumata." },
       { "id": "pala", "name": "Pala", "description": "Pizza alla pala, lunga e generosa." },
       { "id": "teglia", "name": "Teglia", "description": "Pizza al tegame, al taglio." },
-      { "id": "doue", "name": "La Pizza d'Oue", "description": "Categoria tecnica speciale." },
+      { "id": "doue", "name": "Pizza Dué", "description": "Categoria speciale tecnica - Trofeo Chef Ziolo." },
       { "id": "pasta", "name": "Pasta", "description": "L'arte della pasta italiana." },
-      { "id": "glutenfree", "name": "Pizza Senza Glutine", "description": "L'eccellenza senza compromessi." },
-      { "id": "fritta", "name": "Pizza Fritta", "description": "La tradizione della frittura napoletana." },
-      { "id": "acrobatica", "name": "Pizza Acrobatica / Show", "description": "Lo spettacolo del lancio della pasta." }
+      { "id": "freestyle", "name": "Freestyle", "description": "Libertà creativa totale." },
+      { "id": "rapidite", "name": "Rapidità", "description": "Categoria contro il tempo." },
+      { "id": "large", "name": "Large", "description": "Pizza di grande formato." }
     ]
+  },
+  "rulesDetail": {
+    "generalRules": {
+      "title": "Regolamento Generale",
+      "organization": "Il Trofeo Mondiale della Pizza è organizzato dall'Associazione Equipe di Francia di Pizzaioli.",
+      "ageRequirement": "Il Trofeo è aperto a tutti i pizzaioli di età superiore ai 16 anni.",
+      "uniformRequirement": "I concorrenti devono indossare la maglietta e il berretto forniti dall'organizzazione.",
+      "jewelryBan": "Per motivi di igiene è vietato indossare gioielli, braccialetti, anelli o orologi.",
+      "ownProducts": "Ogni partecipante deve utilizzare i propri prodotti per preparare la propria pizza.",
+      "preparationRoom": "Una sala sarà allestita per le preparazioni, la miscelazione e l'immagazzinamento dell'impasto. Solo le piastre a induzione sono autorizzate per le preparazioni (niente gas).",
+      "penalties": {
+        "title": "Penalità",
+        "incompleteUniform": "Uniforme incompleta/sporca: - 10 punti",
+        "noCap": "Senza berretto: - 10 punti",
+        "jewelry": "Gioielli/braccialetti/orologi/anelli: - 10 punti",
+        "timeExceeded": "Il tempo autorizzato per ogni categoria è specificato alla registrazione.",
+        "timeOverruns": [
+          "Proroga da 1 a 60 secondi: - 15 punti",
+          "Proroga da 61 a 120 secondi: - 25 punti",
+          "Proroga di + 121 secondi: - 50 punti"
+        ]
+      },
+      "serving": {
+        "title": "Presentazione alla Giuria",
+        "description": "La pizza deve essere servita direttamente alla giuria dai concorrenti.",
+        "beverage": "È possibile servire la pizza con una bevanda accompagnata ma è rigorosamente vietato fornire utensili, piatti, posate.",
+        "jury": "La giuria di tavolo sarà composta da giudici qualificati. Ognuno attribuirà un punteggio compreso tra 1 e 100 rispettivamente per gusto e cucina."
+      },
+      "cancellation": "In caso di non partecipazione, le quote di iscrizione saranno rimborsate solo se l'organizzazione è informata almeno 15 giorni prima dell'inizio dell'evento.",
+      "rights": "L'Organizzazione si riserva esclusivamente i diritti di pubblicità e immagine riguardanti i partecipanti di ogni categoria del concorso e l'uso illimitato di materiale fotografico, video o altro, senza oneri né obblighi per i partecipanti stessi."
+    },
+    "categoryRules": {
+      "classique": {
+        "name": "Pizza Classica",
+        "description": "La pizza classica rappresenta l'eccellenza della tradizione pizzaiola.",
+        "rules": ["Rispettare le proporzioni tradizionali", "Trama croccante all'esterno, soffice all'interno", "Condimenti equilibrati e armoniosi", "Scioglimento perfetto del formaggio"]
+      },
+      "calzone": {
+        "name": "Calzone",
+        "description": "Maestria nella chiusura e cottura di questa specialità italiana.",
+        "rules": ["Chiusura simmetrica e regolare", "Sigillo ermetico", "Cottura omogenea", "Ripieno ben distribuito"]
+      },
+      "napolitaine": {
+        "name": "Napoletana",
+        "description": "L'arte dell'autentica Vera Pizza Napoletana.",
+        "rules": ["Rispettare gli standard AVPN", "Solo farina, acqua, lievito, sale per l'impasto", "Pomodori San Marzano", "Mozzarella di bufala", "Cottura in forno a legna (minimo 900°C)"]
+      },
+      "dessert": {
+        "name": "Pizza Dolce",
+        "description": "Creatività dolce su pasta per pizza, innovazione e originalità.",
+        "rules": ["Creatività e innovazione premiate", "Presentazione attraente", "Equilibrio dei sapori dolci", "Tecnica di cottura padroneggiata"]
+      },
+      "pala": {
+        "name": "Pala",
+        "description": "Pizza alla pala, lunga e generosa.",
+        "rules": ["Forma allungata caratteristica", "Spessore regolare", "Condimenti generosi", "Cottura omogenea"]
+      },
+      "focaccia": {
+        "name": "Focaccia",
+        "description": "Soffice, croccante e profumata.",
+        "rules": ["Struttura alveolare caratteristica", "Ben aerata e soffice", "Condimento generoso", "Condimento equilibrato"]
+      },
+      "teglia": {
+        "name": "Teglia",
+        "description": "Pizza al tegame, al taglio.",
+        "rules": ["Cottura al tegame", "Spessore regolare", "Condimenti ben distribuiti", "Taglio netto e regolare"]
+      },
+      "doue": {
+        "name": "Pizza Dué - Trofeo Chef Ziolo",
+        "description": "Categoria speciale: lo chef ha due piastre a induzione.",
+        "rules": ["Due piastre a induzione con pentole per la preparazione dei condimenti", "Preparazione e cottura simultanea", "Tecnica e organizzazione", "Originalità delle preparazioni"]
+      },
+      "pasta": {
+        "name": "Pasta",
+        "description": "L'arte della pasta italiana, eccellenza gastronomica.",
+        "rules": ["Tecnica di preparazione tradizionale", "Qualità degli ingredienti", "Cottura perfetta", "Presentazione elegante"]
+      },
+      "freestyle": {
+        "name": "Freestyle",
+        "description": "Libertà creativa totale, innovazione senza limiti.",
+        "rules": ["Nessuna restrizione sugli ingredienti", "Creatività e originalità prioritarie", "Tecnica ed esecuzione", "Presentazione innovativa"]
+      },
+      "rapidite": {
+        "name": "Rapidità",
+        "description": "Categoria contro il tempo: velocità ed efficienza.",
+        "rules": ["Tempo limitato e rigoroso", "Qualità del prodotto finale", "Organizzazione dello spazio", "Rispetto delle norme igieniche sotto pressione"]
+      },
+      "large": {
+        "name": "Large",
+        "description": "Pizza di grande formato, volume e presentazione.",
+        "rules": ["Dimensioni minime imposte", "Cottura omogenea", "Condimenti generosi ed equilibrati", "Presentazione spettacolare"]
+      }
+    }
   },
   "header": {
     "navigation": {

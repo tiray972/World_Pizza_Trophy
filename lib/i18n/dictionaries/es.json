@@ -1,20 +1,20 @@
 {
   "home": {
     "hero": {
-      "title": "Trofeo Mundial de la Pizza Multicategoría",
-      "subtitle": "El campeonato internacional dedicado a pizzaiolos profesionales: técnica, creatividad y excelencia.",
+      "title": "Trofeo Mundial de Pizza Multicaría",
+      "subtitle": "El campeonato internacional dedicado a pizzeros profesionales: técnica, creatividad y excelencia.",
       "cta": {
-        "register": "Inscribirse ahora",
+        "register": "Registrarse ahora",
         "categories": "Ver categorías"
       }
     },
     "intro": {
-      "title": "Un evento mundial único",
-      "text": "El Trofeo Mundial de la Pizza reúne a los mejores profesionales del mundo para competir en múltiples categorías oficiales bajo un jurado internacional de expertos."
+      "title": "Un evento global único",
+      "text": "El Trofeo Mundial de Pizza reúne a los mejores pizzeros profesionales del mundo para competir en múltiples categorías oficiales bajo un jurado internacional experto."
     },
     "numbers": {
-      "title": "El Evento en cifras",
-      "pizzaiolos": "Pizzaiolos esperados",
+      "title": "Estadísticas del Evento",
+      "pizzaiolos": "Pizzeros esperados",
       "countries": "Países representados",
       "categories": "Categorías oficiales"
     },
@@ -23,47 +23,140 @@
       "items": [
         {
           "title": "Reconocimiento internacional",
-          "text": "Gana visibilidad ante prensa, patrocinadores y escuelas de formación."
+          "text": "Gana visibilidad de medios, patrocinadores, escuelas y redes profesionales."
         },
         {
           "title": "Títulos oficiales",
-          "text": "Múltiples trofeos que premian técnica, cocción, creatividad, presentación e innovación."
+          "text": "Múltiples trofeos que premian maestría culinaria, creatividad, presentación e innovación."
         },
         {
           "title": "Red profesional",
-          "text": "Conoce chefs renombrados, marcas, proveedores e inversores."
+          "text": "Conoce chefs de clase mundial, marcas de productos, proveedores y líderes de la industria."
         }
       ]
     },
     "cta": {
       "title": "¿Listo para aceptar el desafío?",
-      "subtitle": "Inscríbete ahora y reserva tu espacio de demostración.",
-      "button": "Inscribirme"
+      "subtitle": "Regístrate ahora y asegura tu lugar de demostración.",
+      "button": "Comenzar registro"
     }
   },
   "meta": {
-    "title": "Trofeo Mundial de la Pizza Multicategoría",
-    "description": "El campeonato internacional dedicado a pizzaiolos profesionales: técnica, creatividad y excelencia.",
-    "keywords": "pizza, trofeo, concurso, pizzaiolo, profesional, internacional, multicategoría, creatividad, excelencia",
+    "title": "Trofeo Mundial de Pizza Multicaría",
+    "description": "El campeonato internacional dedicado a pizzeros profesionales: técnica, creatividad y excelencia.",
+    "keywords": "pizza, trofeo, competencia, pizzero, profesional, internacional, multicategoría, creatividad, excelencia",
     "site_name": "World Pizza Trophy"
   },
   "rules": {
     "title": "Reglas y Categorías",
-    "subtitle": "Descubre las 12 categorías oficiales del Trofeo Mundial de la Pizza.",
+    "subtitle": "Descubre las 12 categorías oficiales del Trofeo Mundial de Pizza.",
     "categories": [
-      { "id": "classique", "name": "Pizza Clásica", "description": "La excelencia de la tradición." },
-      { "id": "calzone", "name": "Calzone", "description": "Dominio del plegado y la cocción." },
+      { "id": "classique", "name": "Pizza Clásica", "description": "Excelencia en la tradición." },
+      { "id": "calzone", "name": "Calzone", "description": "Maestría en el plegado y horneado." },
       { "id": "napolitaine", "name": "Napolitana", "description": "El arte de la Vera Pizza Napoletana." },
       { "id": "dessert", "name": "Pizza Postre", "description": "Creatividad dulce en masa de pizza." },
       { "id": "focaccia", "name": "Focaccia", "description": "Suave, crujiente y aromática." },
       { "id": "pala", "name": "Pala", "description": "Pizza de pala, larga y generosa." },
       { "id": "teglia", "name": "Teglia", "description": "Pizza en bandeja, al taglio." },
-      { "id": "doue", "name": "La Pizza d'Oue", "description": "Categoría técnica especial." },
+      { "id": "doue", "name": "Pizza Dué", "description": "Categoría técnica especial - Trofeo Chef Ziolo." },
       { "id": "pasta", "name": "Pasta", "description": "El arte de la pasta italiana." },
-      { "id": "glutenfree", "name": "Pizza Sin Gluten", "description": "La excelencia sin compromisos." },
-      { "id": "fritta", "name": "Pizza Frita", "description": "La tradición de fritura de Nápoles." },
-      { "id": "acrobatica", "name": "Pizza Acrobática / Show", "description": "El espectáculo del lanzamiento de masa." }
+      { "id": "freestyle", "name": "Freestyle", "description": "Libertad creativa total." },
+      { "id": "rapidite", "name": "Rapidez", "description": "Categoría contra reloj." },
+      { "id": "large", "name": "Grande", "description": "Pizza de gran formato." }
     ]
+  },
+  "rulesDetail": {
+    "generalRules": {
+      "title": "Reglas Generales",
+      "organization": "El Trofeo Mundial de Pizza es organizado por la Asociación del Equipo de Francia de Pizzeros.",
+      "ageRequirement": "El Trofeo está abierto a todos los pizzeros mayores de 16 años.",
+      "uniformRequirement": "Los competidores deben usar la camiseta y gorro proporcionados por la organización.",
+      "jewelryBan": "Por razones de higiene, está prohibido usar joyas, pulseras, anillos o relojes.",
+      "ownProducts": "Cada participante debe usar sus propios productos para preparar su propia pizza.",
+      "preparationRoom": "Se habilitará una sala para preparaciones, mezcla y almacenamiento de masa. Solo se autorizan placas de inducción para preparaciones (sin gas).",
+      "penalties": {
+        "title": "Penalizaciones",
+        "incompleteUniform": "Uniforme incompleto/sucio: - 10 puntos",
+        "noCap": "Sin gorro: - 10 puntos",
+        "jewelry": "Joyas/pulseras/relojes/anillos: - 10 puntos",
+        "timeExceeded": "El tiempo autorizado para cada categoría se especifica en el registro.",
+        "timeOverruns": [
+          "Prórroga de 1 a 60 segundos: - 15 puntos",
+          "Prórroga de 61 a 120 segundos: - 25 puntos",
+          "Prórroga de + 121 segundos: - 50 puntos"
+        ]
+      },
+      "serving": {
+        "title": "Presentación al Jurado",
+        "description": "La pizza debe ser servida directamente al jurado por los competidores.",
+        "beverage": "Es posible servir la pizza con una bebida acompañante pero está estrictamente prohibido proporcionar utensilios, platos, cubiertos.",
+        "jury": "El jurado de mesa estará compuesto por jueces calificados. Cada uno otorgará una puntuación entre 1 y 100 respectivamente para sabor y cocina."
+      },
+      "cancellation": "En caso de no participación, las cuotas de inscripción solo se reembolsarán si la organización es notificada al menos 15 días antes de que comience el evento.",
+      "rights": "La Organización se reserva exclusivamente los derechos de publicidad e imagen de los participantes de cada categoría del concurso y el uso ilimitado de material fotográfico, de video u otro, sin cargo u obligación para los participantes mismos."
+    },
+    "categoryRules": {
+      "classique": {
+        "name": "Pizza Clásica",
+        "description": "La pizza clásica representa la excelencia de la tradición pizzera.",
+        "rules": ["Respetar proporciones tradicionales", "Textura crujiente exterior, suave interior", "Coberturas equilibradas y armoniosas", "Derretimiento perfecto del queso"]
+      },
+      "calzone": {
+        "name": "Calzone",
+        "description": "Maestría en el plegado y horneado de esta especialidad italiana.",
+        "rules": ["Plegado simétrico y regular", "Sello hermético", "Horneado homogéneo", "Relleno bien distribuido"]
+      },
+      "napolitaine": {
+        "name": "Napolitana",
+        "description": "El arte de la auténtica Vera Pizza Napoletana.",
+        "rules": ["Respetar estándares AVPN", "Solo harina, agua, levadura, sal para la masa", "Tomates San Marzano", "Mozzarella di bufala", "Horneado en horno de leña (mínimo 900°C)"]
+      },
+      "dessert": {
+        "name": "Pizza Postre",
+        "description": "Creatividad dulce en masa de pizza, innovación y originalidad.",
+        "rules": ["Creatividad e innovación recompensadas", "Presentación atractiva", "Balance de sabores dulces", "Técnica de horneado dominada"]
+      },
+      "pala": {
+        "name": "Pala",
+        "description": "Pizza de pala, larga y generosa.",
+        "rules": ["Forma alargada característica", "Espesor regular", "Coberturas generosas", "Horneado homogéneo"]
+      },
+      "focaccia": {
+        "name": "Focaccia",
+        "description": "Suave, crujiente y aromática.",
+        "rules": ["Textura alveolar característica", "Bien aireada y esponjosa", "Cobertura generosa", "Condimento equilibrado"]
+      },
+      "teglia": {
+        "name": "Teglia",
+        "description": "Pizza en bandeja, al taglio.",
+        "rules": ["Horneado en bandeja", "Espesor regular", "Coberturas bien distribuidas", "Corte limpio y regular"]
+      },
+      "doue": {
+        "name": "Pizza Dué - Trofeo Chef Ziolo",
+        "description": "Categoría especial: el chef tiene dos placas de inducción.",
+        "rules": ["Dos placas de inducción con ollas para preparación de coberturas", "Preparación y horneado simultáneo", "Técnica y organización", "Originalidad de preparaciones"]
+      },
+      "pasta": {
+        "name": "Pasta",
+        "description": "El arte de la pasta italiana, excelencia gastronómica.",
+        "rules": ["Técnica de preparación tradicional", "Calidad de ingredientes", "Cocción perfecta", "Presentación elegante"]
+      },
+      "freestyle": {
+        "name": "Freestyle",
+        "description": "Libertad creativa total, innovación sin límites.",
+        "rules": ["Sin restricciones en ingredientes", "Creatividad e originalidad primordiales", "Técnica y ejecución", "Presentación innovadora"]
+      },
+      "rapidite": {
+        "name": "Rapidez",
+        "description": "Categoría contra reloj: velocidad y eficiencia.",
+        "rules": ["Tiempo limitado y estricto", "Calidad del producto final", "Organización del espacio", "Respeto de reglas de higiene bajo presión"]
+      },
+      "large": {
+        "name": "Grande",
+        "description": "Pizza de gran formato, volumen y presentación.",
+        "rules": ["Dimensiones mínimas impuestas", "Horneado homogéneo", "Coberturas generosas y equilibradas", "Presentación espectacular"]
+      }
+    }
   },
   "header": {
     "navigation": {
@@ -76,9 +169,9 @@
       "contact": "Contacto"
     },
     "buttons": {
-      "register": "INSCRIBIRSE",
-      "logout": "Cerrar Sesión",
-      "dashboard": "Panel de Control",
+      "register": "REGISTRARSE",
+      "logout": "Cerrar sesión",
+      "dashboard": "Panel",
       "language": "Idioma"
     },
     "greeting": "Hola,"

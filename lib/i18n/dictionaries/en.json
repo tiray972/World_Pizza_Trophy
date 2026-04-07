@@ -58,12 +58,105 @@
       { "id": "focaccia", "name": "Focaccia", "description": "Soft, crispy, and fragrant." },
       { "id": "pala", "name": "Pala", "description": "Paddle pizza, long and generous." },
       { "id": "teglia", "name": "Teglia", "description": "Pan pizza, al taglio." },
-      { "id": "doue", "name": "The Pizza d'Oue", "description": "Special technical category." },
+      { "id": "doue", "name": "Pizza Dué", "description": "Special technical category - Chef Ziolo Trophy." },
       { "id": "pasta", "name": "Pasta", "description": "The art of Italian pasta." },
-      { "id": "glutenfree", "name": "Gluten Free Pizza", "description": "Excellence without compromise." },
-      { "id": "fritta", "name": "Fried Pizza", "description": "Naples' frying tradition." },
-      { "id": "acrobatica", "name": "Acrobatic Pizza / Show", "description": "The dough spinning show." }
+      { "id": "freestyle", "name": "Freestyle", "description": "Total creative freedom." },
+      { "id": "rapidite", "name": "Speed", "description": "Against-the-clock category." },
+      { "id": "large", "name": "Large", "description": "Large-format pizza." }
     ]
+  },
+  "rulesDetail": {
+    "generalRules": {
+      "title": "General Rules",
+      "organization": "The World Pizza Trophy is organized by the France Pizza Chefs Team Association.",
+      "ageRequirement": "The Trophy is open to all pizza chefs aged 16 and over.",
+      "uniformRequirement": "Competitors must wear the t-shirt and cap provided by the organization.",
+      "jewelryBan": "For hygiene reasons, it is forbidden to wear jewelry, bracelets, rings or watches.",
+      "ownProducts": "Each participant must use their own products to prepare their own pizza.",
+      "preparationRoom": "A room will be set up for preparations, mixing and storing dough. Only induction plates are authorized for preparations (no gas).",
+      "penalties": {
+        "title": "Penalties",
+        "incompleteUniform": "Incomplete/dirty uniform: - 10 points",
+        "noCap": "No cap: - 10 points",
+        "jewelry": "Jewelry/bracelets/watches/rings: - 10 points",
+        "timeExceeded": "The authorized time for each category is specified at registration.",
+        "timeOverruns": [
+          "Extension of 1 to 60 seconds: - 15 points",
+          "Extension of 61 to 120 seconds: - 25 points",
+          "Extension of + 121 seconds: - 50 points"
+        ]
+      },
+      "serving": {
+        "title": "Jury Presentation",
+        "description": "The pizza must be served directly to the jury by the competitors.",
+        "beverage": "It is possible to serve the pizza with an accompanying beverage but it is strictly forbidden to provide utensils, plates, cutlery.",
+        "jury": "The table jury will consist of qualified judges. Each will give a score between 1 and 100 for taste and cooking respectively."
+      },
+      "cancellation": "In case of non-participation, registration fees will only be refunded if the organization is notified at least 15 days before the event begins.",
+      "rights": "The Organization exclusively reserves the rights of publicity and image concerning the participants of each category of the competition and the unlimited use of photographic, video or other material, without charge or obligation for the participants themselves."
+    },
+    "categoryRules": {
+      "classique": {
+        "name": "Classic Pizza",
+        "description": "Classic pizza represents the excellence of pizza tradition.",
+        "rules": ["Respect traditional proportions", "Crispy exterior, soft interior texture", "Balanced and harmonious toppings", "Perfect cheese melting"]
+      },
+      "calzone": {
+        "name": "Calzone",
+        "description": "Mastery of folding and baking this Italian specialty.",
+        "rules": ["Symmetrical and regular folding", "Hermetic seal", "Homogeneous baking", "Well-distributed filling"]
+      },
+      "napolitaine": {
+        "name": "Neapolitan",
+        "description": "The art of authentic Vera Pizza Napoletana.",
+        "rules": ["Respect AVPN standards", "Flour, water, yeast, salt only for dough", "San Marzano tomatoes", "Buffalo mozzarella", "Wood-fired oven baking (900°C minimum)"]
+      },
+      "dessert": {
+        "name": "Dessert Pizza",
+        "description": "Sweet creativity on pizza dough, innovation and originality.",
+        "rules": ["Creativity and innovation rewarded", "Attractive presentation", "Balance of sweet flavors", "Mastered baking technique"]
+      },
+      "pala": {
+        "name": "Pala",
+        "description": "Paddle pizza, long and generous.",
+        "rules": ["Characteristic elongated shape", "Regular thickness", "Generous toppings", "Homogeneous baking"]
+      },
+      "focaccia": {
+        "name": "Focaccia",
+        "description": "Soft, crispy and fragrant.",
+        "rules": ["Characteristic alveolar texture", "Well-aerated and fluffy", "Generous topping", "Balanced seasoning"]
+      },
+      "teglia": {
+        "name": "Teglia",
+        "description": "Pan pizza, al taglio.",
+        "rules": ["Pan baking", "Regular thickness", "Well-distributed toppings", "Clean and regular cutting"]
+      },
+      "doue": {
+        "name": "Pizza Dué - Chef Ziolo Trophy",
+        "description": "Special category: chef has two induction plates.",
+        "rules": ["Two induction plates with pans for topping preparation", "Simultaneous preparation and baking", "Technique and organization", "Originality of preparations"]
+      },
+      "pasta": {
+        "name": "Pasta",
+        "description": "The art of Italian pasta, gastronomic excellence.",
+        "rules": ["Traditional preparation technique", "Quality of ingredients", "Perfect cooking", "Elegant presentation"]
+      },
+      "freestyle": {
+        "name": "Freestyle",
+        "description": "Total creative freedom, unlimited innovation.",
+        "rules": ["No restrictions on ingredients", "Creativity and originality paramount", "Technique and execution", "Innovative presentation"]
+      },
+      "rapidite": {
+        "name": "Speed",
+        "description": "Against-the-clock category: speed and efficiency.",
+        "rules": ["Limited and strict time", "Quality of final product", "Space organization", "Respect for hygiene rules under pressure"]
+      },
+      "large": {
+        "name": "Large",
+        "description": "Large-format pizza, volume and presentation.",
+        "rules": ["Minimum imposed dimensions", "Homogeneous baking", "Generous and balanced toppings", "Spectacular presentation"]
+      }
+    }
   },
   "header": {
     "navigation": {
