@@ -24,10 +24,17 @@ const localeNames: Record<string, string> = {
 };
 
 const localeFlags: Record<string, string> = {
-  fr: "🇫🇷 FR",
-  en: "🇬🇧 EN",
-  es: "🇪🇸 ES",
-  it: "🇮🇹 IT",
+  fr: "🇫🇷",
+  en: "🇬🇧",
+  es: "🇪🇸",
+  it: "🇮🇹",
+};
+
+const localeCode: Record<string, string> = {
+  fr: "FR",
+  en: "EN",
+  es: "ES",
+  it: "IT",
 };
 
 interface FirestoreUser {
@@ -160,29 +167,33 @@ export default function Header({
 
         {/* Right Side */}
         <div className="hidden md:flex items-center gap-6">
-          {/* Language Switcher - Affiche le drapeau actuel */}
+          {/* Language Switcher - Beautiful flag with language code */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="flex items-center gap-2 text-gray-700 hover:text-[#8B0000] hover:bg-gray-50 px-3 text-3xl"
+                className="flex items-center gap-1.5 text-gray-700 hover:text-[#8B0000] hover:bg-gray-50 px-2 py-2 rounded-lg transition-colors"
               >
-                <span>{localeFlags[lang]}</span>
+                <span className="text-2xl leading-none">{localeFlags[lang]}</span>
+                <span className="text-xs font-bold tracking-wider text-gray-600 ml-0.5">{localeCode[lang]}</span>
               </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent align="end" className="w-48">
               {locales.map((locale) => (
                 <DropdownMenuItem key={locale} asChild>
                   <Link
                     href={switchLocaleUrl(locale)}
-                    className={`cursor-pointer flex items-center gap-3 text-lg py-2 ${
-                      locale === lang ? "text-[#8B0000] font-bold bg-gray-100" : ""
+                    className={`cursor-pointer flex items-center gap-3 py-2 px-3 rounded transition-colors ${
+                      locale === lang ? "text-[#8B0000] font-bold bg-gray-100" : "hover:bg-gray-50"
                     }`}
                   >
-                    <span className="text-2xl">{localeFlags[locale]}</span>
-                    <span>{localeNames[locale]}</span>
+                    <span className="text-xl leading-none">{localeFlags[locale]}</span>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold">{localeNames[locale]}</span>
+                      <span className="text-xs text-gray-400">{localeCode[locale]}</span>
+                    </div>
                   </Link>
                 </DropdownMenuItem>
               ))}
@@ -319,20 +330,20 @@ function MobileMenu({
           <div className="mt-8 flex flex-col gap-6">
             <div className="flex flex-col gap-3">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t.buttons.language}</span>
-              <div className="flex gap-4 flex-wrap">
+              <div className="flex gap-3 flex-wrap">
                 {locales.map((locale: string) => (
                   <Link
                     key={locale}
                     href={switchLocaleUrl(locale)}
-                    className={`px-4 py-2 border rounded-full text-lg font-bold flex items-center gap-2 ${
-                      locale === lang ? "bg-[#8B0000] text-white border-[#8B0000]" : "border-gray-200 text-gray-600"
+                    className={`px-3 py-2 border rounded-lg font-bold flex items-center gap-2 transition-colors ${
+                      locale === lang ? "bg-[#8B0000] text-white border-[#8B0000]" : "border-gray-200 text-gray-600 hover:border-gray-300"
                     }`}
                     onClick={() => setOpen(false)}
                   >
-                    <span className="text-2xl">
+                    <span className="text-xl leading-none">
                       {localeFlags[locale]}
                     </span>
-                    <span>{locale.toUpperCase()}</span>
+                    <span className="text-sm">{localeCode[locale]}</span>
                   </Link>
                 ))}
               </div>
