@@ -85,6 +85,17 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        console.log(`📊 [Pack Checkout] Total amount: ${totalAmount}€ (type: ${typeof totalAmount})`);
+        
+        // 🔧 VALIDATION: Ensure totalAmount is valid
+        if (typeof totalAmount !== 'number' || isNaN(totalAmount) || totalAmount <= 0) {
+            console.error(`❌ [Pack Checkout] Invalid totalAmount: ${totalAmount} (type: ${typeof totalAmount})`);
+            return NextResponse.json({ 
+                error: `Montant invalide: ${totalAmount}. Le montant doit être > 0.` 
+            }, { status: 400 });
+        }
+
+        console.log(`✅ [Pack Checkout] Amount validation passed`);
         console.log(`📊 Creating Stripe session for pack with total amount: ${totalAmount}€`);
 
         const origin = req.headers.get('origin') || 'http://localhost:3000';
@@ -115,11 +126,8 @@ export async function POST(req: NextRequest) {
                 eventId: eventId || '',
                 packId: packId,
                 packName: packName,
-                slotsToReserve: JSON.stringify(slotsToReserve.map((s: SlotWithParticipant) => ({
-                    slotId: s.slotId,
-                    participant: s.participant
-                }))),
-                isPack: 'true', // ✅ Marquer comme pack
+                slotIds: slotsToReserve.map(s => s.slotId).join(','), // 🔧 FIX: Just slot IDs, participants already saved in Firestore
+                isPack: 'true',
             },
         });
 

@@ -303,37 +303,64 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
     toast.loading("Configuration du pack...", { id: "pack-loading" });
 
     try {
-      // 📊 Calculer le montant total (prix du pack)
+      // �� Calculer le montant total (prix du pack)
       const totalAmount = product.unitAmount;
 
+      console.log(`📦 [PackCheckout] Product:`, product); // 🔍 DEBUG
+      console.log(`📦 [PackCheckout] totalAmount: ${totalAmount} (type: ${typeof totalAmount})`); // 🔍 DEBUG
       console.log(`📦 [PackCheckout] Pack: ${product.name}, Amount: ${totalAmount}€, Slots: ${slotsToCheckout.length}`);
+      
+      // 🔧 VALIDATION
+      if (!totalAmount || totalAmount <= 0) {
+        throw new Error(`Montant invalide: ${totalAmount}€`);
+      }
+
+      console.log(`📦 [PackCheckout] Slots data:`, slotsToCheckout); // 🔍 DEBUG
+
+      const requestBody = {
+        slotsToReserve: slotsToCheckout.map(slot => ({
+          slotId: slot.slotId,
+          categoryId: slot.categoryId,
+          date: slot.date, // 🔧 ADD: Include date
+          participant: slot.participant,
+        })),
+        userId: user.uid,
+        userEmail: user.email,
+        eventId: selectedEventId,
+        packId: product.id,
+        packName: product.name,
+        totalAmount: totalAmount,
+        lang: currentLang,
+      };
+
+      console.log(`📦 [PackCheckout] Request body:`, requestBody); // 🔍 DEBUG
 
       const res = await fetch('/api/booking/checkout-pack', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          // ✅ ALL REQUIRED FIELDS FOR ENDPOINT
-          slotsToReserve: slotsToCheckout.map(slot => ({
-            slotId: slot.slotId,
-            categoryId: slot.categoryId,
-            participant: slot.participant,  // 👤 IMPORTANT: Include participant data
-          })),
-          userId: user.uid,
-          userEmail: user.email,
-          eventId: selectedEventId,
-          packId: product.id,  // ✅ ADD: Product/Pack ID
-          packName: product.name,  // ✅ ADD: Pack name
-          totalAmount: totalAmount,  // ✅ ADD: Total amount
-          lang: currentLang,  // ✅ ADD: Language
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      console.log(`📦 [PackCheckout] Response status: ${res.status}, data:`, data); // 🔍 DEBUG
+      
+      if (!res.ok) {
+        console.error(`❌ [PackCheckout] API Error:`, data);
+        throw new Error(data.error || `Erreur serveur: ${res.status}`);
+      }
 
+      console.log(`✅ [PackCheckout] Session created:`, data.sessionId); // 🔍 DEBUG
       toast.dismiss("pack-loading");
-      if (data.url) window.location.href = data.url;
+      
+      if (!data.url) {
+        console.error(`❌ [PackCheckout] No URL in response:`, data);
+        throw new Error("Impossible de créer la session de paiement");
+      }
+      
+      console.log(`✅ [PackCheckout] Redirecting to Stripe:`, data.url); // 🔍 DEBUG
+      window.location.href = data.url;
     } catch (err: any) {
+      console.error(`❌ [PackCheckout] Error:`, err); // 🔍 DEBUG
       toast.dismiss("pack-loading");
       handleError(err.message);
     }
