@@ -51,18 +51,66 @@
     "title": "Reglas y Categorías",
     "subtitle": "Descubre las 12 categorías oficiales del Trofeo Mundial de Pizza.",
     "categories": [
-      { "id": "classique", "name": "Pizza Clásica", "description": "Excelencia en la tradición." },
-      { "id": "calzone", "name": "Calzone", "description": "Maestría en el plegado y horneado." },
-      { "id": "napolitaine", "name": "Napolitana", "description": "El arte de la Vera Pizza Napoletana." },
-      { "id": "dessert", "name": "Pizza Postre", "description": "Creatividad dulce en masa de pizza." },
-      { "id": "focaccia", "name": "Focaccia", "description": "Suave, crujiente y aromática." },
-      { "id": "pala", "name": "Pala", "description": "Pizza de pala, larga y generosa." },
-      { "id": "teglia", "name": "Teglia", "description": "Pizza en bandeja, al taglio." },
-      { "id": "doue", "name": "Pizza Dué", "description": "Categoría técnica especial - Trofeo Chef Ziolo." },
-      { "id": "pasta", "name": "Pasta", "description": "El arte de la pasta italiana." },
-      { "id": "freestyle", "name": "Freestyle", "description": "Libertad creativa total." },
-      { "id": "rapidite", "name": "Rapidez", "description": "Categoría contra reloj." },
-      { "id": "large", "name": "Grande", "description": "Pizza de gran formato." }
+      {
+        "id": "classique",
+        "name": "Pizza Clásica",
+        "description": "Excelencia en la tradición."
+      },
+      {
+        "id": "calzone",
+        "name": "Calzone",
+        "description": "Maestría en el plegado y horneado."
+      },
+      {
+        "id": "napolitaine",
+        "name": "Napolitana",
+        "description": "El arte de la Vera Pizza Napoletana."
+      },
+      {
+        "id": "dessert",
+        "name": "Pizza Postre",
+        "description": "Creatividad dulce en masa de pizza."
+      },
+      {
+        "id": "focaccia",
+        "name": "Focaccia",
+        "description": "Suave, crujiente y aromática."
+      },
+      {
+        "id": "pala",
+        "name": "Pala",
+        "description": "Pizza de pala, larga y generosa."
+      },
+      {
+        "id": "teglia",
+        "name": "Teglia",
+        "description": "Pizza en bandeja, al taglio."
+      },
+      {
+        "id": "doue",
+        "name": "Pizza Dué",
+        "description": "Categoría técnica especial - Trofeo Chef Ziolo."
+      },
+      {
+        "id": "pasta",
+        "name": "Pasta",
+        "description": "El arte de la pasta italiana."
+      },
+      {
+        "id": "freestyle",
+        "name": "Freestyle",
+        "description": "Libertad creativa total."
+      },
+      {
+        "id": "rapidite",
+        "name": "Rapidez",
+        "description": "Categoría contra reloj."
+      },
+      {
+        "id": "large",
+        "name": "Grande",
+        "description": "Pizza de gran formato."
+      }
     ]
   },
   "rulesDetail": {
@@ -99,62 +147,123 @@
       "classique": {
         "name": "Pizza Clásica",
         "description": "La pizza clásica representa la excelencia de la tradición pizzera.",
-        "rules": ["Respetar proporciones tradicionales", "Textura crujiente exterior, suave interior", "Coberturas equilibradas y armoniosas", "Derretimiento perfecto del queso"]
+        "rules": [
+          "Respetar proporciones tradicionales",
+          "Textura crujiente exterior, suave interior",
+          "Coberturas equilibradas y armoniosas",
+          "Derretimiento perfecto del queso"
+        ]
       },
       "calzone": {
         "name": "Calzone",
         "description": "Maestría en el plegado y horneado de esta especialidad italiana.",
-        "rules": ["Plegado simétrico y regular", "Sello hermético", "Horneado homogéneo", "Relleno bien distribuido"]
+        "rules": [
+          "Plegado simétrico y regular",
+          "Sello hermético",
+          "Horneado homogéneo",
+          "Relleno bien distribuido"
+        ]
       },
       "napolitaine": {
         "name": "Napolitana",
         "description": "El arte de la auténtica Vera Pizza Napoletana.",
-        "rules": ["Respetar estándares AVPN", "Solo harina, agua, levadura, sal para la masa", "Tomates San Marzano", "Mozzarella di bufala", "Horneado en horno de leña (mínimo 900°C)"]
+        "rules": [
+          "Respetar estándares AVPN",
+          "Solo harina, agua, levadura, sal para la masa",
+          "Tomates San Marzano",
+          "Mozzarella di bufala",
+          "Horneado en horno de leña (mínimo 900°C)"
+        ]
       },
       "dessert": {
         "name": "Pizza Postre",
         "description": "Creatividad dulce en masa de pizza, innovación y originalidad.",
-        "rules": ["Creatividad e innovación recompensadas", "Presentación atractiva", "Balance de sabores dulces", "Técnica de horneado dominada"]
+        "rules": [
+          "Creatividad e innovación recompensadas",
+          "Presentación atractiva",
+          "Balance de sabores dulces",
+          "Técnica de horneado dominada"
+        ]
       },
       "pala": {
         "name": "Pala",
         "description": "Pizza de pala, larga y generosa.",
-        "rules": ["Forma alargada característica", "Espesor regular", "Coberturas generosas", "Horneado homogéneo"]
+        "rules": [
+          "Forma alargada característica",
+          "Espesor regular",
+          "Coberturas generosas",
+          "Horneado homogéneo"
+        ]
       },
       "focaccia": {
         "name": "Focaccia",
         "description": "Suave, crujiente y aromática.",
-        "rules": ["Textura alveolar característica", "Bien aireada y esponjosa", "Cobertura generosa", "Condimento equilibrado"]
+        "rules": [
+          "Textura alveolar característica",
+          "Bien aireada y esponjosa",
+          "Cobertura generosa",
+          "Condimento equilibrado"
+        ]
       },
       "teglia": {
         "name": "Teglia",
         "description": "Pizza en bandeja, al taglio.",
-        "rules": ["Horneado en bandeja", "Espesor regular", "Coberturas bien distribuidas", "Corte limpio y regular"]
+        "rules": [
+          "Horneado en bandeja",
+          "Espesor regular",
+          "Coberturas bien distribuidas",
+          "Corte limpio y regular"
+        ]
       },
       "doue": {
         "name": "Pizza Dué - Trofeo Chef Ziolo",
         "description": "Categoría especial: el chef tiene dos placas de inducción.",
-        "rules": ["Dos placas de inducción con ollas para preparación de coberturas", "Preparación y horneado simultáneo", "Técnica y organización", "Originalidad de preparaciones"]
+        "rules": [
+          "Dos placas de inducción con ollas para preparación de coberturas",
+          "Preparación y horneado simultáneo",
+          "Técnica y organización",
+          "Originalidad de preparaciones"
+        ]
       },
       "pasta": {
         "name": "Pasta",
         "description": "El arte de la pasta italiana, excelencia gastronómica.",
-        "rules": ["Técnica de preparación tradicional", "Calidad de ingredientes", "Cocción perfecta", "Presentación elegante"]
+        "rules": [
+          "Técnica de preparación tradicional",
+          "Calidad de ingredientes",
+          "Cocción perfecta",
+          "Presentación elegante"
+        ]
       },
       "freestyle": {
         "name": "Freestyle",
         "description": "Libertad creativa total, innovación sin límites.",
-        "rules": ["Sin restricciones en ingredientes", "Creatividad e originalidad primordiales", "Técnica y ejecución", "Presentación innovadora"]
+        "rules": [
+          "Sin restricciones en ingredientes",
+          "Creatividad e originalidad primordiales",
+          "Técnica y ejecución",
+          "Presentación innovadora"
+        ]
       },
       "rapidite": {
         "name": "Rapidez",
         "description": "Categoría contra reloj: velocidad y eficiencia.",
-        "rules": ["Tiempo limitado y estricto", "Calidad del producto final", "Organización del espacio", "Respeto de reglas de higiene bajo presión"]
+        "rules": [
+          "Tiempo limitado y estricto",
+          "Calidad del producto final",
+          "Organización del espacio",
+          "Respeto de reglas de higiene bajo presión"
+        ]
       },
       "large": {
         "name": "Grande",
         "description": "Pizza de gran formato, volumen y presentación.",
-        "rules": ["Dimensiones mínimas impuestas", "Horneado homogéneo", "Coberturas generosas y equilibradas", "Presentación espectacular"]
+        "rules": [
+          "Dimensiones mínimas impuestas",
+          "Horneado homogéneo",
+          "Coberturas generosas y equilibradas",
+          "Presentación espectacular"
+        ]
       }
     }
   },
@@ -175,5 +284,68 @@
       "language": "Idioma"
     },
     "greeting": "Hola,"
+  },
+  "contact": {
+    "title": "Contáctenos",
+    "subtitle": "¿Tiene preguntas? Contáctenos para cualquier información sobre el Trofeo Mundial de Pizza.",
+    "form": {
+      "name": "Nombre Completo",
+      "email": "Correo Electrónico",
+      "phone": "Número de Teléfono",
+      "subject": "Asunto",
+      "message": "Su Mensaje",
+      "submit": "Enviar",
+      "placeholders": {
+        "name": "Juan García",
+        "email": "juan@example.com",
+        "phone": "+34 91 234 5678",
+        "subject": "Pregunta sobre inscripción",
+        "message": "Escriba su mensaje aquí..."
+      }
+    },
+    "info": {
+      "title": "Información de Contacto",
+      "email": {
+        "label": "Correo Electrónico",
+        "value": "contact@worldpizzatrophy.com"
+      },
+      "phone": {
+        "label": "Teléfono",
+        "value": "+33 (0)1 23 45 67 89"
+      },
+      "address": {
+        "label": "Dirección",
+        "value": "123 Calle de la Pizza, 75000 París, Francia"
+      },
+      "hours": {
+        "label": "Horario de Atención",
+        "value": "Lunes - Viernes: 9:00 - 18:00\nSábado: 10:00 - 14:00"
+      }
+    },
+    "faq": {
+      "title": "Preguntas Frecuentes",
+      "items": [
+        {
+          "question": "¿Cuándo puedo registrarme?",
+          "answer": "El registro se realiza en línea en nuestro sitio web. Los plazos de registro se muestran en la página de inicio."
+        },
+        {
+          "question": "¿Cuál es el costo de participación?",
+          "answer": "El costo varía según las categorías. Consulte la página de reserva para ver las tarifas detalladas."
+        },
+        {
+          "question": "¿Puedo participar en varias categorías?",
+          "answer": "Sí, puede participar en varias categorías. Cada categoría requiere un registro separado."
+        },
+        {
+          "question": "¿Hay costos de preparación?",
+          "answer": "No, usa tus propios productos. La organización solo proporciona equipo de cocina."
+        },
+        {
+          "question": "¿Cuál es la duración de la competencia?",
+          "answer": "La duración varía según la categoría y se especifica durante el registro."
+        }
+      ]
+    }
   }
 }

@@ -51,18 +51,66 @@
     "title": "Rules & Categories",
     "subtitle": "Discover the 12 official categories of the World Pizza Trophy.",
     "categories": [
-      { "id": "classique", "name": "Classic Pizza", "description": "Excellence in tradition." },
-      { "id": "calzone", "name": "Calzone", "description": "Mastery of folding and baking." },
-      { "id": "napolitaine", "name": "Neapolitan", "description": "The art of Vera Pizza Napoletana." },
-      { "id": "dessert", "name": "Dessert Pizza", "description": "Sweet creativity on pizza dough." },
-      { "id": "focaccia", "name": "Focaccia", "description": "Soft, crispy, and fragrant." },
-      { "id": "pala", "name": "Pala", "description": "Paddle pizza, long and generous." },
-      { "id": "teglia", "name": "Teglia", "description": "Pan pizza, al taglio." },
-      { "id": "doue", "name": "Pizza Dué", "description": "Special technical category - Chef Ziolo Trophy." },
-      { "id": "pasta", "name": "Pasta", "description": "The art of Italian pasta." },
-      { "id": "freestyle", "name": "Freestyle", "description": "Total creative freedom." },
-      { "id": "rapidite", "name": "Speed", "description": "Against-the-clock category." },
-      { "id": "large", "name": "Large", "description": "Large-format pizza." }
+      {
+        "id": "classique",
+        "name": "Classic Pizza",
+        "description": "Excellence in tradition."
+      },
+      {
+        "id": "calzone",
+        "name": "Calzone",
+        "description": "Mastery of folding and baking."
+      },
+      {
+        "id": "napolitaine",
+        "name": "Neapolitan",
+        "description": "The art of Vera Pizza Napoletana."
+      },
+      {
+        "id": "dessert",
+        "name": "Dessert Pizza",
+        "description": "Sweet creativity on pizza dough."
+      },
+      {
+        "id": "focaccia",
+        "name": "Focaccia",
+        "description": "Soft, crispy, and fragrant."
+      },
+      {
+        "id": "pala",
+        "name": "Pala",
+        "description": "Paddle pizza, long and generous."
+      },
+      {
+        "id": "teglia",
+        "name": "Teglia",
+        "description": "Pan pizza, al taglio."
+      },
+      {
+        "id": "doue",
+        "name": "Pizza Dué",
+        "description": "Special technical category - Chef Ziolo Trophy."
+      },
+      {
+        "id": "pasta",
+        "name": "Pasta",
+        "description": "The art of Italian pasta."
+      },
+      {
+        "id": "freestyle",
+        "name": "Freestyle",
+        "description": "Total creative freedom."
+      },
+      {
+        "id": "rapidite",
+        "name": "Speed",
+        "description": "Against-the-clock category."
+      },
+      {
+        "id": "large",
+        "name": "Large",
+        "description": "Large-format pizza."
+      }
     ]
   },
   "rulesDetail": {
@@ -99,62 +147,123 @@
       "classique": {
         "name": "Classic Pizza",
         "description": "Classic pizza represents the excellence of pizza tradition.",
-        "rules": ["Respect traditional proportions", "Crispy exterior, soft interior texture", "Balanced and harmonious toppings", "Perfect cheese melting"]
+        "rules": [
+          "Respect traditional proportions",
+          "Crispy exterior, soft interior texture",
+          "Balanced and harmonious toppings",
+          "Perfect cheese melting"
+        ]
       },
       "calzone": {
         "name": "Calzone",
         "description": "Mastery of folding and baking this Italian specialty.",
-        "rules": ["Symmetrical and regular folding", "Hermetic seal", "Homogeneous baking", "Well-distributed filling"]
+        "rules": [
+          "Symmetrical and regular folding",
+          "Hermetic seal",
+          "Homogeneous baking",
+          "Well-distributed filling"
+        ]
       },
       "napolitaine": {
         "name": "Neapolitan",
         "description": "The art of authentic Vera Pizza Napoletana.",
-        "rules": ["Respect AVPN standards", "Flour, water, yeast, salt only for dough", "San Marzano tomatoes", "Buffalo mozzarella", "Wood-fired oven baking (900°C minimum)"]
+        "rules": [
+          "Respect AVPN standards",
+          "Flour, water, yeast, salt only for dough",
+          "San Marzano tomatoes",
+          "Buffalo mozzarella",
+          "Wood-fired oven baking (900°C minimum)"
+        ]
       },
       "dessert": {
         "name": "Dessert Pizza",
         "description": "Sweet creativity on pizza dough, innovation and originality.",
-        "rules": ["Creativity and innovation rewarded", "Attractive presentation", "Balance of sweet flavors", "Mastered baking technique"]
+        "rules": [
+          "Creativity and innovation rewarded",
+          "Attractive presentation",
+          "Balance of sweet flavors",
+          "Mastered baking technique"
+        ]
       },
       "pala": {
         "name": "Pala",
         "description": "Paddle pizza, long and generous.",
-        "rules": ["Characteristic elongated shape", "Regular thickness", "Generous toppings", "Homogeneous baking"]
+        "rules": [
+          "Characteristic elongated shape",
+          "Regular thickness",
+          "Generous toppings",
+          "Homogeneous baking"
+        ]
       },
       "focaccia": {
         "name": "Focaccia",
         "description": "Soft, crispy and fragrant.",
-        "rules": ["Characteristic alveolar texture", "Well-aerated and fluffy", "Generous topping", "Balanced seasoning"]
+        "rules": [
+          "Characteristic alveolar texture",
+          "Well-aerated and fluffy",
+          "Generous topping",
+          "Balanced seasoning"
+        ]
       },
       "teglia": {
         "name": "Teglia",
         "description": "Pan pizza, al taglio.",
-        "rules": ["Pan baking", "Regular thickness", "Well-distributed toppings", "Clean and regular cutting"]
+        "rules": [
+          "Pan baking",
+          "Regular thickness",
+          "Well-distributed toppings",
+          "Clean and regular cutting"
+        ]
       },
       "doue": {
         "name": "Pizza Dué - Chef Ziolo Trophy",
         "description": "Special category: chef has two induction plates.",
-        "rules": ["Two induction plates with pans for topping preparation", "Simultaneous preparation and baking", "Technique and organization", "Originality of preparations"]
+        "rules": [
+          "Two induction plates with pans for topping preparation",
+          "Simultaneous preparation and baking",
+          "Technique and organization",
+          "Originality of preparations"
+        ]
       },
       "pasta": {
         "name": "Pasta",
         "description": "The art of Italian pasta, gastronomic excellence.",
-        "rules": ["Traditional preparation technique", "Quality of ingredients", "Perfect cooking", "Elegant presentation"]
+        "rules": [
+          "Traditional preparation technique",
+          "Quality of ingredients",
+          "Perfect cooking",
+          "Elegant presentation"
+        ]
       },
       "freestyle": {
         "name": "Freestyle",
         "description": "Total creative freedom, unlimited innovation.",
-        "rules": ["No restrictions on ingredients", "Creativity and originality paramount", "Technique and execution", "Innovative presentation"]
+        "rules": [
+          "No restrictions on ingredients",
+          "Creativity and originality paramount",
+          "Technique and execution",
+          "Innovative presentation"
+        ]
       },
       "rapidite": {
         "name": "Speed",
         "description": "Against-the-clock category: speed and efficiency.",
-        "rules": ["Limited and strict time", "Quality of final product", "Space organization", "Respect for hygiene rules under pressure"]
+        "rules": [
+          "Limited and strict time",
+          "Quality of final product",
+          "Space organization",
+          "Respect for hygiene rules under pressure"
+        ]
       },
       "large": {
         "name": "Large",
         "description": "Large-format pizza, volume and presentation.",
-        "rules": ["Minimum imposed dimensions", "Homogeneous baking", "Generous and balanced toppings", "Spectacular presentation"]
+        "rules": [
+          "Minimum imposed dimensions",
+          "Homogeneous baking",
+          "Generous and balanced toppings",
+          "Spectacular presentation"
+        ]
       }
     }
   },
@@ -175,5 +284,68 @@
       "language": "Language"
     },
     "greeting": "Hello,"
+  },
+  "contact": {
+    "title": "Contact Us",
+    "subtitle": "Have questions? Contact us for any information about the World Pizza Trophy.",
+    "form": {
+      "name": "Full Name",
+      "email": "Email Address",
+      "phone": "Phone Number",
+      "subject": "Subject",
+      "message": "Your Message",
+      "submit": "Send",
+      "placeholders": {
+        "name": "John Smith",
+        "email": "john@example.com",
+        "phone": "+1 (555) 123-4567",
+        "subject": "Question about registration",
+        "message": "Write your message here..."
+      }
+    },
+    "info": {
+      "title": "Contact Information",
+      "email": {
+        "label": "Email",
+        "value": "contact@worldpizzatrophy.com"
+      },
+      "phone": {
+        "label": "Phone",
+        "value": "+33 (0)1 23 45 67 89"
+      },
+      "address": {
+        "label": "Address",
+        "value": "123 Pizza Street, 75000 Paris, France"
+      },
+      "hours": {
+        "label": "Opening Hours",
+        "value": "Monday - Friday: 9:00 AM - 6:00 PM\nSaturday: 10:00 AM - 2:00 PM"
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "items": [
+        {
+          "question": "When can I register?",
+          "answer": "Registrations are done online on our website. Registration deadlines are displayed on the home page."
+        },
+        {
+          "question": "What is the participation cost?",
+          "answer": "The cost varies depending on the categories. Check the reservation page for detailed rates."
+        },
+        {
+          "question": "Can I participate in multiple categories?",
+          "answer": "Yes, you can participate in multiple categories. Each category requires a separate registration."
+        },
+        {
+          "question": "Are there preparation fees?",
+          "answer": "No, you use your own products. The organization only provides cooking equipment."
+        },
+        {
+          "question": "What is the competition duration?",
+          "answer": "The duration varies by category and is specified during registration."
+        }
+      ]
+    }
   }
 }

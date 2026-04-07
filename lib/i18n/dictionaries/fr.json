@@ -51,18 +51,66 @@
     "title": "Règlement & Catégories",
     "subtitle": "Découvrez les 12 catégories officielles du Trophée Mondial de la Pizza.",
     "categories": [
-      { "id": "classique", "name": "Pizza Classique", "description": "L'excellence de la tradition." },
-      { "id": "calzone", "name": "Calzone", "description": "La maîtrise du pliage et de la cuisson." },
-      { "id": "napolitaine", "name": "Napolitaine", "description": "L'art de la Vera Pizza Napoletana." },
-      { "id": "dessert", "name": "Pizza Dessert", "description": "Créativité sucrée sur pâte à pizza." },
-      { "id": "focaccia", "name": "Focaccia", "description": "Moelleuse, croustillante et parfumée." },
-      { "id": "pala", "name": "Pala", "description": "La pizza à la pelle, longue et généreuse." },
-      { "id": "teglia", "name": "Teglia", "description": "La pizza en plaque, al taglio." },
-      { "id": "doue", "name": "Pizza Dué", "description": "Catégorie spéciale technique - Trophée Chef Ziolo." },
-      { "id": "pasta", "name": "Pasta", "description": "L'art des pâtes italiennes." },
-      { "id": "freestyle", "name": "Freestyle", "description": "Liberté créative totale." },
-      { "id": "rapidite", "name": "Rapidité", "description": "Catégorie contre la montre." },
-      { "id": "large", "name": "Large", "description": "Pizza de grande taille." }
+      {
+        "id": "classique",
+        "name": "Pizza Classique",
+        "description": "L'excellence de la tradition."
+      },
+      {
+        "id": "calzone",
+        "name": "Calzone",
+        "description": "La maîtrise du pliage et de la cuisson."
+      },
+      {
+        "id": "napolitaine",
+        "name": "Napolitaine",
+        "description": "L'art de la Vera Pizza Napoletana."
+      },
+      {
+        "id": "dessert",
+        "name": "Pizza Dessert",
+        "description": "Créativité sucrée sur pâte à pizza."
+      },
+      {
+        "id": "focaccia",
+        "name": "Focaccia",
+        "description": "Moelleuse, croustillante et parfumée."
+      },
+      {
+        "id": "pala",
+        "name": "Pala",
+        "description": "La pizza à la pelle, longue et généreuse."
+      },
+      {
+        "id": "teglia",
+        "name": "Teglia",
+        "description": "La pizza en plaque, al taglio."
+      },
+      {
+        "id": "doue",
+        "name": "Pizza Dué",
+        "description": "Catégorie spéciale technique - Trophée Chef Ziolo."
+      },
+      {
+        "id": "pasta",
+        "name": "Pasta",
+        "description": "L'art des pâtes italiennes."
+      },
+      {
+        "id": "freestyle",
+        "name": "Freestyle",
+        "description": "Liberté créative totale."
+      },
+      {
+        "id": "rapidite",
+        "name": "Rapidité",
+        "description": "Catégorie contre la montre."
+      },
+      {
+        "id": "large",
+        "name": "Large",
+        "description": "Pizza de grande taille."
+      }
     ]
   },
   "rulesDetail": {
@@ -99,62 +147,123 @@
       "classique": {
         "name": "Pizza Classique",
         "description": "La pizza classique représente l'excellence de la tradition pizzaïola.",
-        "rules": ["Respecter les proportions traditionnelles", "Texture croustillante à l'extérieur, moelleuse à l'intérieur", "Garnitures équilibrées et harmonieuses", "Cuisson parfaite du fromage"]
+        "rules": [
+          "Respecter les proportions traditionnelles",
+          "Texture croustillante à l'extérieur, moelleuse à l'intérieur",
+          "Garnitures équilibrées et harmonieuses",
+          "Cuisson parfaite du fromage"
+        ]
       },
       "calzone": {
         "name": "Calzone",
         "description": "Maîtrise du pliage et de la cuisson pour cette spécialité italienne.",
-        "rules": ["Pliage symétrique et régulier", "Fermeture hermétique", "Cuisson homogène", "Garniture bien répartie"]
+        "rules": [
+          "Pliage symétrique et régulier",
+          "Fermeture hermétique",
+          "Cuisson homogène",
+          "Garniture bien répartie"
+        ]
       },
       "napolitaine": {
         "name": "Napolitaine",
         "description": "L'art de la Vera Pizza Napoletana, tradition authentique.",
-        "rules": ["Respecter les normes AVPN", "Farine, eau, levure, sel uniquement pour la pâte", "Tomates San Marzano", "Mozzarella di bufala", "Cuisson au feu de bois (900°C minimum)"]
+        "rules": [
+          "Respecter les normes AVPN",
+          "Farine, eau, levure, sel uniquement pour la pâte",
+          "Tomates San Marzano",
+          "Mozzarella di bufala",
+          "Cuisson au feu de bois (900°C minimum)"
+        ]
       },
       "dessert": {
         "name": "Pizza Dessert",
         "description": "Créativité sucrée sur pâte à pizza, innovation et originalité.",
-        "rules": ["Créativité et innovation récompensées", "Présentation attrayante", "Équilibre des saveurs sucrées", "Technique de cuisson maîtrisée"]
+        "rules": [
+          "Créativité et innovation récompensées",
+          "Présentation attrayante",
+          "Équilibre des saveurs sucrées",
+          "Technique de cuisson maîtrisée"
+        ]
       },
       "pala": {
         "name": "Pala",
         "description": "La pizza à la pelle, longue et généreuse.",
-        "rules": ["Forme allongée caractéristique", "Épaisseur régulière", "Garnitures généreuses", "Cuisson homogène"]
+        "rules": [
+          "Forme allongée caractéristique",
+          "Épaisseur régulière",
+          "Garnitures généreuses",
+          "Cuisson homogène"
+        ]
       },
       "focaccia": {
         "name": "Focaccia",
         "description": "Moelleuse, croustillante et parfumée.",
-        "rules": ["Texture alvéolée caractéristique", "Bien aérée et moelleuse", "Garniture généreuse", "Assaisonnement équilibré"]
+        "rules": [
+          "Texture alvéolée caractéristique",
+          "Bien aérée et moelleuse",
+          "Garniture généreuse",
+          "Assaisonnement équilibré"
+        ]
       },
       "teglia": {
         "name": "Teglia",
         "description": "La pizza en plaque, al taglio.",
-        "rules": ["Cuisson en plaque", "Épaisseur régulière", "Garnitures bien réparties", "Découpe nette et régulière"]
+        "rules": [
+          "Cuisson en plaque",
+          "Épaisseur régulière",
+          "Garnitures bien réparties",
+          "Découpe nette et régulière"
+        ]
       },
       "doue": {
         "name": "Pizza Dué - Trophée Chef Ziolo",
         "description": "Catégorie spéciale : le chef dispose de deux plaques à induction.",
-        "rules": ["Deux plaques à induction avec casseroles pour les garnitures", "Préparation et cuisson simultanée", "Technique et organisation", "Originalité des préparations"]
+        "rules": [
+          "Deux plaques à induction avec casseroles pour les garnitures",
+          "Préparation et cuisson simultanée",
+          "Technique et organisation",
+          "Originalité des préparations"
+        ]
       },
       "pasta": {
         "name": "Pasta",
         "description": "L'art des pâtes italiennes, excellence gastronomique.",
-        "rules": ["Technique de préparation traditionnelle", "Qualité des ingrédients", "Cuisson parfaite", "Présentation élégante"]
+        "rules": [
+          "Technique de préparation traditionnelle",
+          "Qualité des ingrédients",
+          "Cuisson parfaite",
+          "Présentation élégante"
+        ]
       },
       "freestyle": {
         "name": "Freestyle",
         "description": "Liberté créative totale, innovation sans limite.",
-        "rules": ["Aucune restriction sur les ingrédients", "Créativité et originalité primordiales", "Technique et exécution", "Présentation innovante"]
+        "rules": [
+          "Aucune restriction sur les ingrédients",
+          "Créativité et originalité primordiales",
+          "Technique et exécution",
+          "Présentation innovante"
+        ]
       },
       "rapidite": {
         "name": "Rapidité",
         "description": "Catégorie contre la montre : vitesse et efficacité.",
-        "rules": ["Temps limité et strict", "Qualité du produit final", "Organisation de l'espace", "Respect des règles d'hygiène même sous pression"]
+        "rules": [
+          "Temps limité et strict",
+          "Qualité du produit final",
+          "Organisation de l'espace",
+          "Respect des règles d'hygiène même sous pression"
+        ]
       },
       "large": {
         "name": "Large",
         "description": "Pizza de grande taille, volume et présentation.",
-        "rules": ["Dimensions minimales imposées", "Cuisson homogène", "Garnitures généreuses et équilibrées", "Présentation spectaculaire"]
+        "rules": [
+          "Dimensions minimales imposées",
+          "Cuisson homogène",
+          "Garnitures généreuses et équilibrées",
+          "Présentation spectaculaire"
+        ]
       }
     }
   },
@@ -175,5 +284,68 @@
       "language": "Langue"
     },
     "greeting": "Bonjour,"
+  },
+  "contact": {
+    "title": "Nous Contacter",
+    "subtitle": "Des questions ? Contactez-nous pour toute information sur le Trophée Mondial de la Pizza.",
+    "form": {
+      "name": "Nom complet",
+      "email": "Adresse email",
+      "phone": "Numéro de téléphone",
+      "subject": "Sujet",
+      "message": "Votre message",
+      "submit": "Envoyer",
+      "placeholders": {
+        "name": "Jean Dupont",
+        "email": "jean@example.com",
+        "phone": "+33 6 12 34 56 78",
+        "subject": "Question sur l'inscription",
+        "message": "Écrivez votre message ici..."
+      }
+    },
+    "info": {
+      "title": "Informations de Contact",
+      "email": {
+        "label": "Email",
+        "value": "contact@worldpizzatrophy.com"
+      },
+      "phone": {
+        "label": "Téléphone",
+        "value": "+33 (0)1 23 45 67 89"
+      },
+      "address": {
+        "label": "Adresse",
+        "value": "123 Rue de la Pizza, 75000 Paris, France"
+      },
+      "hours": {
+        "label": "Horaires d'ouverture",
+        "value": "Lundi - Vendredi: 9h00 - 18h00\nSamedi: 10h00 - 14h00"
+      }
+    },
+    "faq": {
+      "title": "Questions Fréquemment Posées",
+      "items": [
+        {
+          "question": "Quand s'inscrit-on ?",
+          "answer": "Les inscriptions se font en ligne sur notre site. Les délais d'inscription sont affichés sur la page d'accueil."
+        },
+        {
+          "question": "Quel est le coût de participation ?",
+          "answer": "Le coût varie selon les catégories. Consultez la page de réservation pour les tarifs détaillés."
+        },
+        {
+          "question": "Puis-je participer à plusieurs catégories ?",
+          "answer": "Oui, vous pouvez participer à plusieurs catégories. Chaque catégorie nécessite une inscription séparée."
+        },
+        {
+          "question": "Y a-t-il des frais de préparation ?",
+          "answer": "Non, vous utilisez vos propres produits. L'organisation fournit uniquement les équipements de cuisson."
+        },
+        {
+          "question": "Quelle est la durée du concours ?",
+          "answer": "La durée varie selon les catégories et est spécifiée lors de l'inscription."
+        }
+      ]
+    }
   }
 }
