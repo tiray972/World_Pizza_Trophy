@@ -169,11 +169,7 @@ export default function SuccessClient({ lang }: BookingSuccessClientProps) {
             </div>
 
             <div className="space-y-3 pt-4">
-              <Button asChild className="w-full bg-[#8B0000] hover:bg-[#A50000]">
-                <Link href={`/${lang}/dashboard`}>
-                  Voir mon tableau de bord
-                </Link>
-              </Button>
+              
               <Button asChild variant="outline" className="w-full">
                 <Link href={`/${lang}`}>
                   Retour à l'accueil
