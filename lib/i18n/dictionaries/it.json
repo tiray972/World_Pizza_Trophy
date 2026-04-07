@@ -1,0 +1,86 @@
+{
+  "home": {
+    "hero": {
+      "title": "Trofeo Mondiale della Pizza Multicategoria",
+      "subtitle": "Il campionato internazionale dedicato ai pizzaioli professionisti: tecnica, creatività ed eccellenza.",
+      "cta": {
+        "register": "Registrati ora",
+        "categories": "Visualizza categorie"
+      }
+    },
+    "intro": {
+      "title": "Un evento mondiale unico",
+      "text": "Il Trofeo Mondiale della Pizza riunisce i migliori professionisti del mondo per sfidarsi in più prove ufficiali supervisionate da una giuria riconosciuta internazionalmente."
+    },
+    "numbers": {
+      "title": "L'Evento in numeri",
+      "pizzaiolos": "Pizzaioli attesi",
+      "countries": "Paesi rappresentati",
+      "categories": "Categorie ufficiali"
+    },
+    "why": {
+      "title": "Perché partecipare?",
+      "items": [
+        {
+          "title": "Riconoscimento internazionale",
+          "text": "Guadagna visibilità da media, sponsor, scuole di formazione e reti professionali."
+        },
+        {
+          "title": "Titoli ufficiali",
+          "text": "Più trofei che premiano maestria culinaria, creatività, presentazione e innovazione."
+        },
+        {
+          "title": "Rete professionale",
+          "text": "Conosci chef rinomati, marchi, fornitori e leader del settore."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Pronto a raccogliere la sfida?",
+      "subtitle": "Registrati ora e assicura il tuo slot di partecipazione.",
+      "button": "Inizia registrazione"
+    }
+  },
+  "meta": {
+    "title": "Trofeo Mondiale della Pizza Multicategoria",
+    "description": "Il campionato internazionale dedicato ai pizzaioli professionisti: tecnica, creatività ed eccellenza.",
+    "keywords": "pizza, trofeo, concorso, pizzaiolo, professionista, internazionale, multicategoria, creatività, eccellenza",
+    "site_name": "World Pizza Trophy"
+  },
+  "rules": {
+    "title": "Regolamento e Categorie",
+    "subtitle": "Scopri le 12 categorie ufficiali del Trofeo Mondiale della Pizza.",
+    "categories": [
+      { "id": "classique", "name": "Pizza Classica", "description": "L'eccellenza della tradizione." },
+      { "id": "calzone", "name": "Calzone", "description": "La maestria della chiusura e cottura." },
+      { "id": "napolitaine", "name": "Napoletana", "description": "L'arte della Vera Pizza Napoletana." },
+      { "id": "dessert", "name": "Pizza Dolce", "description": "Creatività dolce su pasta per pizza." },
+      { "id": "focaccia", "name": "Focaccia", "description": "Soffice, croccante e profumata." },
+      { "id": "pala", "name": "Pala", "description": "Pizza alla pala, lunga e generosa." },
+      { "id": "teglia", "name": "Teglia", "description": "Pizza al tegame, al taglio." },
+      { "id": "doue", "name": "La Pizza d'Oue", "description": "Categoria tecnica speciale." },
+      { "id": "pasta", "name": "Pasta", "description": "L'arte della pasta italiana." },
+      { "id": "glutenfree", "name": "Pizza Senza Glutine", "description": "L'eccellenza senza compromessi." },
+      { "id": "fritta", "name": "Pizza Fritta", "description": "La tradizione della frittura napoletana." },
+      { "id": "acrobatica", "name": "Pizza Acrobatica / Show", "description": "Lo spettacolo del lancio della pasta." }
+    ]
+  },
+  "header": {
+    "navigation": {
+      "home": "Home",
+      "trophy": "Il Trofeo",
+      "rules": "Regolamento",
+      "academy": "Accademia",
+      "editions": "Edizioni Precedenti",
+      "gallery": "Galleria",
+      "contact": "Contatti"
+    },
+    "buttons": {
+      "register": "REGISTRATI",
+      "logout": "Esci",
+      "dashboard": "Pannello di controllo",
+      "language": "Lingua"
+    },
+    "greeting": "Ciao,"
+  }
+}

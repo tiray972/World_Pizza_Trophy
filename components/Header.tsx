@@ -7,7 +7,6 @@ import { useRouter, usePathname } from "next/navigation";
 import { auth, db } from "@/lib/firebase/client";
 import { signOut, onAuthStateChanged, User as FBUser } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { Globe } from "lucide-react";
 import { Button } from "./ui/button";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import {
@@ -19,8 +18,16 @@ import {
 
 const localeNames: Record<string, string> = {
   fr: "Français",
+  it: "Italiano",
   en: "English",
   es: "Español",
+};
+
+const localeFlags: Record<string, string> = {
+  fr: "🇫🇷 FR",
+  en: "🇬🇧 EN",
+  es: "🇪🇸 ES",
+  it: "🇮🇹 IT",
 };
 
 interface FirestoreUser {
@@ -32,13 +39,13 @@ interface FirestoreUser {
 }
 
 interface HeaderProps {
-  lang?: "fr" | "en" | "es";
+  lang?: "fr" | "en" | "es" | "it";
   locales?: string[];
 }
 
 export default function Header({
   lang = "fr",
-  locales = ["fr", "en", "es"],
+  locales = ["fr", "en", "es", "it"],
 }: HeaderProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState<FirestoreUser | null>(null);
@@ -127,9 +134,7 @@ export default function Header({
         <nav className="hidden xl:flex items-center space-x-8 font-semibold text-gray-800">
           {[
             { name: t.navigation.home, href: `/${lang}` },
-            // { name: t.navigation.trophy, href: `/${lang}/trophy` },
             { name: t.navigation.rules, href: `/${lang}/rules` },
-            // { name: t.navigation.academy, href: `/${lang}/academy` },
             { name: t.navigation.editions, href: `/${lang}/editions` },
             { name: t.navigation.gallery, href: `/${lang}/gallery` },
             { name: t.navigation.contact, href: `/${lang}/contact` },
@@ -155,29 +160,29 @@ export default function Header({
 
         {/* Right Side */}
         <div className="hidden md:flex items-center gap-6">
-          {/* Language Switcher */}
+          {/* Language Switcher - Affiche le drapeau actuel */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="flex items-center gap-2 text-gray-700 hover:text-[#8B0000] hover:bg-gray-50 px-3"
+                className="flex items-center gap-2 text-gray-700 hover:text-[#8B0000] hover:bg-gray-50 px-3 text-3xl"
               >
-                <Globe className="h-4 w-4" />
-                <span className="text-sm font-bold uppercase">{lang}</span>
+                <span>{localeFlags[lang]}</span>
               </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-32">
+            <DropdownMenuContent align="end" className="w-44">
               {locales.map((locale) => (
                 <DropdownMenuItem key={locale} asChild>
                   <Link
                     href={switchLocaleUrl(locale)}
-                    className={`cursor-pointer ${
-                      locale === lang ? "text-[#8B0000] font-bold" : ""
+                    className={`cursor-pointer flex items-center gap-3 text-lg py-2 ${
+                      locale === lang ? "text-[#8B0000] font-bold bg-gray-100" : ""
                     }`}
                   >
-                    {localeNames[locale]}
+                    <span className="text-2xl">{localeFlags[locale]}</span>
+                    <span>{localeNames[locale]}</span>
                   </Link>
                 </DropdownMenuItem>
               ))}
@@ -235,8 +240,6 @@ export default function Header({
   );
 }
 
-/* ========= MOBILE MENU COMPONENT ========= */
-
 function MobileMenu({
   lang,
   locales,
@@ -250,7 +253,6 @@ function MobileMenu({
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
-  // Close menu on route change
   useEffect(() => {
     setOpen(false);
   }, [router]);
@@ -259,7 +261,6 @@ function MobileMenu({
 
   return (
     <div className="xl:hidden flex items-center gap-4">
-      {/* Mobile Register CTA (Visible when not logged in) */}
       {!isLoggedIn && !open && (
         <Button
           size="sm"
@@ -294,7 +295,6 @@ function MobileMenu({
         </div>
       </button>
 
-      {/* Modern Overlay Menu */}
       <div
         className={`fixed inset-0 bg-white z-[90] flex flex-col transition-transform duration-500 ease-in-out ${
           open ? "translate-x-0" : "translate-x-full"
@@ -319,17 +319,20 @@ function MobileMenu({
           <div className="mt-8 flex flex-col gap-6">
             <div className="flex flex-col gap-3">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t.buttons.language}</span>
-              <div className="flex gap-4">
+              <div className="flex gap-4 flex-wrap">
                 {locales.map((locale: string) => (
                   <Link
                     key={locale}
                     href={switchLocaleUrl(locale)}
-                    className={`px-4 py-2 border rounded-full text-sm font-bold ${
+                    className={`px-4 py-2 border rounded-full text-lg font-bold flex items-center gap-2 ${
                       locale === lang ? "bg-[#8B0000] text-white border-[#8B0000]" : "border-gray-200 text-gray-600"
                     }`}
                     onClick={() => setOpen(false)}
                   >
-                    {locale.toUpperCase()}
+                    <span className="text-2xl">
+                      {localeFlags[locale]}
+                    </span>
+                    <span>{locale.toUpperCase()}</span>
                   </Link>
                 ))}
               </div>
