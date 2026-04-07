@@ -16,7 +16,7 @@ import ThreeColumnFeatures from "@/components/sections/common/ThreeColumnFeature
 import TimelineSection from "@/components/sections/common/TimelineSection";
 // import SectionTextImageClipPath from "@/components/sections/new/SectionTextImageClipPath";
 
-type SupportedLang = "fr" | "en" | "es";
+type SupportedLang = "fr" | "en" | "es" | "it";
 
 type Props = {
   params: { lang: string } | Promise<{ lang: string }>;
@@ -31,7 +31,7 @@ export default async function Home({ params }: Props) {
   const rawLang = resolvedParams.lang;
 
   // secure & typed language
-  const lang: SupportedLang = ["fr", "en", "es"].includes(rawLang)
+  const lang: SupportedLang = ["fr", "en", "es", "it"].includes(rawLang)
     ? (rawLang as SupportedLang)
     : "fr";
 
