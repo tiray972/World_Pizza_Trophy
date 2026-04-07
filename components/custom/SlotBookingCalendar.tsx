@@ -471,26 +471,41 @@ export function SlotBookingView({
                           <>
                             {selectedPackSlots
                               .filter(s => s.categoryId === activePackCategoryId && s.date === dateStr)
-                              .map(slot => (
-                                <Button
-                                  key={slot.slotId}
-                                  variant="default"
-                                  className="w-full justify-start transition-colors bg-primary/80 hover:bg-primary"
-                                  onClick={() =>
-                                    handleTogglePackSlotSelect(
-                                      availableSlots.find(s => s.id === slot.slotId)!
-                                    )
-                                  }
-                                >
-                                  <CheckCircleIcon className="w-4 h-4 mr-2" />
-                                  <span className="font-semibold">
-                                    {formatTime(slot.startTime)} (Sélectionné)
-                                  </span>
-                                  <Badge className="ml-auto bg-white text-primary hover:bg-white/90">
-                                    Retirer
-                                  </Badge>
-                                </Button>
-                              ))}
+                              .map(slot => {
+                                const hasParticipant = !!slot.participant;
+                                return (
+                                  <div key={slot.slotId} className="space-y-1 mb-2">
+                                    <Button
+                                      variant="default"
+                                      className="w-full justify-start transition-colors bg-primary/80 hover:bg-primary"
+                                      onClick={() =>
+                                        handleTogglePackSlotSelect(
+                                          availableSlots.find(s => s.id === slot.slotId)!
+                                        )
+                                      }
+                                    >
+                                      <CheckCircleIcon className="w-4 h-4 mr-2" />
+                                      <span className="font-semibold">
+                                        {formatTime(slot.startTime)} (Sélectionné)
+                                      </span>
+                                      <Badge className="ml-auto bg-white text-primary hover:bg-white/90">
+                                        Retirer
+                                      </Badge>
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      className={`w-full h-8 text-xs justify-start ${hasParticipant ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-50 hover:bg-yellow-100 text-yellow-900 border-yellow-200'}`}
+                                      onClick={() => {
+                                        setCurrentPackSlotForParticipant(slot);
+                                        setIsPackParticipantModalOpen(true);
+                                      }}
+                                    >
+                                      <UserIcon className="w-3 h-3 mr-1" />
+                                      {hasParticipant ? `${slot.participant!.firstName} ${slot.participant!.lastName}` : 'Ajouter participant'}
+                                    </Button>
+                                  </div>
+                                );
+                              })}
 
                             {filteredSlots.map(slot => {
                               // Convert startTime to Date if needed
