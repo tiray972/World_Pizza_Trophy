@@ -9,6 +9,7 @@ import { CalendarIcon, ShoppingCartIcon, XCircleIcon, ClockIcon, PizzaIcon, Pack
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose } from '@/components/ui/sheet';
 import { ParticipantModal } from './ParticipantModal';
+import { ParticipantSelector } from './ParticipantSelector';
 
 interface SelectedSlot {
   slotId: string;
@@ -91,6 +92,10 @@ export function SlotBookingView({
   const [currentSlotForParticipant, setCurrentSlotForParticipant] = useState<SelectedSlot | null>(null);
   const [isPackParticipantModalOpen, setIsPackParticipantModalOpen] = useState(false);
   const [currentPackSlotForParticipant, setCurrentPackSlotForParticipant] = useState<SelectedPackSlot | null>(null);
+  
+  // 📋 Liste des participants réutilisables
+  const [savedParticipants, setSavedParticipants] = useState<Participant[]>([]);
+  const [editingParticipantSlot, setEditingParticipantSlot] = useState<string | null>(null);
 
   // 🍽️ Meal state
   const [wantsMeal, setWantsMeal] = useState(false);
@@ -253,6 +258,16 @@ export function SlotBookingView({
         };
         setSelectedPackSlots([...selectedPackSlots, newSlot]);
       }
+    }
+  };
+
+  // �� Sauvegarder un participant dans la liste réutilisable (évite les doublons)
+  const handleSaveParticipant = (participant: Participant) => {
+    const exists = savedParticipants.some(
+      p => p.firstName === participant.firstName && p.lastName === participant.lastName
+    );
+    if (!exists) {
+      setSavedParticipants([...savedParticipants, participant]);
     }
   };
 
@@ -471,13 +486,15 @@ export function SlotBookingView({
                           <>
                             {selectedPackSlots
                               .filter(s => s.categoryId === activePackCategoryId && s.date === dateStr)
-                              .map(slot => {
-                                const hasParticipant = !!slot.participant;
-                                return (
-                                  <div key={slot.slotId} className="space-y-1 mb-2">
+                              .map(slot => (
+                                <Card
+                                  key={slot.slotId}
+                                  className="p-3 bg-primary/5 border-2 border-primary mb-3"
+                                >
+                                  <div className="flex items-center justify-between mb-3">
                                     <Button
                                       variant="default"
-                                      className="w-full justify-start transition-colors bg-primary/80 hover:bg-primary"
+                                      className="flex-1 justify-start transition-colors bg-primary/80 hover:bg-primary"
                                       onClick={() =>
                                         handleTogglePackSlotSelect(
                                           availableSlots.find(s => s.id === slot.slotId)!
@@ -486,26 +503,36 @@ export function SlotBookingView({
                                     >
                                       <CheckCircleIcon className="w-4 h-4 mr-2" />
                                       <span className="font-semibold">
-                                        {formatTime(slot.startTime)} (Sélectionné)
+                                        {formatTime(slot.startTime)}
                                       </span>
-                                      <Badge className="ml-auto bg-white text-primary hover:bg-white/90">
-                                        Retirer
-                                      </Badge>
                                     </Button>
-                                    <Button
-                                      size="sm"
-                                      className={`w-full h-8 text-xs justify-start ${hasParticipant ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-50 hover:bg-yellow-100 text-yellow-900 border-yellow-200'}`}
-                                      onClick={() => {
+                                    <Badge className="ml-2 bg-white text-primary hover:bg-white/90">
+                                      Retirer
+                                    </Badge>
+                                  </div>
+                                  {/* 👤 Sélecteur de participant réutilisable */}
+                                  <div className="mt-2">
+                                    <ParticipantSelector
+                                      participants={savedParticipants}
+                                      selectedParticipant={slot.participant}
+                                      onSelect={(participant) => {
+                                        setSelectedPackSlots(
+                                          selectedPackSlots.map(s =>
+                                            s.slotId === slot.slotId
+                                              ? { ...s, participant }
+                                              : s
+                                          )
+                                        );
+                                      }}
+                                      onAddNew={() => {
                                         setCurrentPackSlotForParticipant(slot);
                                         setIsPackParticipantModalOpen(true);
                                       }}
-                                    >
-                                      <UserIcon className="w-3 h-3 mr-1" />
-                                      {hasParticipant ? `${slot.participant!.firstName} ${slot.participant!.lastName}` : 'Ajouter participant'}
-                                    </Button>
+                                      compact={true}
+                                    />
                                   </div>
-                                );
-                              })}
+                                </Card>
+                              ))}
 
                             {filteredSlots.map(slot => {
                               // Convert startTime to Date if needed
@@ -739,18 +766,24 @@ export function SlotBookingView({
 
                     <div className="flex flex-col gap-1">
                       {/* Bouton pour ajouter/modifier les infos du participant */}
-                      <Button
-                        size="sm"
-                        variant={hasParticipant ? "default" : "outline"}
-                        className={`h-8 text-xs ${hasParticipant ? 'bg-green-600 hover:bg-green-700' : ''}`}
-                        onClick={() => {
+                      <ParticipantSelector
+                        participants={savedParticipants}
+                        selectedParticipant={slot.participant}
+                        onSelect={(participant) => {
+                          setSelectedSlots(
+                            selectedSlots.map(s =>
+                              s.slotId === slot.slotId
+                                ? { ...s, participant }
+                                : s
+                            )
+                          );
+                        }}
+                        onAddNew={() => {
                           setCurrentSlotForParticipant(slot);
                           setIsParticipantModalOpen(true);
                         }}
-                      >
-                        <UserIcon className="w-3 h-3 mr-1" />
-                        {hasParticipant ? 'Modifier' : 'Ajouter'}
-                      </Button>
+                        compact={true}
+                      />
 
                       {/* Bouton pour supprimer le créneau */}
                       <Button
@@ -931,6 +964,7 @@ export function SlotBookingView({
           setIsParticipantModalOpen(false);
           setCurrentSlotForParticipant(null);
         }}
+        onSaveParticipant={handleSaveParticipant}
         slotInfo={currentSlotForParticipant ? `${currentSlotForParticipant.categoryName} - ${formatTime(currentSlotForParticipant.startTime)}, ${formatDateDisplay(new Date(currentSlotForParticipant.date + 'T00:00:00'))}` : undefined}
       />
 
@@ -953,6 +987,17 @@ export function SlotBookingView({
           setIsPackParticipantModalOpen(false);
           setCurrentPackSlotForParticipant(null);
         }}
+        onApplyToAll={(participant) => {
+          // 👤 Appliquer le participant à TOUS les créneaux du pack
+          setSelectedPackSlots(selectedPackSlots.map(slot => ({
+            ...slot,
+            participant
+          })));
+          setIsPackParticipantModalOpen(false);
+          setCurrentPackSlotForParticipant(null);
+        }}
+        onSaveParticipant={handleSaveParticipant}
+        isPackModal={true}
         slotInfo={currentPackSlotForParticipant ? `${currentPackSlotForParticipant.categoryName} - ${formatTime(currentPackSlotForParticipant.startTime)}, ${formatDateDisplay(new Date(currentPackSlotForParticipant.date + 'T00:00:00'))}` : undefined}
       />
     </div>

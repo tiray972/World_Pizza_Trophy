@@ -7,13 +7,17 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Participant } from '@/types/firestore';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface ParticipantModalProps {
   open: boolean;
   onClose: () => void;
   onConfirm: (participant: Participant) => void;
-  slotInfo?: string; // ex: "Classique - 14h30, 15 mars"
+  slotInfo?: string;
   isRequired?: boolean;
+  onApplyToAll?: (participant: Participant) => void;
+  isPackModal?: boolean;
+  onSaveParticipant?: (participant: Participant) => void; // Sauvegarde le participant dans la liste réutilisable
 }
 
 export function ParticipantModal({ 
@@ -21,13 +25,17 @@ export function ParticipantModal({
   onClose, 
   onConfirm, 
   slotInfo,
-  isRequired = true 
+  isRequired = true,
+  onApplyToAll,
+  isPackModal = false,
+  onSaveParticipant
 }: ParticipantModalProps) {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [applyToAll, setApplyToAll] = useState(false);
 
   const handleConfirm = () => {
     const newErrors: Record<string, string> = {};
@@ -42,12 +50,23 @@ export function ParticipantModal({
       return;
     }
 
-    onConfirm({
+    const participant: Participant = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.trim() || undefined,
       phone: phone.trim() || undefined,
-    });
+    };
+
+    // 📋 Sauvegarder le participant dans la liste réutilisable
+    if (onSaveParticipant) {
+      onSaveParticipant(participant);
+    }
+
+    if (applyToAll && onApplyToAll && isPackModal) {
+      onApplyToAll(participant);
+    } else {
+      onConfirm(participant);
+    }
 
     // Reset form
     setFirstName('');
@@ -55,6 +74,7 @@ export function ParticipantModal({
     setEmail('');
     setPhone('');
     setErrors({});
+    setApplyToAll(false);
   };
 
   const handleClose = () => {
@@ -63,6 +83,7 @@ export function ParticipantModal({
     setEmail('');
     setPhone('');
     setErrors({});
+    setApplyToAll(false);
     onClose();
   };
 
@@ -131,6 +152,25 @@ export function ParticipantModal({
             />
           </div>
 
+          {isPackModal && onApplyToAll && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-3">
+              <Checkbox
+                id="applyToAll"
+                checked={applyToAll}
+                onCheckedChange={(checked) => setApplyToAll(!!checked)}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <Label htmlFor="applyToAll" className="text-sm font-semibold text-blue-900 cursor-pointer">
+                  ✨ Appliquer à tous les créneaux du pack
+                </Label>
+                <p className="text-xs text-blue-700 mt-1">
+                  Utilise les mêmes informations pour tous les créneaux restants du pack
+                </p>
+              </div>
+            </div>
+          )}
+
           <p className="text-xs text-gray-500">* Champs obligatoires</p>
         </div>
 
@@ -139,7 +179,7 @@ export function ParticipantModal({
             Annuler
           </Button>
           <Button onClick={handleConfirm} className="bg-[#8B0000] hover:bg-[#A50000]">
-            Confirmer
+            {applyToAll && isPackModal ? '✨ Appliquer à tous' : 'Confirmer'}
           </Button>
         </DialogFooter>
       </DialogContent>
