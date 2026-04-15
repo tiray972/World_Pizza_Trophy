@@ -22,7 +22,9 @@ import {
   useProducts,
   useVouchers,
   usePayments,
+  useAnalytics,
 } from './lib/useFirebase';
+import { AnalyticsPage } from './components/AnalyticsPage';
 // Import direct des templates depuis mockData.ts
 import {
   WPT_DEFAULT_TEMPLATE_CATEGORIES,
@@ -98,6 +100,9 @@ export default function App() {
   const { products, createProduct, updateProduct, deleteProduct } = useProducts(selectedEventId);
   const { vouchers, createVoucher, deleteVoucher } = useVouchers(selectedEventId);
   const { payments, updatePayment } = usePayments(selectedEventId);
+
+  // Analytics hook - no event filter (global)
+  const { summary, pageViews, events: trackingEvents, loading: analyticsLoading } = useAnalytics(30);
 
   // Set default event on first load
   React.useEffect(() => {
@@ -434,6 +439,15 @@ export default function App() {
             users={users}
             payments={payments}
             selectedEvent={selectedEvent}
+          />
+        );
+      case 'analytics':
+        return (
+          <AnalyticsPage
+            summary={summary}
+            pageViews={pageViews}
+            events={trackingEvents}
+            loading={analyticsLoading}
           />
         );
       default: return null;

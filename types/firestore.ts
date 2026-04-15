@@ -26,7 +26,8 @@ export type ViewType =
   | 'vouchers'
   | 'users'
   | 'payments'
-  | 'exports';
+  | 'exports'
+  | 'analytics';
 
 /* ---------------------------------
    EVENTS
@@ -199,4 +200,59 @@ export interface Payment {
   metadata: Record<string, any>;
   createdAt: Date;  // Converted from Firestore Timestamp
   updatedAt: Date;  // Converted from Firestore Timestamp
+}
+
+/* ---------------------------------
+   ANALYTICS / TRACKING
+---------------------------------- */
+
+export type TrackingEventType =
+  | 'page_view'
+  | 'click'
+  | 'form_submit'
+  | 'registration_start'
+  | 'registration_complete'
+  | 'payment_start'
+  | 'payment_complete'
+  | 'slot_select'
+  | 'slot_book'
+  | 'login'
+  | 'logout'
+  | 'scroll'
+  | 'error';
+
+export interface TrackingEvent {
+  id: string;
+  eventType: TrackingEventType;
+  timestamp: Date;
+  userId?: string | null;
+  sessionId: string;
+  path: string;
+  metadata?: Record<string, any>;
+}
+
+export interface PageView {
+  id: string;
+  path: string;
+  title?: string;
+  referrer?: string;
+  userAgent?: string;
+  userId?: string | null;
+  sessionId: string;
+  timestamp: Date;
+  // Performance metrics
+  loadTime?: number;
+  domContentLoaded?: number;
+}
+
+export interface AnalyticsSummary {
+  totalPageViews: number;
+  uniqueVisitors: number;
+  totalEvents: number;
+  topPages: { path: string; views: number }[];
+  topEvents: { type: string; count: number }[];
+  viewsByDate: { date: string; views: number }[];
+  devices: { device: string; count: number }[];
+  browsers: { browser: string; count: number }[];
+  countries: { country: string; count: number }[];
 }

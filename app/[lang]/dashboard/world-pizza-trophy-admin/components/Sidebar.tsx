@@ -2,19 +2,20 @@ import React from "react";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/Button";
 import { NavItem, ViewType, WPTEvent } from "@/types/firestore";
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Package, 
-  Ticket, 
-  Users, 
+import {
+  LayoutDashboard,
+  Calendar,
+  Package,
+  Ticket,
+  Users,
   Download,
   Trophy,
   ChevronDown,
   Settings as SettingsIcon,
   Plus,
   List,
-  CreditCard
+  CreditCard,
+  BarChart3
 } from "lucide-react";
 
 interface SidebarProps {
@@ -76,6 +77,11 @@ export const NAV_ITEMS: NavItem[] = [
     title: "Exports",
     href: "exports",
     icon: Download,
+  },
+  {
+    title: "Analytics",
+    href: "analytics",
+    icon: BarChart3,
   },
 ];
 

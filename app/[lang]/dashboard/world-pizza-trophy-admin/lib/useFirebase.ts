@@ -13,10 +13,12 @@ import {
   deleteDoc,
   doc,
   getDocs,
-  Timestamp
+  Timestamp,
+  orderBy,
+  limit,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
-import { WPTEvent, User, Slot, Category, Product, Voucher, Payment } from '@/types/firestore';
+import { WPTEvent, User, Slot, Category, Product, Voucher, Payment, AnalyticsSummary, PageView, TrackingEvent } from '@/types/firestore';
 
 // ============================================================================
 // CONVERSION HELPERS (Firestore Timestamp ↔ Date)
@@ -690,4 +692,166 @@ export const usePayments = (eventId?: string) => {
   };
 
   return { payments, loading, error, updatePayment };
+};
+
+// ============================================================================
+// ANALYTICS HOOK
+// ============================================================================
+
+export const useAnalytics = (days: number = 30) => {
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [pageViews, setPageViews] = useState<PageView[]>([]);
+  const [events, setEvents] = useState<TrackingEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    setLoading(true);
+
+    // Query for page views in the date range
+    const pageViewsQuery = query(
+      collection(db, 'pageViews'),
+      where('timestamp', '>=', Timestamp.fromDate(startDate)),
+      where('timestamp', '<=', Timestamp.fromDate(endDate)),
+      orderBy('timestamp', 'desc'),
+      limit(5000)
+    );
+
+    // Query for tracking events in the date range
+    const eventsQuery = query(
+      collection(db, 'trackingEvents'),
+      where('timestamp', '>=', Timestamp.fromDate(startDate)),
+      where('timestamp', '<=', Timestamp.fromDate(endDate)),
+      orderBy('timestamp', 'desc'),
+      limit(5000)
+    );
+
+    const unsubscribePageViews = onSnapshot(
+      pageViewsQuery,
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => {
+          const raw = doc.data();
+          return {
+            id: doc.id,
+            ...raw,
+            timestamp: raw.timestamp?.toDate?.() || new Date(raw.timestamp),
+          } as PageView;
+        });
+        setPageViews(data);
+        setLoading(false);
+      },
+      (err) => {
+        setError(err.message);
+        setLoading(false);
+      }
+    );
+
+    const unsubscribeEvents = onSnapshot(
+      eventsQuery,
+      (snapshot) => {
+        const data = snapshot.docs.map(doc => {
+          const raw = doc.data();
+          return {
+            id: doc.id,
+            ...raw,
+            timestamp: raw.timestamp?.toDate?.() || new Date(raw.timestamp),
+          } as TrackingEvent;
+        });
+        setEvents(data);
+        setLoading(false);
+      },
+      (err) => {
+        setError(err.message);
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      unsubscribePageViews();
+      unsubscribeEvents();
+    };
+  }, [days]);
+
+  // Calculate summary from pageViews and events
+  useEffect(() => {
+    if (pageViews.length === 0 && events.length === 0) {
+      setSummary(null);
+      return;
+    }
+
+    // Calculate unique visitors (by session)
+    const uniqueSessions = new Set(pageViews.map(pv => pv.sessionId));
+
+    // Top pages
+    const pageCounts: Record<string, number> = {};
+    pageViews.forEach(pv => {
+      pageCounts[pv.path] = (pageCounts[pv.path] || 0) + 1;
+    });
+    const topPages = Object.entries(pageCounts)
+      .map(([path, views]) => ({ path, views }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 10);
+
+    // Top events
+    const eventCounts: Record<string, number> = {};
+    events.forEach(e => {
+      eventCounts[e.eventType] = (eventCounts[e.eventType] || 0) + 1;
+    });
+    const topEvents = Object.entries(eventCounts)
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    // Views by date
+    const viewsByDateMap: Record<string, number> = {};
+    pageViews.forEach(pv => {
+      const date = pv.timestamp.toISOString().split('T')[0];
+      viewsByDateMap[date] = (viewsByDateMap[date] || 0) + 1;
+    });
+    const viewsByDate = Object.entries(viewsByDateMap)
+      .map(([date, views]) => ({ date, views }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Device/browser parsing (simple)
+    const deviceCounts: Record<string, number> = {};
+    const browserCounts: Record<string, number> = {};
+
+    pageViews.forEach(pv => {
+      if (pv.userAgent) {
+        const isMobile = /Mobile|Android|iPhone/i.test(pv.userAgent);
+        const isTablet = /iPad|Tablet/i.test(pv.userAgent);
+        const device = isTablet ? 'tablet' : isMobile ? 'mobile' : 'desktop';
+        deviceCounts[device] = (deviceCounts[device] || 0) + 1;
+
+        let browser = 'other';
+        if (/Chrome/i.test(pv.userAgent)) browser = 'Chrome';
+        else if (/Safari/i.test(pv.userAgent)) browser = 'Safari';
+        else if (/Firefox/i.test(pv.userAgent)) browser = 'Firefox';
+        else if (/Edge/i.test(pv.userAgent)) browser = 'Edge';
+        browserCounts[browser] = (browserCounts[browser] || 0) + 1;
+      }
+    });
+
+    const devices = Object.entries(deviceCounts).map(([device, count]) => ({ device, count }));
+    const browsers = Object.entries(browserCounts).map(([browser, count]) => ({ browser, count }));
+    const countries: { country: string; count: number }[] = []; // Placeholder for country data
+
+    setSummary({
+      totalPageViews: pageViews.length,
+      uniqueVisitors: uniqueSessions.size,
+      totalEvents: events.length,
+      topPages,
+      topEvents,
+      viewsByDate,
+      devices,
+      browsers,
+      countries,
+    });
+  }, [pageViews, events]);
+
+  return { summary, pageViews, events, loading, error };
 };
