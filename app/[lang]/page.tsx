@@ -101,6 +101,7 @@ export default async function Home({ params }: Props) {
             title={section.title}
             content={section.content}
             images={section.images}
+            lang={lang}
           />
         );
       })}
