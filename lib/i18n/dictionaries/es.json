@@ -298,7 +298,7 @@
       "placeholders": {
         "name": "Juan García",
         "email": "juan@example.com",
-        "phone": "+34 91 234 5678",
+        "phone": "+33 6 11 85 43 43",
         "subject": "Pregunta sobre inscripción",
         "message": "Escriba su mensaje aquí..."
       }
@@ -311,11 +311,11 @@
       },
       "phone": {
         "label": "Teléfono",
-        "value": "+33 (0)1 23 45 67 89"
+        "value": "+33 6 11 85 43 43"
       },
       "address": {
         "label": "Dirección",
-        "value": "123 Calle de la Pizza, 75000 París, Francia"
+        "value": "8 Av. Boyer, 06500 Menton, Francia"
       },
       "hours": {
         "label": "Horario de Atención",

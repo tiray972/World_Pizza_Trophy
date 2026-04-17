@@ -298,7 +298,7 @@
       "placeholders": {
         "name": "Marco Rossi",
         "email": "marco@example.com",
-        "phone": "+39 06 1234 5678",
+        "phone": "+33 6 11 85 43 43",
         "subject": "Domanda sulla registrazione",
         "message": "Scrivi il tuo messaggio qui..."
       }
@@ -311,11 +311,11 @@
       },
       "phone": {
         "label": "Telefono",
-        "value": "+33 (0)1 23 45 67 89"
+        "value": "+33 6 11 85 43 43"
       },
       "address": {
         "label": "Indirizzo",
-        "value": "123 Rue de la Pizza, 75000 Paris, Francia"
+        "value": "8 Av. Boyer, 06500 Menton, Francia"
       },
       "hours": {
         "label": "Orari di Apertura",

@@ -298,7 +298,7 @@
       "placeholders": {
         "name": "John Smith",
         "email": "john@example.com",
-        "phone": "+1 (555) 123-4567",
+        "phone": "+33 6 11 85 43 43",
         "subject": "Question about registration",
         "message": "Write your message here..."
       }
@@ -311,11 +311,11 @@
       },
       "phone": {
         "label": "Phone",
-        "value": "+33 (0)1 23 45 67 89"
+        "value": "+33 6 11 85 43 43"
       },
       "address": {
         "label": "Address",
-        "value": "123 Pizza Street, 75000 Paris, France"
+        "value": "8 Av. Boyer, 06500 Menton, France"
       },
       "hours": {
         "label": "Opening Hours",

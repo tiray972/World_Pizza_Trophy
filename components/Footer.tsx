@@ -39,8 +39,8 @@ export default function Footer({
       about_text: "Le Trophée Mondial de la Pizza est le plus grand concours international de pizza multicatégorie réunissant les meilleurs pizzaïolos du monde.",
       organization: "Organisation",
       contact_email: "contact@worldpizzatrophy.com",
-      phone: "+33 (0)1 23 45 67 89",
-      address: "123 Rue de la Pizza, 75000 Paris, France",
+      phone: "+33 6 11 85 43 43",
+      address: "8 Av. Boyer, 06500 Menton, France",
       follow: "Nous Suivre",
       copyright: "© Trophée Mondial de la Pizza - Tous droits réservés.",
       created_by: "Conçu par UGM Communication"
@@ -59,8 +59,8 @@ export default function Footer({
       about_text: "The World Pizza Trophy is the largest international multi-category pizza competition bringing together the world's best pizza chefs.",
       organization: "Organization",
       contact_email: "contact@worldpizzatrophy.com",
-      phone: "+33 (0)1 23 45 67 89",
-      address: "123 Pizza Street, 75000 Paris, France",
+      phone: "+33 6 11 85 43 43",
+      address: "8 Av. Boyer, 06500 Menton, France",
       follow: "Follow Us",
       copyright: "© World Pizza Trophy - All rights reserved.",
       created_by: "Designed by UGM Communication"
@@ -79,8 +79,8 @@ export default function Footer({
       about_text: "El Trofeo Mundial de Pizza es el mayor concurso internacional de pizza multicategoría que reúne a los mejores pizzeros del mundo.",
       organization: "Organización",
       contact_email: "contact@worldpizzatrophy.com",
-      phone: "+33 (0)1 23 45 67 89",
-      address: "123 Calle de la Pizza, 75000 París, Francia",
+      phone: "+33 6 11 85 43 43",
+      address: "8 Av. Boyer, 06500 Menton, Francia",
       follow: "Síguenos",
       copyright: "© Trofeo Mundial de Pizza - Todos los derechos reservados.",
       created_by: "Diseñado por UGM Communication"
@@ -99,8 +99,8 @@ export default function Footer({
       about_text: "Il Trofeo Mondiale della Pizza è il più grande concorso internazionale di pizza multicategoria che riunisce i migliori pizzaioli del mondo.",
       organization: "Organizzazione",
       contact_email: "contact@worldpizzatrophy.com",
-      phone: "+33 (0)1 23 45 67 89",
-      address: "123 Via della Pizza, 75000 Parigi, Francia",
+      phone: "+33 6 11 85 43 43",
+      address: "8 Av. Boyer, 06500 Menton, Francia",
       follow: "Seguici",
       copyright: "© Trofeo Mondiale della Pizza - Tutti i diritti riservati.",
       created_by: "Progettato da UGM Communication"
