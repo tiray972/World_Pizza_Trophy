@@ -22,6 +22,8 @@ export default function ContactPage({ params }: Props) {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     params.then(({ lang: rawLang }) => {
@@ -45,10 +47,25 @@ export default function ContactPage({ params }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/contact/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Une erreur est survenue");
+      }
+
+      setSubmitted(true);
       setFormData({
         name: "",
         email: "",
@@ -56,7 +73,16 @@ export default function ContactPage({ params }: Props) {
         subject: "",
         message: "",
       });
-    }, 3000);
+
+      // Masquer le message de succès après 5 secondes
+      setTimeout(() => {
+        setSubmitted(false);
+      }, 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de l'envoi");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!dictionary) {
@@ -161,12 +187,26 @@ export default function ContactPage({ params }: Props) {
               <div className="mb-6 p-4 bg-green-100 border border-green-400 rounded-lg">
                 <p className="text-green-800 font-semibold">
                   {lang === "fr"
-                    ? "✓ Message envoyé avec succès !"
+                    ? "✓ Message envoyé avec succès ! Vous recevrez une confirmation par email."
                     : lang === "en"
-                    ? "✓ Message sent successfully!"
+                    ? "✓ Message sent successfully! You will receive a confirmation by email."
                     : lang === "es"
-                    ? "✓ ¡Mensaje enviado con éxito!"
-                    : "✓ Messaggio inviato con successo!"}
+                    ? "✓ ¡Mensaje enviado con éxito! Recibirás una confirmación por email."
+                    : "✓ Messaggio inviato con successo! Riceverai una conferma via email."}
+                </p>
+              </div>
+            )}
+
+            {error && (
+              <div className="mb-6 p-4 bg-red-100 border border-red-400 rounded-lg">
+                <p className="text-red-800 font-semibold">
+                  {lang === "fr"
+                    ? "✗ Erreur: "
+                    : lang === "en"
+                    ? "✗ Error: "
+                    : lang === "es"
+                    ? "✗ Error: "
+                    : "✗ Errore: "}{error}
                 </p>
               </div>
             )}
@@ -248,9 +288,12 @@ export default function ContactPage({ params }: Props) {
 
               <button
                 type="submit"
-                className="w-full bg-[#8B0000] hover:bg-[#A50000] text-white font-bold py-4 px-6 rounded-lg transition-colors shadow-lg active:scale-95"
+                disabled={loading}
+                className="w-full bg-[#8B0000] hover:bg-[#A50000] text-white font-bold py-4 px-6 rounded-lg transition-colors shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {contact.form.submit} ✉️
+                {loading
+                  ? (lang === "fr" ? "Envoi en cours..." : lang === "en" ? "Sending..." : lang === "es" ? "Enviando..." : "Invio in corso...")
+                  : `${contact.form.submit} ✉️`}
               </button>
             </form>
           </div>
