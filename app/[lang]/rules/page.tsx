@@ -117,9 +117,16 @@ export default function RulesPage({ params }: Props) {
             {selectedCategory === null ? (
               // General Rules
               <div className="bg-white rounded-2xl p-8 md:p-12 shadow-lg border border-gray-100">
-                <h2 className="text-4xl font-bold text-[#8B0000] mb-8">
+                <h2 className="text-4xl font-bold text-[#8B0000] mb-6">
                   {generalRules.title}
                 </h2>
+
+                {/* Warning Banner - Highly Visible */}
+                <div className="bg-[#8B0000] text-white px-6 py-4 rounded-xl mb-8 shadow-lg">
+                  <p className="text-center font-bold text-lg md:text-xl">
+                    ⚠️ {generalRules.warning}
+                  </p>
+                </div>
 
                 <div className="space-y-8">
                   {/* Organization */}
