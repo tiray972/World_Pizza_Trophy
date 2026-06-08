@@ -4,7 +4,7 @@ import Stripe from 'stripe';
 import * as admin from "firebase-admin";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-    apiVersion: '2023-10-16' as any,
+    apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
 });
 
 interface SlotWithParticipant {
@@ -15,6 +15,7 @@ interface SlotWithParticipant {
     lastName: string;
     email?: string;
     phone?: string;
+    shirtSize?: string;
   };
 }
 
@@ -49,6 +50,9 @@ export async function POST(req: NextRequest) {
         }
         if (!lang) {
             return NextResponse.json({ error: "Langue manquante." }, { status: 400 });
+        }
+        if (slotsToReserve.some(slot => !slot.participant?.shirtSize)) {
+            return NextResponse.json({ error: "La taille du t-shirt est obligatoire pour chaque participant." }, { status: 400 });
         }
 
         console.log(`🔵 [Pack Checkout] Starting pack checkout for user ${userId}, pack ${packId}, slots: ${slotsToReserve.length}, total: ${totalAmount}€`);
@@ -126,7 +130,11 @@ export async function POST(req: NextRequest) {
                 eventId: eventId || '',
                 packId: packId,
                 packName: packName,
-                slotIds: slotsToReserve.map(s => s.slotId).join(','), // 🔧 FIX: Just slot IDs, participants already saved in Firestore
+                slotsToReserve: JSON.stringify(slotsToReserve.map(s => ({
+                    slotId: s.slotId,
+                    participant: s.participant,
+                }))),
+                slotIds: slotsToReserve.map(s => s.slotId).join(','),
                 isPack: 'true',
             },
         });

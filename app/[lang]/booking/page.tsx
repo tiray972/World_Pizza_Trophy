@@ -2,7 +2,7 @@
 
 import { SlotBookingView } from "@/components/custom/SlotBookingCalendar";
 import type { SelectedPackSlot } from "@/components/custom/SlotBookingCalendar";
-import { Slot, Category, WPTEvent, Product } from "@/types/firestore";
+import { Slot, Category, WPTEvent, Product, MealGuest } from "@/types/firestore";
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -237,7 +237,8 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
   const handleCheckout = async (
     slotsToCheckout: { slotId: string; categoryId: string }[],
     includeMeal: boolean,
-    mealPrice: number
+    mealPrice: number,
+    mealGuests: MealGuest[]
   ) => {
     if (!user) {
       const loginUrl = `/${currentLang}/auth/login?redirect=/booking`;
@@ -253,7 +254,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
       const category = categories.find(c => c.id === slot.categoryId);
       return sum + (category?.unitPrice || 0);
     }, 0);
-    const mealCost = includeMeal && mealPrice > 0 ? mealPrice : 0;
+    const mealCost = includeMeal && mealPrice > 0 ? mealPrice * mealGuests.length : 0;
     const totalAmount = slotTotal + mealCost;
 
     setIsProcessing(true);
@@ -271,6 +272,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
           totalAmount: totalAmount,
           includeMeal: includeMeal,
           mealPrice: mealPrice,
+          mealGuests: mealGuests,
           lang: currentLang,
         }),
       });

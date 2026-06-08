@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
 import { Payment, User, WPTEvent, Slot } from "@/types/firestore";
-import { AlertTriangle, CheckCircle2, RefreshCw, Filter, CreditCard, UserCheck, AlertOctagon } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RefreshCw, UserCheck, AlertOctagon } from "lucide-react";
 import { formatCurrency, formatUser, cn } from "../lib/utils";
 
 interface PaymentsPageProps {
@@ -33,9 +33,9 @@ export function PaymentsPage({
         <div className="bg-destructive/10 p-4 rounded-full text-destructive">
           <AlertTriangle className="h-8 w-8" />
         </div>
-        <h3 className="text-lg font-semibold">No Event Selected</h3>
+        <h3 className="text-lg font-semibold">Aucun événement sélectionné</h3>
         <p className="text-muted-foreground max-w-sm">
-          Please select an event to view financial reconciliation.
+          Sélectionnez un événement pour consulter le suivi financier.
         </p>
       </div>
     );
@@ -53,12 +53,12 @@ export function PaymentsPage({
 
     // Issue: Payment is PAID but User is NOT marked as paid
     if (payment.status === 'paid' && (!userRegistration || !userRegistration.paid)) {
-      issues.push("User status is UNPAID despite payment");
+      issues.push("Utilisateur non marqué payé malgré le paiement");
     }
 
     // Issue: Payment amount is 0 (Suspicious)
     if (payment.amount === 0 && payment.status === 'paid' && payment.source === 'stripe') {
-      issues.push("Zero amount Stripe payment");
+      issues.push("Paiement Stripe à montant zéro");
     }
 
     // Issue: Payment exists but no slots assigned (Warning only, maybe they haven't picked yet)
@@ -66,7 +66,7 @@ export function PaymentsPage({
     // Let's check if the slots in payment.slotIds actually exist and are assigned to this user
     const slotsFound = slots.filter(s => payment.slotIds.includes(s.id));
     if (payment.slotIds.length > 0 && slotsFound.length !== payment.slotIds.length) {
-      issues.push(`Missing ${payment.slotIds.length - slotsFound.length} slots in system`);
+      issues.push(`${payment.slotIds.length - slotsFound.length} créneaux manquants dans le système`);
     }
 
     return {
@@ -87,7 +87,7 @@ export function PaymentsPage({
     return !hasPayment;
   }).map(u => ({
     user: u,
-    issue: "User marked PAID but no Payment Record found"
+    issue: "Utilisateur marqué payé sans paiement enregistré"
   }));
 
 
@@ -96,7 +96,7 @@ export function PaymentsPage({
     : analyzedPayments;
 
   const handleFixSync = (userId: string, paymentId: string) => {
-    if (window.confirm("Auto-correct: Mark user as PAID based on this payment record?")) {
+    if (window.confirm("Correction automatique: marquer l'utilisateur comme payé à partir de ce paiement ?")) {
       const user = users.find(u => u.id === userId);
       if (!user) return;
 
@@ -123,7 +123,7 @@ export function PaymentsPage({
     switch (source) {
       case 'stripe': return <Badge variant="outline" className="border-purple-200 bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800">Stripe</Badge>;
       case 'admin': return <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800">Admin</Badge>;
-      case 'manual': return <Badge variant="outline" className="border-yellow-200 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800">Manual</Badge>;
+      case 'manual': return <Badge variant="outline" className="border-yellow-200 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800">Manuel</Badge>;
       default: return <Badge variant="outline">{source}</Badge>;
     }
   };
@@ -132,8 +132,8 @@ export function PaymentsPage({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">Financial Reconciliation</h2>
-          <p className="text-muted-foreground">Monitor payments, sources, and sync status for <strong>{selectedEvent.name}</strong>.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">Suivi financier</h2>
+          <p className="text-muted-foreground">Suivez les paiements, les sources et la synchronisation pour <strong>{selectedEvent.name}</strong>.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -141,7 +141,7 @@ export function PaymentsPage({
             size="sm"
             onClick={() => setFilterMode('all')}
           >
-            All Transactions
+            Toutes les transactions
           </Button>
           <Button
             variant={filterMode === 'issues' ? "destructive" : "ghost"}
@@ -150,7 +150,7 @@ export function PaymentsPage({
             className={filterMode === 'issues' ? "" : "text-muted-foreground"}
           >
             <AlertOctagon className="mr-2 h-4 w-4" />
-            Issues ({analyzedPayments.filter(p => p.hasIssues).length + ghostUsers.length})
+            Problèmes ({analyzedPayments.filter(p => p.hasIssues).length + ghostUsers.length})
           </Button>
         </div>
       </div>
@@ -160,10 +160,10 @@ export function PaymentsPage({
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
           <h4 className="flex items-center gap-2 text-red-800 dark:text-red-300 font-semibold mb-2">
             <AlertTriangle className="h-5 w-5" />
-            {ghostUsers.length} Users marked PAID without Payment Records
+            {ghostUsers.length} utilisateurs marqués payés sans paiement enregistré
           </h4>
           <div className="space-y-2">
-            {ghostUsers.map(({ user, issue }) => (
+            {ghostUsers.map(({ user }) => (
               <div key={user.id} className="flex items-center justify-between text-sm bg-white dark:bg-black/20 p-2 rounded">
                 <div className="flex items-center gap-2">
                   <UserCheck className="h-4 w-4 text-red-500" />
@@ -171,7 +171,7 @@ export function PaymentsPage({
                   <span className="text-muted-foreground">({user.email})</span>
                 </div>
                 <Button size="sm" variant="outline" className="h-7 text-xs border-red-200 hover:bg-red-50 text-red-600">
-                  Create Manual Record
+                  Créer un paiement manuel
                 </Button>
               </div>
             ))}
@@ -181,9 +181,9 @@ export function PaymentsPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Transactions Log</CardTitle>
+          <CardTitle>Journal des transactions</CardTitle>
           <CardDescription>
-            {filteredPayments.length} records found.
+            {filteredPayments.length} enregistrements trouvés.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -192,13 +192,13 @@ export function PaymentsPage({
               <thead className="[&_tr]:border-b">
                 <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Date</th>
-                  <th className="h-12 px-4 align-middle font-medium text-muted-foreground">User</th>
+                  <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Utilisateur</th>
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Participants</th>
-                  <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Pack / Item</th>
-                  <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Amount</th>
+                  <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Pack / article</th>
+                  <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Montant</th>
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Source</th>
-                  <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Status</th>
-                  <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Sync Health</th>
+                  <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Statut</th>
+                  <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Synchronisation</th>
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground text-right">Actions</th>
                 </tr>
               </thead>
@@ -206,7 +206,7 @@ export function PaymentsPage({
                 {filteredPayments.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="p-4 text-center text-muted-foreground">
-                      No payments found matching criteria.
+                      Aucun paiement ne correspond aux critères.
                     </td>
                   </tr>
                 ) : (
@@ -230,7 +230,7 @@ export function PaymentsPage({
                               <span className="text-xs text-muted-foreground">{user.email}</span>
                             </div>
                           ) : (
-                            <span className="text-destructive">User Deleted ({payment.userId})</span>
+                            <span className="text-destructive">Utilisateur supprimé ({payment.userId})</span>
                           )}
                         </td>
                         <td className="p-4 align-middle text-sm">
@@ -242,18 +242,19 @@ export function PaymentsPage({
                                     👤 {p!.firstName} {p!.lastName}
                                   </span>
                                   {p!.email && <span className="text-xs text-muted-foreground">{p!.email}</span>}
+                                  {p!.shirtSize && <span className="text-xs text-muted-foreground">T-shirt: {p!.shirtSize}</span>}
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <span className="text-xs text-yellow-600 dark:text-yellow-400">No participants</span>
+                            <span className="text-xs text-yellow-600 dark:text-yellow-400">Aucun participant</span>
                           )}
                         </td>
                         <td className="p-4 align-middle">
                           {payment.isPack ? (
                             <Badge variant="secondary" className="font-normal">{payment.packName || "Pack"}</Badge>
                           ) : (
-                            <span className="text-muted-foreground">Single Items</span>
+                            <span className="text-muted-foreground">Articles individuels</span>
                           )}
                         </td>
                         <td className="p-4 align-middle font-mono">
@@ -265,7 +266,7 @@ export function PaymentsPage({
                         <td className="p-4 align-middle">
                           {payment.status === 'paid' ? (
                             <span className="inline-flex items-center text-green-600 dark:text-green-400 font-medium text-xs">
-                              <CheckCircle2 className="w-3 h-3 mr-1" /> Paid
+                              <CheckCircle2 className="w-3 h-3 mr-1" /> Payé
                             </span>
                           ) : (
                             <Badge variant={payment.status === 'refunded' ? "secondary" : "destructive"}>
@@ -298,7 +299,7 @@ export function PaymentsPage({
                               onClick={() => handleFixSync(payment.userId, payment.id)}
                             >
                               <RefreshCw className="h-3 w-3 mr-1" />
-                              Sync Status
+                              Synchroniser
                             </Button>
                           )}
                         </td>

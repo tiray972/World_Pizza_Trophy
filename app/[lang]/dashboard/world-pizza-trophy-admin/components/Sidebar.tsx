@@ -12,7 +12,6 @@ import {
   Trophy,
   ChevronDown,
   Settings as SettingsIcon,
-  Plus,
   List,
   CreditCard,
   BarChart3
@@ -34,42 +33,42 @@ interface SidebarProps {
 
 export const NAV_ITEMS: NavItem[] = [
   {
-    title: "Dashboard",
+    title: "Tableau de bord",
     href: "dashboard",
     icon: LayoutDashboard,
   },
   {
-    title: "Event Settings",
+    title: "Paramètres événement",
     href: "settings",
     icon: SettingsIcon,
   },
   {
-    title: "Categories", // New Link
+    title: "Catégories",
     href: "categories",
     icon: List,
   },
   {
-    title: "Slots",
+    title: "Créneaux",
     href: "slots",
     icon: Calendar,
   },
   {
-    title: "Products",
+    title: "Produits",
     href: "products",
     icon: Package,
   },
   {
-    title: "Payments", // New Link
+    title: "Paiements",
     href: "payments",
     icon: CreditCard,
   },
   {
-    title: "Vouchers",
+    title: "Codes promo",
     href: "vouchers",
     icon: Ticket,
   },
   {
-    title: "Users",
+    title: "Utilisateurs",
     href: "users",
     icon: Users,
   },
@@ -79,7 +78,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Download,
   },
   {
-    title: "Analytics",
+    title: "Statistiques",
     href: "analytics",
     icon: BarChart3,
   },
@@ -128,7 +127,7 @@ export function Sidebar({
                 value={selectedEventId || ""}
                 onChange={handleSelectChange}
               >
-                {events.length === 0 && <option value="">No Events Created</option>}
+                {events.length === 0 && <option value="">Aucun événement créé</option>}
                 
                 {events.map(evt => (
                   <option key={evt.id} value={evt.id}>
@@ -137,7 +136,7 @@ export function Sidebar({
                 ))}
                 
                 <option disabled>──────────</option>
-                <option value="create_new" className="text-primary font-bold">+ Create New Event</option>
+                <option value="create_new" className="text-primary font-bold">+ Créer un événement</option>
               </select>
               <ChevronDown className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none bg-transparent" />
             </div>
@@ -169,10 +168,10 @@ export function Sidebar({
       <div className="px-3 py-4 mt-auto border-t">
         <Button variant="ghost" className="w-full justify-start font-normal text-muted-foreground">
           <Users className="mr-2 h-4 w-4" />
-          Team Access
+          Accès équipe
         </Button>
         <div className="px-4 py-2 text-xs text-muted-foreground text-center">
-          v1.5.0 • {selectedEvent ? selectedEvent.eventYear : "No Event"}
+          v1.5.0 • {selectedEvent ? selectedEvent.eventYear : "Aucun événement"}
         </div>
       </div>
     </div>

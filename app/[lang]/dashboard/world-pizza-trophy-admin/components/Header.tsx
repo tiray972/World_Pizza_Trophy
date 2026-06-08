@@ -19,7 +19,7 @@ export function Header({ onMobileMenuToggle, title }: HeaderProps) {
           onClick={onMobileMenuToggle}
         >
           <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle Sidebar</span>
+          <span className="sr-only">Ouvrir le menu</span>
         </Button>
         
         <div className="flex flex-1 items-center justify-between">
@@ -33,7 +33,7 @@ export function Header({ onMobileMenuToggle, title }: HeaderProps) {
             </Button>
             <Button variant="ghost" size="icon" className="rounded-full text-foreground">
               <User className="h-5 w-5" />
-              <span className="sr-only">User Profile</span>
+              <span className="sr-only">Profil utilisateur</span>
             </Button>
           </div>
         </div>

@@ -4,7 +4,7 @@ import Stripe from 'stripe';
 import * as admin from "firebase-admin";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-    apiVersion: '2023-10-16' as any,
+    apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
 });
 
 interface SlotWithParticipant {
@@ -15,7 +15,16 @@ interface SlotWithParticipant {
     lastName: string;
     email?: string;
     phone?: string;
+    shirtSize?: string;
   };
+}
+
+interface MealGuest {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  isParticipant?: boolean;
 }
 
 interface CheckoutBody {
@@ -26,16 +35,39 @@ interface CheckoutBody {
   totalAmount: number;
   includeMeal: boolean;
   mealPrice: number;
+  mealGuests?: MealGuest[];
   lang: string;
 }
 
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json() as CheckoutBody;
-        const { slotsToReserve, userId, userEmail, eventId, totalAmount, includeMeal, mealPrice, lang } = body;
+        const { slotsToReserve, userId, userEmail, eventId, totalAmount, includeMeal, mealPrice, mealGuests = [], lang } = body;
 
-        if (!slotsToReserve || slotsToReserve.length === 0 || !userId || !userEmail || !totalAmount || !lang) {
+        if (!slotsToReserve || !userId || !userEmail || !totalAmount || !lang) {
             return NextResponse.json({ error: "Données manquantes." }, { status: 400 });
+        }
+
+        const missingShirtSize = slotsToReserve.some(slot => !slot.participant?.shirtSize);
+        if (missingShirtSize) {
+            return NextResponse.json({ error: "La taille du t-shirt est obligatoire pour chaque participant." }, { status: 400 });
+        }
+
+        const cleanedMealGuests = includeMeal
+            ? mealGuests
+                .map(guest => ({
+                    firstName: guest.firstName?.trim(),
+                    lastName: guest.lastName?.trim(),
+                    email: guest.email?.trim() || undefined,
+                    phone: guest.phone?.trim() || undefined,
+                    isParticipant: !!guest.isParticipant,
+                }))
+                .filter(guest => guest.firstName && guest.lastName)
+            : [];
+        const mealQuantity = cleanedMealGuests.length;
+
+        if (slotsToReserve.length === 0 && mealQuantity === 0) {
+            return NextResponse.json({ error: "Ajoutez au moins un créneau ou un repas." }, { status: 400 });
         }
 
         console.log(`🔵 [Checkout] Starting checkout for user ${userId}, event ${eventId}, slots: ${slotsToReserve.length}, total: ${totalAmount}€`);
@@ -79,10 +111,12 @@ export async function POST(req: NextRequest) {
 
         // 2️⃣ Création de la Session Stripe avec le montant total
         // Calculer le coût des slots (totalAmount - mealPrice si repas inclus)
-        const slotsCost = includeMeal && mealPrice > 0 ? totalAmount - mealPrice : totalAmount;
+        const slotsCost = includeMeal && mealPrice > 0 ? totalAmount - (mealPrice * mealQuantity) : totalAmount;
         
-        const lineItems = [
-            {
+        const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+
+        if (slotsToReserve.length > 0 && slotsCost > 0) {
+            lineItems.push({
                 price_data: {
                     currency: 'eur',
                     product_data: {
@@ -92,21 +126,21 @@ export async function POST(req: NextRequest) {
                     unit_amount: Math.round(slotsCost * 100),
                 },
                 quantity: 1,
-            },
-        ];
+            });
+        }
 
         // Ajouter le line item du repas s'il est inclus
-        if (includeMeal && mealPrice > 0) {
+        if (includeMeal && mealPrice > 0 && mealQuantity > 0) {
             lineItems.push({
                 price_data: {
                     currency: 'eur',
                     product_data: {
                         name: 'Repas',
-                        description: 'Repas pendant l\'événement',
+                        description: `Repas pendant l'événement pour ${mealQuantity} personne(s)`,
                     },
                     unit_amount: Math.round(mealPrice * 100),
                 },
-                quantity: 1,
+                quantity: mealQuantity,
             });
         }
 
@@ -128,6 +162,8 @@ export async function POST(req: NextRequest) {
                 isPack: 'false',
                 includeMeal: includeMeal ? 'true' : 'false',
                 mealPrice: mealPrice.toString(),
+                mealQuantity: mealQuantity.toString(),
+                mealGuests: JSON.stringify(cleanedMealGuests),
             },
         });
 
@@ -147,7 +183,9 @@ export async function POST(req: NextRequest) {
                 buyerId: userId,
             });
         });
-        await batch.commit();
+        if (availableSlots.length > 0) {
+            await batch.commit();
+        }
 
         console.log(`✅ ${availableSlots.length} slots marked as locked for 10 minutes`);
 

@@ -113,6 +113,17 @@ export interface Participant {
   lastName: string;
   email?: string;
   phone?: string;
+  shirtSize?: TShirtSize;
+}
+
+export type TShirtSize = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL';
+
+export interface MealGuest {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  isParticipant?: boolean;
 }
 
 export interface Slot {

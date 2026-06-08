@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Slot, Category, WPTEvent, Product, Participant } from '@/types/firestore';
+import { Slot, Category, WPTEvent, Product, Participant, MealGuest } from '@/types/firestore';
 import { Badge } from '@/components/ui/badge';
 import { CalendarIcon, ShoppingCartIcon, XCircleIcon, ClockIcon, PizzaIcon, PackageIcon, UtensilsCrossedIcon, CheckCircleIcon, ArrowLeftIcon, UserIcon } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -30,7 +30,7 @@ interface SlotBookingViewProps {
   settings: WPTEvent;
   products: Product[];
   registrationClosed: boolean;
-  onCheckout: (slots: SelectedSlot[], includeMeal: boolean, mealPrice: number) => void;
+  onCheckout: (slots: SelectedSlot[], includeMeal: boolean, mealPrice: number, mealGuests: MealGuest[]) => void;
   onPackCheckout: (product: Product, slots: SelectedPackSlot[]) => void;
 }
 
@@ -99,6 +99,7 @@ export function SlotBookingView({
 
   // 🍽️ Meal state
   const [wantsMeal, setWantsMeal] = useState(false);
+  const [additionalMealGuests, setAdditionalMealGuests] = useState<MealGuest[]>([]);
 
   // 🔧 DEBUG LOG: Track prop changes
   useEffect(() => {
@@ -110,6 +111,24 @@ export function SlotBookingView({
 
   const eventStartDate = useMemo(() => new Date(settings.eventStartDate), [settings.eventStartDate]);
   const registrationDeadlineDate = useMemo(() => new Date(settings.registrationDeadline), [settings.registrationDeadline]);
+
+  const mealGuests = wantsMeal ? additionalMealGuests : [];
+
+  const hasMissingShirtSizes = (slotsToCheck: SelectedSlot[]) =>
+    slotsToCheck.some(slot => !slot.participant?.shirtSize);
+
+  const updateAdditionalMealGuest = (index: number, field: keyof MealGuest, value: string) => {
+    setAdditionalMealGuests(prev =>
+      prev.map((guest, currentIndex) =>
+        currentIndex === index ? { ...guest, [field]: value } : guest
+      )
+    );
+  };
+
+  const addAdditionalMealGuest = () => {
+    setAdditionalMealGuests(prev => [...prev, { firstName: '', lastName: '' }]);
+    setWantsMeal(true);
+  };
 
   const activeCategory = useMemo(() => {
     const id = isPackSelectionSheetOpen ? activePackCategoryId : activeCategoryId;
@@ -581,10 +600,10 @@ export function SlotBookingView({
 
         <SheetFooter className="shrink-0 mt-4 border-t pt-3 flex flex-col gap-3">
           {/* ⚠️ Vérifier que tous les participants sont remplis */}
-          {selectedPackSlots.some(slot => !slot.participant) && (
+          {(selectedPackSlots.some(slot => !slot.participant) || hasMissingShirtSizes(selectedPackSlots)) && (
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-xs text-yellow-700 font-semibold">
-                ⚠️ Veuillez ajouter les informations du participant pour tous les créneaux
+                ⚠️ Veuillez ajouter les informations du participant et la taille du t-shirt pour tous les créneaux
               </p>
             </div>
           )}
@@ -592,7 +611,7 @@ export function SlotBookingView({
           <Button
             type="button"
             className="w-full h-12 text-lg"
-            disabled={!selectionComplete || selectedPackSlots.some(slot => !slot.participant)}
+            disabled={!selectionComplete || selectedPackSlots.some(slot => !slot.participant) || hasMissingShirtSizes(selectedPackSlots)}
             onClick={() => {
               onPackCheckout(packToPurchase, selectedPackSlots);
               setIsPackSelectionSheetOpen(false);
@@ -717,7 +736,7 @@ export function SlotBookingView({
     }, 0);
     
     const mealPrice = settings.mealPrice || 0;
-    const mealCost = wantsMeal && mealPrice > 0 ? mealPrice : 0;
+    const mealCost = wantsMeal && mealPrice > 0 ? mealPrice * mealGuests.length : 0;
     const totalPrice = slotTotal + mealCost;
 
     return (
@@ -732,7 +751,7 @@ export function SlotBookingView({
         <div className="py-4 space-y-3 grow overflow-y-auto pr-2">
           {selectedSlots.length === 0 ? (
             <div className="p-8 text-center text-gray-500 border border-dashed rounded-lg">
-              Votre panier est vide. Sélectionnez une catégorie pour commencer.
+              Aucun créneau sélectionné. Vous pouvez acheter uniquement des repas si besoin.
             </div>
           ) : (
             selectedSlots.map(slot => {
@@ -759,6 +778,9 @@ export function SlotBookingView({
                           </p>
                           {slot.participant!.email && (
                             <p className="text-xs text-green-600">{slot.participant!.email}</p>
+                          )}
+                          {slot.participant!.shirtSize && (
+                            <p className="text-xs text-green-600">T-shirt: {slot.participant!.shirtSize}</p>
                           )}
                         </div>
                       )}
@@ -804,27 +826,109 @@ export function SlotBookingView({
           )}
           
           {/* 🍽️ Option Repas */}
-          {selectedSlots.length > 0 && mealPrice > 0 && (
+          {mealPrice > 0 && (
             <Card className="p-4 bg-blue-50 border-2 border-blue-200">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <p className="font-semibold text-blue-900 flex items-center">
                     <UtensilsCrossedIcon className="w-4 h-4 mr-2" />
-                    Ajouter un Repas
+                    Ajouter des repas
                   </p>
                   <p className="text-sm text-blue-700">
-                    {formatPrice(mealPrice)} par personne
+                    {formatPrice(mealPrice)} par personne, indépendant des créneaux de compétition
                   </p>
                 </div>
                 <Button
                   size="sm"
                   variant={wantsMeal ? "default" : "outline"}
                   className={wantsMeal ? "bg-blue-600 hover:bg-blue-700" : ""}
-                  onClick={() => setWantsMeal(!wantsMeal)}
+                  onClick={() => {
+                    if (wantsMeal) {
+                      setWantsMeal(false);
+                      setAdditionalMealGuests([]);
+                    } else {
+                      setWantsMeal(true);
+                      if (additionalMealGuests.length === 0) {
+                        setAdditionalMealGuests([{ firstName: '', lastName: '' }]);
+                      }
+                    }
+                  }}
                 >
                   {wantsMeal ? "✓ Inclus" : "+ Ajouter"}
                 </Button>
               </div>
+              {wantsMeal && (
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-md bg-white/70 border border-blue-100 p-3">
+                    <p className="text-xs font-semibold text-blue-900 mb-2">Récapitulatif repas</p>
+                    {mealGuests.length === 0 ? (
+                      <p className="text-xs text-blue-700">Ajoutez les personnes qui mangeront pour préparer le récapitulatif.</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {mealGuests.map((guest, index) => (
+                          <div key={`${guest.firstName}-${guest.lastName}-${index}`} className="flex justify-between gap-3 text-xs text-blue-800">
+                            <span>{guest.firstName || `Repas ${index + 1}`} {guest.lastName || ""}</span>
+                            <span>{formatPrice(mealPrice)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {additionalMealGuests.map((guest, index) => (
+                    <div key={index} className="rounded-md bg-white border border-blue-100 p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-blue-950">Repas {index + 1}</p>
+                          <p className="text-xs text-blue-700">Nom de la personne qui mangera</p>
+                        </div>
+                        {additionalMealGuests.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAdditionalMealGuests(prev => prev.filter((_, currentIndex) => currentIndex !== index))}
+                          >
+                            Retirer
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          value={guest.firstName}
+                          onChange={(e) => updateAdditionalMealGuest(index, 'firstName', e.target.value)}
+                          placeholder="Prénom"
+                          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                        />
+                        <input
+                          value={guest.lastName}
+                          onChange={(e) => updateAdditionalMealGuest(index, 'lastName', e.target.value)}
+                          placeholder="Nom"
+                          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          value={guest.email || ''}
+                          onChange={(e) => updateAdditionalMealGuest(index, 'email', e.target.value)}
+                          placeholder="Email optionnel"
+                          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                        />
+                        <input
+                          value={guest.phone || ''}
+                          onChange={(e) => updateAdditionalMealGuest(index, 'phone', e.target.value)}
+                          placeholder="Téléphone optionnel"
+                          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                        />
+                      </div>
+                    </div>
+                  ))}
+
+                  <Button type="button" variant="outline" size="sm" className="w-full" onClick={addAdditionalMealGuest}>
+                    + Ajouter un autre repas
+                  </Button>
+                </div>
+              )}
             </Card>
           )}
         </div>
@@ -838,7 +942,7 @@ export function SlotBookingView({
             </div>
             {wantsMeal && mealCost > 0 && (
               <div className="flex justify-between text-blue-600 font-semibold">
-                <span>Repas:</span>
+                <span>Repas ({mealGuests.length}):</span>
                 <span>{formatPrice(mealCost)}</span>
               </div>
             )}
@@ -851,10 +955,10 @@ export function SlotBookingView({
           </div>
 
           {/* ⚠️ Vérifier que tous les participants sont remplis */}
-          {selectedSlots.some(slot => !slot.participant) && (
+          {(selectedSlots.some(slot => !slot.participant) || hasMissingShirtSizes(selectedSlots)) && (
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-3">
               <p className="text-xs text-yellow-700 font-semibold">
-                ⚠️ Veuillez ajouter les informations du participant pour tous les créneaux
+                ⚠️ Veuillez ajouter les informations du participant et la taille du t-shirt pour tous les créneaux
               </p>
             </div>
           )}
@@ -867,11 +971,26 @@ export function SlotBookingView({
           <Button
             type="button"
             className="w-full h-12 text-lg"
-            disabled={selectedSlots.length === 0 || selectedSlots.some(slot => !slot.participant)}
+            disabled={
+              (selectedSlots.length === 0 && mealGuests.filter(guest => guest.firstName.trim() && guest.lastName.trim()).length === 0) ||
+              selectedSlots.some(slot => !slot.participant) ||
+              hasMissingShirtSizes(selectedSlots)
+            }
             onClick={() => {
-              onCheckout(selectedSlots, wantsMeal, mealPrice);
+              const cleanedMealGuests = mealGuests
+                .map(guest => ({
+                  ...guest,
+                  firstName: guest.firstName.trim(),
+                  lastName: guest.lastName.trim(),
+                  email: guest.email?.trim() || undefined,
+                  phone: guest.phone?.trim() || undefined,
+                }))
+                .filter(guest => guest.firstName && guest.lastName);
+              onCheckout(selectedSlots, wantsMeal && cleanedMealGuests.length > 0, mealPrice, cleanedMealGuests);
               setIsCartSheetOpen(false);
               setSelectedSlots([]);
+              setWantsMeal(false);
+              setAdditionalMealGuests([]);
             }}
           >
             Procéder au Paiement
@@ -909,15 +1028,15 @@ export function SlotBookingView({
       <Button
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl z-50 transition-transform hover:scale-105"
         onClick={() => setIsCartSheetOpen(true)}
-        disabled={selectedSlots.length === 0}
+        disabled={selectedSlots.length === 0 && (settings.mealPrice || 0) <= 0}
       >
         <ShoppingCartIcon className="w-6 h-6" />
-        {selectedSlots.length > 0 && (
+        {(selectedSlots.length > 0 || mealGuests.length > 0) && (
           <Badge
             variant="destructive"
             className="absolute top-0 right-0 transform translate-x-1/3 -translate-y-1/3 rounded-full h-6 w-6 flex items-center justify-center font-bold"
           >
-            {selectedSlots.length}
+            {selectedSlots.length + mealGuests.filter(guest => guest.firstName.trim() && guest.lastName.trim()).length}
           </Badge>
         )}
       </Button>

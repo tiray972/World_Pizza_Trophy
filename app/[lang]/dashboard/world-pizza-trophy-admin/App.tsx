@@ -2,7 +2,6 @@
 import React, { useState, useMemo } from 'react';
 import { AdminLayout } from './components/AdminLayout';
 import { ViewType, Slot, User, Category, WPTEvent, Product, Voucher, Payment } from './types';
-import { Button } from './components/ui/Button';
 import { SlotsPage } from './components/SlotsPage';
 import { ProductsPage } from './components/ProductsPage';
 import { VouchersPage } from './components/VouchersPage';
@@ -30,7 +29,6 @@ import {
   WPT_DEFAULT_TEMPLATE_CATEGORIES,
   WPT_DEFAULT_TEMPLATE_PRODUCTS
 } from './lib/mockData';
-import { Timestamp } from 'firebase/firestore';
 
 const DashboardStats = ({
   slots,
@@ -58,30 +56,30 @@ const DashboardStats = ({
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6">
-          <div className="text-sm font-medium tracking-tight text-muted-foreground">Estimated Revenue</div>
+          <div className="text-sm font-medium tracking-tight text-muted-foreground">Revenus estimés</div>
           <div className="text-2xl font-bold">{formatCurrency(estimatedRevenue)}</div>
-          <div className="text-xs text-muted-foreground mt-1">Based on {paidUsers.length} paid registrations</div>
+          <div className="text-xs text-muted-foreground mt-1">Basé sur {paidUsers.length} inscriptions payées</div>
         </div>
         <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6">
-          <div className="text-sm font-medium tracking-tight text-muted-foreground">Slot Occupancy</div>
+          <div className="text-sm font-medium tracking-tight text-muted-foreground">Occupation des créneaux</div>
           <div className="text-2xl font-bold">{bookedSlots} / {totalSlots}</div>
           <div className="text-xs text-muted-foreground mt-1">
-            {totalSlots > 0 ? Math.round((bookedSlots / totalSlots) * 100) : 0}% capacity
+            {totalSlots > 0 ? Math.round((bookedSlots / totalSlots) * 100) : 0}% de remplissage
           </div>
         </div>
         <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6">
-          <div className="text-sm font-medium tracking-tight text-muted-foreground">Active Products</div>
+          <div className="text-sm font-medium tracking-tight text-muted-foreground">Produits actifs</div>
           <div className="text-2xl font-bold">{products.length}</div>
-          <div className="text-xs text-muted-foreground mt-1">For this event edition</div>
+          <div className="text-xs text-muted-foreground mt-1">Pour cette édition</div>
         </div>
         <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6">
-          <div className="text-sm font-medium tracking-tight text-muted-foreground">Competitors</div>
+          <div className="text-sm font-medium tracking-tight text-muted-foreground">Compétiteurs</div>
           <div className="text-2xl font-bold">{registeredUsers.length}</div>
-          <div className="text-xs text-muted-foreground mt-1">{paidUsers.length} confirmed paid</div>
+          <div className="text-xs text-muted-foreground mt-1">{paidUsers.length} paiements confirmés</div>
         </div>
       </div>
       <div className="rounded-xl border bg-card shadow-sm p-12 text-center text-muted-foreground">
-        Detailed Analytics Charts would appear here.
+        Les graphiques détaillés apparaîtront ici.
       </div>
     </div>
   );
@@ -276,7 +274,7 @@ export default function App() {
 
   const handleCreateSlots = async (slotsData: Omit<Slot, "id" | "status" | "userId" | "stripeSessionId" | "eventId">[]) => {
     if (!selectedEventId) {
-      alert("No event selected. Cannot create slots.");
+      alert("Aucun événement sélectionné. Impossible de créer des créneaux.");
       return;
     }
 

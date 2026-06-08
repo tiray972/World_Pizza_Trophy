@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Participant } from '@/types/firestore';
+import { Participant, TShirtSize } from '@/types/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
+
+const T_SHIRT_SIZES: TShirtSize[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 interface ParticipantModalProps {
   open: boolean;
@@ -34,6 +35,7 @@ export function ParticipantModal({
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [shirtSize, setShirtSize] = useState<TShirtSize | ''>('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [applyToAll, setApplyToAll] = useState(false);
 
@@ -43,6 +45,7 @@ export function ParticipantModal({
     if (isRequired) {
       if (!firstName.trim()) newErrors.firstName = 'Le prénom est requis';
       if (!lastName.trim()) newErrors.lastName = 'Le nom est requis';
+      if (!shirtSize) newErrors.shirtSize = 'La taille du t-shirt est requise';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -55,6 +58,7 @@ export function ParticipantModal({
       lastName: lastName.trim(),
       email: email.trim() || undefined,
       phone: phone.trim() || undefined,
+      shirtSize: shirtSize || undefined,
     };
 
     // 📋 Sauvegarder le participant dans la liste réutilisable
@@ -73,6 +77,7 @@ export function ParticipantModal({
     setLastName('');
     setEmail('');
     setPhone('');
+    setShirtSize('');
     setErrors({});
     setApplyToAll(false);
   };
@@ -82,6 +87,7 @@ export function ParticipantModal({
     setLastName('');
     setEmail('');
     setPhone('');
+    setShirtSize('');
     setErrors({});
     setApplyToAll(false);
     onClose();
@@ -150,6 +156,30 @@ export function ParticipantModal({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
+          </div>
+
+          <div>
+            <Label htmlFor="shirtSize">Taille du t-shirt *</Label>
+            <select
+              id="shirtSize"
+              value={shirtSize}
+              onChange={(e) => {
+                setShirtSize(e.target.value as TShirtSize | '');
+                if (errors.shirtSize) setErrors({ ...errors, shirtSize: '' });
+              }}
+              className={`w-full h-10 rounded-md border bg-background px-3 text-sm ${
+                errors.shirtSize ? 'border-red-500' : 'border-input'
+              }`}
+            >
+              <option value="">Sélectionner une taille</option>
+              {T_SHIRT_SIZES.map(size => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+            {errors.shirtSize && <p className="text-xs text-red-500 mt-1">{errors.shirtSize}</p>}
+            <p className="text-xs text-gray-500 mt-1">
+              Un seul t-shirt est prévu par participant.
+            </p>
           </div>
 
           {isPackModal && onApplyToAll && (

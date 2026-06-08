@@ -3,10 +3,27 @@ import Stripe from 'stripe';
 import { adminDB } from '@/lib/firebase/admin';
 import * as admin from 'firebase-admin';
 import { Payment } from '@/types/firestore';
+import { sendPaymentNotifications } from '@/lib/email/payment-notifications';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2023-10-16' as any,
+  apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
 });
+
+interface PaymentParticipant {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  shirtSize?: string;
+}
+
+interface PaymentMealGuest {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  isParticipant?: boolean;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,6 +55,9 @@ export async function POST(req: NextRequest) {
       isPack: isPackString,
       packName,
       packId,
+      mealGuests: mealGuestsJson,
+      mealPrice: mealPriceString,
+      mealQuantity: mealQuantityString,
     } = session.metadata as {
       userId: string;
       userEmail: string;
@@ -46,6 +66,9 @@ export async function POST(req: NextRequest) {
       isPack: string;
       packName?: string;
       packId?: string;
+      mealGuests?: string;
+      mealPrice?: string;
+      mealQuantity?: string;
     };
 
     if (!userId || !slotsToReserveJson) {
@@ -57,11 +80,11 @@ export async function POST(req: NextRequest) {
     }
 
     // 3️⃣ Parser les slots
-    let slotsData: Array<{ slotId: string; participant?: any }> = [];
+    let slotsData: Array<{ slotId: string; participant?: PaymentParticipant }> = [];
     try {
       slotsData = JSON.parse(slotsToReserveJson);
-      if (!Array.isArray(slotsData) || slotsData.length === 0) {
-        throw new Error('slotsToReserve is invalid or empty');
+      if (!Array.isArray(slotsData)) {
+        throw new Error('slotsToReserve is invalid');
       }
     } catch (e) {
       console.error('❌ Failed to parse slotsToReserve:', slotsToReserveJson, e);
@@ -73,6 +96,22 @@ export async function POST(req: NextRequest) {
 
     const isPack = isPackString === 'true';
     const amountTotal = session.amount_total || 0;
+    const mealPrice = Number(mealPriceString || 0);
+    const mealQuantity = Number(mealQuantityString || 0);
+    let mealGuests: PaymentMealGuest[] = [];
+    try {
+      const parsedMealGuests = mealGuestsJson ? JSON.parse(mealGuestsJson) : [];
+      mealGuests = Array.isArray(parsedMealGuests) ? parsedMealGuests : [];
+    } catch {
+      mealGuests = [];
+    }
+
+    if (slotsData.length === 0 && mealGuests.length === 0) {
+      return NextResponse.json(
+        { error: 'No slots or meals found in metadata' },
+        { status: 400 }
+      );
+    }
 
     // 4️⃣ Vérifier si le paiement existe déjà
     const existingPaymentQuery = await adminDB
@@ -94,7 +133,7 @@ export async function POST(req: NextRequest) {
     const batch = adminDB.batch();
 
     // 6️⃣ Créer l'enregistrement de paiement
-    const slotIds = slotsData.map((s: any) => s.slotId);
+    const slotIds = slotsData.map((slot) => slot.slotId);
     const paymentRecord: Payment = {
       id: session.id,
       eventId: eventId || '',
@@ -107,7 +146,7 @@ export async function POST(req: NextRequest) {
       isPack: isPack,
       packName: isPack ? packName : undefined,
       packId: isPack ? packId : undefined,
-      metadata: session.metadata as Record<string, any>,
+      metadata: session.metadata as Payment['metadata'],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -127,9 +166,11 @@ export async function POST(req: NextRequest) {
 
     // 7️⃣ Mettre à jour les slots : locked -> paid
     const categoryIds = new Set<string>();
+    const participantsForEmail: PaymentParticipant[] = [];
     for (const slotInfo of slotsData) {
       const slotId = slotInfo.slotId;
       const participant = slotInfo.participant;
+      if (participant) participantsForEmail.push(participant);
 
       const slotRef = adminDB.collection('slots').doc(slotId);
       const slotDoc = await slotRef.get();
@@ -156,7 +197,7 @@ export async function POST(req: NextRequest) {
     const userRef = adminDB.collection('users').doc(userId);
     const userDoc = await userRef.get();
 
-    if (userDoc.exists) {
+    if (slotIds.length > 0 && userDoc.exists) {
       const userData = userDoc.data();
       if (!userData) {
         console.warn(`⚠️ User document data is empty: ${userId}`);
@@ -200,13 +241,34 @@ export async function POST(req: NextRequest) {
         batch.update(userRef, { registrations });
         console.log(`✅ User ${userId} registrations updated for event ${eventId}`);
       }
-    } else {
+    } else if (slotIds.length > 0) {
       console.warn(`⚠️ User document not found: ${userId}`);
     }
 
     // Exécuter le batch
     await batch.commit();
     console.log(`✅ Payment processing COMPLETED for session ${session.id}`);
+
+    try {
+      const eventDoc = eventId ? await adminDB.collection('events').doc(eventId).get() : null;
+      const userData = userDoc.exists ? userDoc.data() : null;
+      await sendPaymentNotifications({
+        userEmail,
+        userName: userData ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() : undefined,
+        eventName: eventDoc?.exists ? eventDoc.data()?.name : undefined,
+        amount: amountTotal / 100,
+        sessionId: session.id,
+        isPack,
+        packName,
+        slotCount: slotIds.length,
+        participants: participantsForEmail,
+        mealGuests,
+        mealPrice,
+        mealQuantity,
+      });
+    } catch (emailError) {
+      console.error('❌ Payment emails failed:', emailError);
+    }
 
     return NextResponse.json({
       success: true,
