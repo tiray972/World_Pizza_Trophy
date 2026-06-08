@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
@@ -23,6 +23,8 @@ interface AnalyticsPageProps {
   pageViews: PageView[];
   events: TrackingEvent[];
   loading: boolean;
+  timeRange: number;
+  onTimeRangeChange: (days: number) => void;
 }
 
 const TIME_RANGES = [
@@ -31,9 +33,7 @@ const TIME_RANGES = [
   { label: "90 jours", days: 90 },
 ];
 
-export function AnalyticsPage({ summary, pageViews, events, loading }: AnalyticsPageProps) {
-  const [timeRange, setTimeRange] = useState(30);
-
+export function AnalyticsPage({ summary, pageViews, events, loading, timeRange, onTimeRangeChange }: AnalyticsPageProps) {
   // Calculate stats from data
   const stats = useMemo(() => {
     if (!summary) return null;
@@ -106,7 +106,7 @@ export function AnalyticsPage({ summary, pageViews, events, loading }: Analytics
             {TIME_RANGES.map((range) => (
               <button
                 key={range.days}
-                onClick={() => setTimeRange(range.days)}
+                onClick={() => onTimeRangeChange(range.days)}
                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                   timeRange === range.days
                     ? "bg-background text-foreground shadow-sm"

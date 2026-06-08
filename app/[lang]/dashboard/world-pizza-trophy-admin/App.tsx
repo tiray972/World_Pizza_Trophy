@@ -87,6 +87,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<ViewType>('slots');
   const [isCreateEventModalOpen, setIsCreateEventModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [analyticsDays, setAnalyticsDays] = useState(30);
 
   // Firebase hooks - loads data in real-time
   const { events, createEvent, updateEvent } = useEvents();
@@ -98,7 +99,7 @@ export default function App() {
   const { payments, updatePayment } = usePayments(selectedEventId);
 
   // Analytics hook - no event filter (global)
-  const { summary, pageViews, events: trackingEvents, loading: analyticsLoading } = useAnalytics(30);
+  const { summary, pageViews, events: trackingEvents, loading: analyticsLoading } = useAnalytics(analyticsDays);
 
   // Set default event on first load
   React.useEffect(() => {
@@ -445,6 +446,8 @@ export default function App() {
             pageViews={pageViews}
             events={trackingEvents}
             loading={analyticsLoading}
+            timeRange={analyticsDays}
+            onTimeRangeChange={setAnalyticsDays}
           />
         );
       default: return null;

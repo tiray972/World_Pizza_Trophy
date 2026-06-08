@@ -23,9 +23,19 @@ import { TrackingEvent, PageView, TrackingEventType, AnalyticsSummary } from '@/
 
 const SESSION_KEY = 'wpt_analytics_session';
 const SESSION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+const ANALYTICS_RETENTION_DAYS = 120;
+const EVENT_THROTTLE_MS = 5000;
 
 function generateSessionId(): string {
   return `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+function getAnalyticsExpiryDate(): Date {
+  return new Date(Date.now() + ANALYTICS_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+}
+
+function shouldTrackPath(path: string): boolean {
+  return !path.includes('/dashboard');
 }
 
 export function getSessionId(): string {
@@ -89,6 +99,7 @@ function cleanUndefinedValues(obj: Record<string, any>): Record<string, any> {
 
 let lastPageViewPath: string | null = null;
 let lastPageViewTime: number = 0;
+const lastEventByKey = new Map<string, number>();
 const MIN_PAGE_VIEW_INTERVAL = 2000; // Minimum 2 seconds between page views of same path
 
 export async function trackPageView(path?: string, title?: string): Promise<void> {
@@ -96,6 +107,10 @@ export async function trackPageView(path?: string, title?: string): Promise<void
 
   const currentPath = path || window.location.pathname;
   const currentTime = Date.now();
+
+  if (!shouldTrackPath(currentPath)) {
+    return;
+  }
 
   // Prevent duplicate page views
   if (currentPath === lastPageViewPath && currentTime - lastPageViewTime < MIN_PAGE_VIEW_INTERVAL) {
@@ -123,6 +138,7 @@ export async function trackPageView(path?: string, title?: string): Promise<void
     userId: getCurrentUserId(),
     sessionId: getSessionId(),
     timestamp: new Date(),
+    expiresAt: getAnalyticsExpiryDate(),
     loadTime: loadTime || null,
     domContentLoaded: domContentLoaded || null,
   });
@@ -131,6 +147,7 @@ export async function trackPageView(path?: string, title?: string): Promise<void
     await addDoc(collection(db, 'pageViews'), {
       ...pageViewData,
       timestamp: serverTimestamp(),
+      expiresAt: Timestamp.fromDate(getAnalyticsExpiryDate()),
     });
   } catch (error) {
     console.error('Failed to track page view:', error);
@@ -147,19 +164,33 @@ export async function trackEvent(
 ): Promise<void> {
   if (typeof window === 'undefined') return;
 
+  const currentPath = window.location.pathname;
+  if (!shouldTrackPath(currentPath)) {
+    return;
+  }
+
+  const eventKey = `${eventType}:${currentPath}:${JSON.stringify(metadata || {})}`;
+  const lastTrackedAt = lastEventByKey.get(eventKey) || 0;
+  if (Date.now() - lastTrackedAt < EVENT_THROTTLE_MS) {
+    return;
+  }
+  lastEventByKey.set(eventKey, Date.now());
+
   const eventData = cleanUndefinedValues({
     eventType,
     timestamp: new Date(),
     userId: getCurrentUserId(),
     sessionId: getSessionId(),
-    path: window.location.pathname,
+    path: currentPath,
     metadata: metadata || null,
+    expiresAt: getAnalyticsExpiryDate(),
   });
 
   try {
     await addDoc(collection(db, 'trackingEvents'), {
       ...eventData,
       timestamp: serverTimestamp(),
+      expiresAt: Timestamp.fromDate(getAnalyticsExpiryDate()),
     });
   } catch (error) {
     console.error('Failed to track event:', error);
@@ -362,9 +393,6 @@ export async function getAnalyticsSummary(
 export function initAnalytics(): void {
   if (typeof window === 'undefined') return;
 
-  // Track initial page view
-  trackPageView();
-
   // Track scroll depth
   let maxScrollDepth = 0;
   const scrollThresholds = [25, 50, 75, 90];
@@ -398,14 +426,22 @@ export function initAnalytics(): void {
     if (target.tagName === 'BUTTON' || target.closest('button')) {
       const button = target.tagName === 'BUTTON' ? target : target.closest('button');
       const buttonText = button?.textContent?.trim() || 'unnamed';
-      analytics.trackClick(`button:${buttonText}`);
+      const hasAnalyticsMarker = button?.hasAttribute('data-analytics');
+      const isSubmitButton = button?.getAttribute('type') === 'submit';
+      if (hasAnalyticsMarker || isSubmitButton) {
+        analytics.trackClick(`button:${buttonText}`);
+      }
     }
 
     // Track link clicks
     const link = target.closest('a');
     if (link) {
       const href = link.getAttribute('href') || '#';
-      analytics.trackClick('link', { href });
+      const isInternalLink = href.startsWith('/') && !href.startsWith('/dashboard');
+      const isMarkedLink = link.hasAttribute('data-analytics');
+      if (isInternalLink || isMarkedLink) {
+        analytics.trackClick('link', { href });
+      }
     }
   };
 

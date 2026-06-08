@@ -709,8 +709,11 @@ export const useAnalytics = (days: number = 30) => {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
+    const queryLimit = days <= 7 ? 1000 : days <= 30 ? 2500 : 5000;
+    let isCancelled = false;
 
     setLoading(true);
+    setError(null);
 
     // Query for page views in the date range
     const pageViewsQuery = query(
@@ -718,7 +721,7 @@ export const useAnalytics = (days: number = 30) => {
       where('timestamp', '>=', Timestamp.fromDate(startDate)),
       where('timestamp', '<=', Timestamp.fromDate(endDate)),
       orderBy('timestamp', 'desc'),
-      limit(5000)
+      limit(queryLimit)
     );
 
     // Query for tracking events in the date range
@@ -727,13 +730,19 @@ export const useAnalytics = (days: number = 30) => {
       where('timestamp', '>=', Timestamp.fromDate(startDate)),
       where('timestamp', '<=', Timestamp.fromDate(endDate)),
       orderBy('timestamp', 'desc'),
-      limit(5000)
+      limit(queryLimit)
     );
 
-    const unsubscribePageViews = onSnapshot(
-      pageViewsQuery,
-      (snapshot) => {
-        const data = snapshot.docs.map(doc => {
+    const loadAnalytics = async () => {
+      try {
+        const [pageViewsSnapshot, eventsSnapshot] = await Promise.all([
+          getDocs(pageViewsQuery),
+          getDocs(eventsQuery),
+        ]);
+
+        if (isCancelled) return;
+
+        const pageViewsData = pageViewsSnapshot.docs.map(doc => {
           const raw = doc.data();
           return {
             id: doc.id,
@@ -741,19 +750,8 @@ export const useAnalytics = (days: number = 30) => {
             timestamp: raw.timestamp?.toDate?.() || new Date(raw.timestamp),
           } as PageView;
         });
-        setPageViews(data);
-        setLoading(false);
-      },
-      (err) => {
-        setError(err.message);
-        setLoading(false);
-      }
-    );
 
-    const unsubscribeEvents = onSnapshot(
-      eventsQuery,
-      (snapshot) => {
-        const data = snapshot.docs.map(doc => {
+        const eventsData = eventsSnapshot.docs.map(doc => {
           const raw = doc.data();
           return {
             id: doc.id,
@@ -761,18 +759,24 @@ export const useAnalytics = (days: number = 30) => {
             timestamp: raw.timestamp?.toDate?.() || new Date(raw.timestamp),
           } as TrackingEvent;
         });
-        setEvents(data);
-        setLoading(false);
-      },
-      (err) => {
-        setError(err.message);
-        setLoading(false);
+
+        setPageViews(pageViewsData);
+        setEvents(eventsData);
+      } catch (err) {
+        if (!isCancelled) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
-    );
+    };
+
+    loadAnalytics();
 
     return () => {
-      unsubscribePageViews();
-      unsubscribeEvents();
+      isCancelled = true;
     };
   }, [days]);
 
