@@ -659,7 +659,7 @@ export const usePayments = (eventId?: string) => {
         const data = snapshot.docs.map(doc => {
           const raw = doc.data();
           return convertFirestoreDocumentData(
-            { id: doc.id, ...raw } as Payment,
+            { ...raw, id: doc.id } as Payment,
             ['createdAt', 'updatedAt']
           );
         });

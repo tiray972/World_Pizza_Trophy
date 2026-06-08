@@ -34,21 +34,19 @@ const DashboardStats = ({
   slots,
   users,
   products,
+  payments,
   eventId
 }: {
   slots: Slot[],
   users: User[],
   products: Product[],
+  payments: Payment[],
   eventId: string
 }) => {
   const registeredUsers = users.filter(u => u.registrations[eventId]);
   const paidUsers = registeredUsers.filter(u => u.registrations[eventId].paid);
-
-  const avgProductPrice = products.length > 0
-    ? products.reduce((acc, p) => acc + p.unitAmount, 0) / products.length
-    : 300;
-
-  const estimatedRevenue = (paidUsers.length * avgProductPrice);
+  const paidPayments = payments.filter(payment => payment.status === 'paid');
+  const totalRevenue = paidPayments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
   const totalSlots = slots.length;
   const bookedSlots = slots.filter(s => s.status !== 'available').length;
 
@@ -56,9 +54,9 @@ const DashboardStats = ({
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6">
-          <div className="text-sm font-medium tracking-tight text-muted-foreground">Revenus estimés</div>
-          <div className="text-2xl font-bold">{formatCurrency(estimatedRevenue)}</div>
-          <div className="text-xs text-muted-foreground mt-1">Basé sur {paidUsers.length} inscriptions payées</div>
+          <div className="text-sm font-medium tracking-tight text-muted-foreground">Revenus encaissés</div>
+          <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+          <div className="text-xs text-muted-foreground mt-1">{paidPayments.length} paiements confirmés</div>
         </div>
         <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6">
           <div className="text-sm font-medium tracking-tight text-muted-foreground">Occupation des créneaux</div>
@@ -353,6 +351,7 @@ export default function App() {
             slots={eventSlots}
             users={users}
             products={eventProducts}
+            payments={payments}
             eventId={selectedEventId}
           />
         );

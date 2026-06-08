@@ -3,8 +3,8 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
-import { Payment, User, WPTEvent, Slot } from "@/types/firestore";
-import { AlertTriangle, CheckCircle2, RefreshCw, UserCheck, AlertOctagon } from "lucide-react";
+import { MealGuest, Payment, User, WPTEvent, Slot } from "@/types/firestore";
+import { AlertTriangle, CheckCircle2, RefreshCw, UserCheck, AlertOctagon, UtensilsCrossed, X } from "lucide-react";
 import { formatCurrency, formatUser, cn } from "../lib/utils";
 
 interface PaymentsPageProps {
@@ -26,6 +26,81 @@ export function PaymentsPage({
 }: PaymentsPageProps) {
 
   const [filterMode, setFilterMode] = useState<'all' | 'issues'>('all');
+  const [mealEditorPayment, setMealEditorPayment] = useState<Payment | null>(null);
+  const [mealDraft, setMealDraft] = useState<MealGuest[]>([]);
+
+  const parseMealGuests = (payment: Payment): MealGuest[] => {
+    const raw = payment.metadata?.mealGuests;
+    if (!raw || typeof raw !== "string") return [];
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const getPaymentParticipants = (payment: Payment) =>
+    slots
+      .filter(slot => payment.slotIds.includes(slot.id) && slot.participant)
+      .map(slot => slot.participant!)
+      .filter((participant, index, participants) => {
+        const key = `${participant.firstName.trim().toLowerCase()}|${participant.lastName.trim().toLowerCase()}|${participant.email || ""}`;
+        return participants.findIndex(candidate =>
+          `${candidate.firstName.trim().toLowerCase()}|${candidate.lastName.trim().toLowerCase()}|${candidate.email || ""}` === key
+        ) === index;
+      });
+
+  const openMealEditor = (payment: Payment) => {
+    setMealEditorPayment(payment);
+    setMealDraft(parseMealGuests(payment));
+  };
+
+  const addMealGuest = (guest: MealGuest) => {
+    const exists = mealDraft.some(existing =>
+      existing.firstName.trim().toLowerCase() === guest.firstName.trim().toLowerCase() &&
+      existing.lastName.trim().toLowerCase() === guest.lastName.trim().toLowerCase() &&
+      (existing.email || "") === (guest.email || "")
+    );
+    if (!exists) {
+      setMealDraft(prev => [...prev, guest]);
+    }
+  };
+
+  const updateMealDraft = (index: number, field: keyof MealGuest, value: string) => {
+    setMealDraft(prev =>
+      prev.map((guest, currentIndex) =>
+        currentIndex === index ? { ...guest, [field]: value } : guest
+      )
+    );
+  };
+
+  const saveMealEditor = async () => {
+    if (!mealEditorPayment) return;
+
+    const cleanedMealGuests = mealDraft
+      .map(guest => ({
+        firstName: guest.firstName.trim(),
+        lastName: guest.lastName.trim(),
+        email: guest.email?.trim() || undefined,
+        phone: guest.phone?.trim() || undefined,
+      }))
+      .filter(guest => guest.firstName && guest.lastName);
+
+    const metadata = {
+      ...(mealEditorPayment.metadata || {}),
+      mealGuests: JSON.stringify(cleanedMealGuests),
+      mealQuantity: String(cleanedMealGuests.length),
+      mealPrice: String(mealEditorPayment.metadata?.mealPrice || selectedEvent?.mealPrice || 0),
+      includeMeal: cleanedMealGuests.length > 0 ? "true" : "false",
+      mealEditedByAdmin: "true",
+      mealEditedAt: new Date().toISOString(),
+    };
+
+    await onUpdatePayment(mealEditorPayment.id, { metadata, updatedAt: new Date() });
+    setMealEditorPayment(null);
+    setMealDraft([]);
+  };
 
   if (!selectedEvent) {
     return (
@@ -52,7 +127,7 @@ export function PaymentsPage({
     const issues: string[] = [];
 
     // Issue: Payment is PAID but User is NOT marked as paid
-    if (payment.status === 'paid' && (!userRegistration || !userRegistration.paid)) {
+    if (payment.status === 'paid' && payment.slotIds.length > 0 && (!userRegistration || !userRegistration.paid)) {
       issues.push("Utilisateur non marqué payé malgré le paiement");
     }
 
@@ -194,6 +269,7 @@ export function PaymentsPage({
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Date</th>
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Utilisateur</th>
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Participants</th>
+                  <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Repas</th>
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Pack / article</th>
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Montant</th>
                   <th className="h-12 px-4 align-middle font-medium text-muted-foreground">Source</th>
@@ -205,7 +281,7 @@ export function PaymentsPage({
               <tbody className="[&_tr:last-child]:border-0 text-foreground">
                 {filteredPayments.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="p-4 text-center text-muted-foreground">
+                    <td colSpan={10} className="p-4 text-center text-muted-foreground">
                       Aucun paiement ne correspond aux critères.
                     </td>
                   </tr>
@@ -216,6 +292,7 @@ export function PaymentsPage({
                     const participants = paymentSlots
                       .filter(s => s.participant)
                       .map(s => s.participant);
+                    const mealGuests = parseMealGuests(payment);
 
                     return (
                       <tr key={payment.id} className={cn("border-b transition-colors hover:bg-muted/50", hasIssues && "bg-yellow-50/50 dark:bg-yellow-900/10")}>
@@ -248,6 +325,21 @@ export function PaymentsPage({
                             </div>
                           ) : (
                             <span className="text-xs text-yellow-600 dark:text-yellow-400">Aucun participant</span>
+                          )}
+                        </td>
+                        <td className="p-4 align-middle">
+                          {mealGuests.length > 0 ? (
+                            <div className="space-y-1">
+                              <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700">
+                                {mealGuests.length} repas
+                              </Badge>
+                              <div className="text-xs text-muted-foreground">
+                                {mealGuests.slice(0, 2).map(guest => `${guest.firstName} ${guest.lastName}`).join(", ")}
+                                {mealGuests.length > 2 ? ` +${mealGuests.length - 2}` : ""}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Aucun</span>
                           )}
                         </td>
                         <td className="p-4 align-middle">
@@ -291,17 +383,28 @@ export function PaymentsPage({
                           )}
                         </td>
                         <td className="p-4 align-middle text-right">
-                          {hasIssues && payment.status === 'paid' && issues.some(i => i.includes("UNPAID")) && (
+                          <div className="flex justify-end gap-2">
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 text-xs border-green-200 hover:bg-green-50 text-green-700"
-                              onClick={() => handleFixSync(payment.userId, payment.id)}
+                              className="h-7 text-xs"
+                              onClick={() => openMealEditor(payment)}
                             >
-                              <RefreshCw className="h-3 w-3 mr-1" />
-                              Synchroniser
+                              <UtensilsCrossed className="h-3 w-3 mr-1" />
+                              Gérer repas
                             </Button>
-                          )}
+                            {hasIssues && payment.status === 'paid' && issues.some(i => i.includes("UNPAID")) && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs border-green-200 hover:bg-green-50 text-green-700"
+                                onClick={() => handleFixSync(payment.userId, payment.id)}
+                              >
+                                <RefreshCw className="h-3 w-3 mr-1" />
+                                Synchroniser
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -312,6 +415,136 @@ export function PaymentsPage({
           </div>
         </CardContent>
       </Card>
+
+      {mealEditorPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-lg border bg-card text-card-foreground shadow-xl">
+            <div className="flex items-start justify-between gap-4 border-b p-5">
+              <div>
+                <h3 className="text-lg font-semibold">Gérer les repas</h3>
+                <p className="text-sm text-muted-foreground">
+                  Ajoutez les personnes qui ont droit à un repas pour ce paiement.
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setMealEditorPayment(null);
+                  setMealDraft([]);
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="max-h-[70vh] space-y-5 overflow-y-auto p-5">
+              {getPaymentParticipants(mealEditorPayment).length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold">Participants de ce paiement</p>
+                  <div className="flex flex-wrap gap-2">
+                    {getPaymentParticipants(mealEditorPayment).map((participant, index) => (
+                      <Button
+                        key={`${participant.firstName}-${participant.lastName}-${index}`}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addMealGuest({
+                          firstName: participant.firstName,
+                          lastName: participant.lastName,
+                          email: participant.email,
+                          phone: participant.phone,
+                        })}
+                      >
+                        + {participant.firstName} {participant.lastName}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold">Repas attribués ({mealDraft.length})</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMealDraft(prev => [...prev, { firstName: "", lastName: "" }])}
+                  >
+                    + Ajouter une personne
+                  </Button>
+                </div>
+
+                {mealDraft.length === 0 ? (
+                  <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                    Aucun repas attribué pour ce paiement.
+                  </div>
+                ) : (
+                  mealDraft.map((guest, index) => (
+                    <div key={index} className="rounded-md border bg-background p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">Repas {index + 1}</p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setMealDraft(prev => prev.filter((_, currentIndex) => currentIndex !== index))}
+                        >
+                          Retirer
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          value={guest.firstName}
+                          onChange={(event) => updateMealDraft(index, "firstName", event.target.value)}
+                          placeholder="Prénom"
+                          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                        />
+                        <input
+                          value={guest.lastName}
+                          onChange={(event) => updateMealDraft(index, "lastName", event.target.value)}
+                          placeholder="Nom"
+                          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          value={guest.email || ""}
+                          onChange={(event) => updateMealDraft(index, "email", event.target.value)}
+                          placeholder="Email optionnel"
+                          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                        />
+                        <input
+                          value={guest.phone || ""}
+                          onChange={(event) => updateMealDraft(index, "phone", event.target.value)}
+                          placeholder="Téléphone optionnel"
+                          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t p-5">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setMealEditorPayment(null);
+                  setMealDraft([]);
+                }}
+              >
+                Annuler
+              </Button>
+              <Button onClick={saveMealEditor}>
+                Enregistrer les repas
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
