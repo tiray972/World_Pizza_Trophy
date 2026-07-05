@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Slot, Category, WPTEvent, Product, Participant, MealGuest } from '@/types/firestore';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, ShoppingCartIcon, XCircleIcon, ClockIcon, PizzaIcon, PackageIcon, UtensilsCrossedIcon, CheckCircleIcon, ArrowLeftIcon, UserIcon } from 'lucide-react';
+import { CalendarIcon, ShoppingCartIcon, ClockIcon, PizzaIcon, PackageIcon, UtensilsCrossedIcon, CheckCircleIcon, ArrowLeftIcon, UserIcon } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose } from '@/components/ui/sheet';
 import { ParticipantModal } from './ParticipantModal';
@@ -811,12 +811,12 @@ export function SlotBookingView({
                       <Button
                         variant="destructive"
                         size="sm"
-                        className="h-8 text-xs"
+                        className="h-8 text-xs px-3"
                         onClick={() =>
                           handleToggleSelect(availableSlots.find(s => s.id === slot.slotId)!)
                         }
                       >
-                        <XCircleIcon className="w-4 h-4" />
+                        Supprimer le créneau
                       </Button>
                     </div>
                   </div>
