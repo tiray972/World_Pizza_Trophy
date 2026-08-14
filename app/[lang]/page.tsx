@@ -16,8 +16,7 @@ type Props = {
   params: Promise<{ lang: string }> | { lang: string };
 };
 
-const ASSET_ROOT =
-  "https://raw.githubusercontent.com/tiray972/World_Pizza_Trophy/bb3ead84b5dda4f75ce2657dfe91a37044745a7c/public/images/editions/2025";
+const ASSET_ROOT = "/images/editions/2025";
 
 const photos = {
   hero: `${ASSET_ROOT}/DW4A3657.JPG`,
@@ -44,8 +43,8 @@ export default async function Home({ params }: Props) {
             src={photos.hero}
             alt={content.title}
             fill
-            unoptimized
             priority
+            quality={75}
             sizes="100vw"
             className="object-cover object-center"
           />
@@ -159,7 +158,7 @@ export default async function Home({ params }: Props) {
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr]">
             {[photos.competition, photos.people, photos.jury].map((src, index) => (
               <div key={src} className={`relative overflow-hidden bg-gray-100 ${index === 0 ? "aspect-[4/3] sm:col-span-2 lg:col-span-1 lg:aspect-auto" : "aspect-[4/3]"}`}>
-                <Image src={src} alt={`${content.archiveTitle} ${index + 1}`} fill unoptimized sizes="(max-width: 1024px) 100vw, 33vw" className="object-cover" />
+                <Image src={src} alt={`${content.archiveTitle} ${index + 1}`} fill quality={60} sizes="(max-width: 1024px) 100vw, 33vw" className="object-cover" />
               </div>
             ))}
           </div>

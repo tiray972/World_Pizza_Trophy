@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    formats: ['image/webp'],
+    qualities: [60, 75, 85],
+    minimumCacheTTL: 2_678_400,
     remotePatterns: [
       {
         protocol: 'https',
@@ -14,12 +17,6 @@ const nextConfig: NextConfig = {
         hostname: 'firebasestorage.googleapis.com',
         port: '',
         pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'raw.githubusercontent.com',
-        port: '',
-        pathname: '/tiray972/World_Pizza_Trophy/**',
       },
     ],
   },

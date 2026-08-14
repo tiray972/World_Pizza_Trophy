@@ -86,7 +86,7 @@ export default function EditionPhotoGallery({
               src={src}
               alt={`${copy.imageAlt} ${index + 1}`}
               fill
-              unoptimized
+              quality={60}
               sizes={
                 index % 11 === 0
                   ? "(max-width: 640px) 100vw, (max-width: 1024px) 66vw, 40vw"
@@ -155,7 +155,7 @@ export default function EditionPhotoGallery({
               src={images[selectedIndex]}
               alt={`${copy.imageAlt} ${selectedIndex + 1}`}
               fill
-              unoptimized
+              quality={85}
               sizes="90vw"
               priority
               className="object-contain"
