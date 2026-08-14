@@ -138,7 +138,7 @@ export default function Header({
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden xl:flex items-center space-x-8 font-semibold text-gray-800">
+        <nav className="hidden xl:flex items-center space-x-6 font-semibold text-gray-800">
           {[
             { name: t.navigation.home, href: `/${lang}` },
             { name: t.navigation.rules, href: `/${lang}/rules` },
@@ -307,16 +307,15 @@ function MobileMenu({
       </button>
 
       <div
-        className={`fixed inset-0 bg-white z-[90] flex flex-col transition-transform duration-500 ease-in-out ${
-          open ? "translate-x-0" : "translate-x-full"
+        className={`fixed inset-0 bg-white z-[90] flex-col transition-transform duration-500 ease-in-out ${
+          open ? "flex translate-x-0" : "hidden translate-x-full"
         }`}
       >
         <div className="p-8 mt-20 flex flex-col h-full overflow-y-auto">
           <nav className="flex flex-col gap-6 text-2xl font-bold text-gray-900 border-b border-gray-100 pb-8">
             <Link href={`/${lang}`} onClick={() => setOpen(false)}>{t.navigation.home}</Link>
-            <Link href={`/${lang}/trophy`} onClick={() => setOpen(false)}>{t.navigation.trophy}</Link>
+            <Link href={`/${lang}#trophy`} onClick={() => setOpen(false)}>{t.navigation.trophy}</Link>
             <Link href={`/${lang}/rules`} onClick={() => setOpen(false)}>{t.navigation.rules}</Link>
-            <Link href={`/${lang}/academy`} onClick={() => setOpen(false)}>{t.navigation.academy}</Link>
             <Link href={`/${lang}/editions`} onClick={() => setOpen(false)}>{t.navigation.editions}</Link>
             <Link href={`/${lang}/gallery`} onClick={() => setOpen(false)}>{t.navigation.gallery}</Link>
             {isLoggedIn && userRole === 'admin' && (

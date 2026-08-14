@@ -171,7 +171,7 @@ export default function Footer({
                 </Link>
               </li>
               <li>
-                <a href="mailto:contact@worldpizzatrophy.com" className="hover:text-[#8B0000] transition-colors">
+                <a href="mailto:contact@worldpizzatrophy.com" className="break-all hover:text-[#8B0000] transition-colors">
                   {content.contact_email}
                 </a>
               </li>
