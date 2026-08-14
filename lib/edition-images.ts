@@ -1,23 +1,46 @@
 import "server-only";
 
-import { readdir } from "node:fs/promises";
-import path from "node:path";
+const REPOSITORY = "tiray972/World_Pizza_Trophy";
+const ASSET_COMMIT = "bb3ead84b5dda4f75ce2657dfe91a37044745a7c";
 
-const IMAGE_EXTENSION = /\.(?:jpe?g|png|webp)$/i;
+type GitHubContent = {
+  download_url: string | null;
+  name: string;
+  type: "file" | "dir";
+};
 
 export async function getEditionImages(year: number) {
-  const relativeDirectory = `/images/editions/${year}`;
-  const directory = path.join(process.cwd(), "public", relativeDirectory);
-
   try {
-    const files = await readdir(directory);
+    const directory = `public/images/editions/${year}`;
+    const response = await fetch(
+      `https://api.github.com/repos/${REPOSITORY}/contents/${directory}?ref=${ASSET_COMMIT}`,
+      {
+        headers: {
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+        next: { revalidate: 86400 },
+      },
+    );
+
+    if (!response.ok) return [];
+
+    const files = (await response.json()) as GitHubContent[];
 
     return files
-      .filter((file) => IMAGE_EXTENSION.test(file))
-      .sort((left, right) =>
-        left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" }),
+      .filter(
+        (file) =>
+          file.type === "file" &&
+          file.download_url &&
+          /\.(?:jpe?g|png|webp)$/i.test(file.name),
       )
-      .map((file) => `${relativeDirectory}/${file}`);
+      .sort((left, right) =>
+        left.name.localeCompare(right.name, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        }),
+      )
+      .map((file) => file.download_url as string);
   } catch {
     return [];
   }

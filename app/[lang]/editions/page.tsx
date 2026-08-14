@@ -115,6 +115,7 @@ export default async function EditionsPage({ params }: Props) {
               src={heroImage}
               alt={content.imageAlt}
               fill
+              unoptimized
               priority
               sizes="100vw"
               className="object-cover"
