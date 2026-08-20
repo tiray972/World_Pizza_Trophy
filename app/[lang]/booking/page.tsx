@@ -239,14 +239,14 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
     includeMeal: boolean,
     mealPrice: number,
     mealGuests: MealGuest[]
-  ) => {
+  ): Promise<boolean> => {
     if (!user) {
       const loginUrl = `/${currentLang}/auth/login?redirect=/booking`;
       toast.info("Connexion requise", {
         description: "Vous devez être connecté pour réserver.",
       });
       router.push(loginUrl);
-      return;
+      return false;
     }
 
     // Calculer le montant total (slots + repas optionnel)
@@ -281,24 +281,27 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
       if (!res.ok) throw new Error(data.error);
 
       toast.dismiss("checkout-loading");
-      if (data.url) window.location.href = data.url;
+      if (!data.url) throw new Error("Impossible de créer la session de paiement");
+      window.location.href = data.url;
+      return true;
     } catch (err: any) {
       toast.dismiss("checkout-loading");
       handleError(err.message);
+      return false;
     }
   };
 
   const handlePackCheckout = async (
     product: Product,
     slotsToCheckout: SelectedPackSlot[]
-  ) => {
+  ): Promise<boolean> => {
     if (!user) {
       const loginUrl = `/${currentLang}/auth/login?redirect=/booking`;
       toast.info("Connexion requise", {
         description: "Vous devez être connecté pour réserver.",
       });
       router.push(loginUrl);
-      return;
+      return false;
     }
 
     setIsProcessing(true);
@@ -361,10 +364,12 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
       
       console.log(`✅ [PackCheckout] Redirecting to Stripe:`, data.url); // 🔍 DEBUG
       window.location.href = data.url;
+      return true;
     } catch (err: any) {
       console.error(`❌ [PackCheckout] Error:`, err); // 🔍 DEBUG
       toast.dismiss("pack-loading");
       handleError(err.message);
+      return false;
     }
   };
 

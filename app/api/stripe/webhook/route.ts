@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { Payment } from "@/types/firestore"; // Maintenant disponible
 import * as admin from "firebase-admin";
 import { sendPaymentNotifications } from "@/lib/email/payment-notifications";
+import { markPendingBookingPaid, resolveBookingPayload } from "@/lib/booking/pending-booking";
 
 // Initialisation de Stripe (utilisation de la variable d'environnement)
 // On utilise 'as any' car ce code est exécuté côté serveur (Next.js API route)
@@ -51,51 +52,37 @@ export async function POST(req: Request) {
         const session = event.data.object as Stripe.Checkout.Session;
         const { 
             userId, 
-            slotsToReserve: slotsToReserveJson, // JSON string des IDs
             isPack: isPackString,               // 'true' ou 'false'
             packName,                          // Nom du pack (si existant)
             userEmail,                         // Email de l'utilisateur
             eventId,                           // Event ID from metadata
-            mealGuests: mealGuestsJson,
             mealPrice: mealPriceString,
-            mealQuantity: mealQuantityString
+            mealQuantity: mealQuantityString,
+            bookingRef
         } = session.metadata as { 
             userId: string, 
-            slotsToReserve: string, 
             isPack: string,
             packName?: string,
             userEmail: string,
             eventId?: string,
-            mealGuests?: string,
             mealPrice?: string,
-            mealQuantity?: string
+            mealQuantity?: string,
+            bookingRef?: string
         };
         
         const amountTotal = session.amount_total || 0;
 
-        if (userId && slotsToReserveJson && eventId) {
+        // 📦 La charge utile vit dans Firestore (metadata Stripe limitée à 500 caractères)
+        const bookingPayload = await resolveBookingPayload(session);
+
+        if (userId && bookingPayload && eventId) {
             
-            let slotsData: Array<{ slotId: string; participant?: PaymentParticipant }> = [];
-            try {
-                slotsData = JSON.parse(slotsToReserveJson);
-                if (!Array.isArray(slotsData)) {
-                    throw new Error("slotsToReserve is invalid.");
-                }
-            } catch (e) {
-                console.error("❌ Failed to parse slotsToReserve metadata:", slotsToReserveJson, e);
-                return new NextResponse("Invalid slot data in metadata", { status: 400 });
-            }
+            const slotsData = bookingPayload.slots as Array<{ slotId: string; participant?: PaymentParticipant }>;
 
             const isPack = isPackString === 'true';
             const mealPrice = Number(mealPriceString || 0);
             const mealQuantity = Number(mealQuantityString || 0);
-            let mealGuests: PaymentMealGuest[] = [];
-            try {
-                const parsedMealGuests = mealGuestsJson ? JSON.parse(mealGuestsJson) : [];
-                mealGuests = Array.isArray(parsedMealGuests) ? parsedMealGuests : [];
-            } catch {
-                mealGuests = [];
-            }
+            const mealGuests = bookingPayload.mealGuests as PaymentMealGuest[];
 
             if (slotsData.length === 0 && mealGuests.length === 0) {
                 console.error("❌ No slots or meals found in metadata.");
@@ -129,7 +116,11 @@ export async function POST(req: Request) {
                     slotIds: slotIds,
                     isPack: isPack,
                     packName: isPack ? packName : undefined,
-                    metadata: session.metadata as Payment["metadata"],
+                    metadata: {
+                        ...(session.metadata || {}),
+                        slotsToReserve: JSON.stringify(slotsData),
+                        mealGuests: JSON.stringify(mealGuests),
+                    } as Payment["metadata"],
                     createdAt: new Date(),
                     updatedAt: new Date(),
                 };
@@ -224,6 +215,7 @@ export async function POST(req: Request) {
 
                 // Exécuter le batch
                 await batch.commit();
+                await markPendingBookingPaid(bookingRef);
                 console.log(`✅ Webhook processing COMPLETED for session ${session.id}`);
 
                 try {
@@ -251,7 +243,7 @@ export async function POST(req: Request) {
                 return new NextResponse("Error processing payment", { status: 500 });
             }
         } else {
-            console.warn(`⚠️ Missing required metadata: userId=${userId}, slotsToReserveJson=${!!slotsToReserveJson}, eventId=${eventId}`);
+            console.warn(`⚠️ Missing required metadata: userId=${userId}, bookingPayload=${!!bookingPayload}, eventId=${eventId}`);
         }
     }
 

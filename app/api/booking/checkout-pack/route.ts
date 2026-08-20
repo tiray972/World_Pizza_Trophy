@@ -2,6 +2,12 @@ import { NextResponse, NextRequest } from "next/server";
 import { adminDB } from "@/lib/firebase/admin";
 import Stripe from 'stripe';
 import * as admin from "firebase-admin";
+import {
+    attachSessionToPendingBooking,
+    buildBookingMetadata,
+    createPendingBooking,
+    deletePendingBooking,
+} from "@/lib/booking/pending-booking";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
@@ -31,6 +37,8 @@ interface PackCheckoutBody {
 }
 
 export async function POST(req: NextRequest) {
+    let pendingBookingRef: string | null = null;
+
     try {
         const body = await req.json() as PackCheckoutBody;
         const { slotsToReserve, userId, userEmail, eventId, packId, packName, totalAmount, lang } = body;
@@ -51,6 +59,10 @@ export async function POST(req: NextRequest) {
         if (!lang) {
             return NextResponse.json({ error: "Langue manquante." }, { status: 400 });
         }
+        const uniqueSlotIds = new Set(slotsToReserve.map(slot => slot.slotId));
+        if (uniqueSlotIds.size !== slotsToReserve.length) {
+            return NextResponse.json({ error: "Un créneau est sélectionné plusieurs fois." }, { status: 400 });
+        }
         if (slotsToReserve.some(slot => !slot.participant?.shirtSize)) {
             return NextResponse.json({ error: "La taille du t-shirt est obligatoire pour chaque participant." }, { status: 400 });
         }
@@ -58,6 +70,7 @@ export async function POST(req: NextRequest) {
         console.log(`🔵 [Pack Checkout] Starting pack checkout for user ${userId}, pack ${packId}, slots: ${slotsToReserve.length}, total: ${totalAmount}€`);
 
         const availableSlots = [];
+        const now = new Date();
         
         // 1️⃣ Vérification de la disponibilité des slots et verrouillage
         for (const slot of slotsToReserve) {
@@ -71,7 +84,7 @@ export async function POST(req: NextRequest) {
                 }
 
                 const slotData = slotDoc.data();
-                if (!slotData || slotData.status !== 'available') {
+                if (!slotData || !isSlotReservableBy(slotData, userId, now)) {
                     console.warn(`⚠️ Slot ${slot.slotId} is not available (status: ${slotData?.status})`);
                     return NextResponse.json({ error: `Créneau non disponible: ${slot.slotId}` }, { status: 400 });
                 }
@@ -104,7 +117,25 @@ export async function POST(req: NextRequest) {
 
         const origin = req.headers.get('origin') || 'http://localhost:3000';
 
-        // 2️⃣ Création de la Session Stripe avec price_data dynamique (COMME LE MULTI-SLOTS)
+        // 2️⃣ Sauvegarder la charge utile hors des metadata Stripe (limite 500 caractères)
+        const payload = {
+            userId,
+            userEmail,
+            eventId: eventId || '',
+            isPack: true,
+            packId,
+            packName,
+            totalAmount,
+            slots: slotsToReserve.map(slot => ({
+                slotId: slot.slotId,
+                categoryId: slot.categoryId,
+                participant: slot.participant,
+            })),
+            mealGuests: [],
+        };
+        pendingBookingRef = await createPendingBooking(payload);
+
+        // 3️⃣ Création de la Session Stripe avec price_data dynamique (COMME LE MULTI-SLOTS)
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: [
@@ -124,20 +155,10 @@ export async function POST(req: NextRequest) {
             success_url: `${origin}/${lang}/booking/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${origin}/${lang}/booking?canceled=true`,
             
-            metadata: {
-                userId: userId,
-                userEmail: userEmail,
-                eventId: eventId || '',
-                packId: packId,
-                packName: packName,
-                slotsToReserve: JSON.stringify(slotsToReserve.map(s => ({
-                    slotId: s.slotId,
-                    participant: s.participant,
-                }))),
-                slotIds: slotsToReserve.map(s => s.slotId).join(','),
-                isPack: 'true',
-            },
+            metadata: buildBookingMetadata(payload, pendingBookingRef),
         });
+
+        await attachSessionToPendingBooking(pendingBookingRef, session.id);
 
         console.log(`✅ Stripe session created for pack: ${session.id}`);
 
@@ -164,6 +185,10 @@ export async function POST(req: NextRequest) {
 
     } catch (error) {
         console.error("❌ Erreur lors de la création de la session Stripe (Pack):", error);
+
+        if (pendingBookingRef) {
+            await deletePendingBooking(pendingBookingRef);
+        }
         
         if (error instanceof Stripe.errors.StripeInvalidRequestError) {
             console.error(`Stripe Error Details:`, {
@@ -181,4 +206,21 @@ export async function POST(req: NextRequest) {
             error: "Erreur interne du serveur lors de la création de la session Stripe." 
         }, { status: 500 });
     }
+}
+
+/**
+ * Un créneau est réservable s'il est libre, si son verrou a expiré,
+ * ou s'il est déjà verrouillé par l'utilisateur lui-même.
+ */
+function isSlotReservableBy(
+    slotData: admin.firestore.DocumentData,
+    userId: string,
+    now: Date
+): boolean {
+    if (slotData.status === 'available') return true;
+    if (slotData.status !== 'locked') return false;
+    if (slotData.lockedByUserId === userId) return true;
+
+    const lockedUntil = slotData.lockedUntil?.toDate?.() ?? (slotData.lockedUntil ? new Date(slotData.lockedUntil) : null);
+    return !!lockedUntil && lockedUntil < now;
 }

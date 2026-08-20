@@ -30,8 +30,8 @@ interface SlotBookingViewProps {
   settings: WPTEvent;
   products: Product[];
   registrationClosed: boolean;
-  onCheckout: (slots: SelectedSlot[], includeMeal: boolean, mealPrice: number, mealGuests: MealGuest[]) => void;
-  onPackCheckout: (product: Product, slots: SelectedPackSlot[]) => void;
+  onCheckout: (slots: SelectedSlot[], includeMeal: boolean, mealPrice: number, mealGuests: MealGuest[]) => void | boolean | Promise<void | boolean>;
+  onPackCheckout: (product: Product, slots: SelectedPackSlot[]) => void | boolean | Promise<void | boolean>;
 }
 
 const formatTime = (date: Date | string): string => {
@@ -141,11 +141,6 @@ export function SlotBookingView({
     const currentActiveCategoryId = isPackSelectionSheetOpen ? activePackCategoryId : activeCategoryId;
     const currentActiveDate = activeDate; // Use activeDate directly (works for both modes)
 
-    // 🔧 DEBUG: Log filter inputs
-    if (currentActiveCategoryId && currentActiveDate) {
-      console.log(`🔍 [filteredSlots] Filtering: categoryId=${currentActiveCategoryId}, date=${currentActiveDate}`);
-      console.log(`   - Total slots in props: ${availableSlots.length}`);
-    }
 
     // Early return if filters are not set
     if (!currentActiveCategoryId || !currentActiveDate) {
@@ -164,10 +159,9 @@ export function SlotBookingView({
         const notInStandardCart = !slotsInStandardCart.has(slot.id);
         const notInPackSelection = !slotsInPackSelection.has(slot.id);
 
-        // Log first non-matching slot for debugging
-        if (!categoryMatch || !dateMatch || !statusMatch) {
-          console.log(`   ❌ Slot ${slot.id}: categoryMatch=${categoryMatch}, dateMatch=${dateMatch}, statusMatch=${slot.status}`);
-        }
+        // 🔇 Log volontairement supprimé : il imprimait une ligne par créneau
+        // (269 lignes à chaque rendu), ce qui saturait la console et ralentissait
+        // fortement la sélection sur mobile.
 
         return categoryMatch && dateMatch && statusMatch && notInStandardCart && notInPackSelection;
       })
@@ -195,7 +189,6 @@ export function SlotBookingView({
         return timeA - timeB;
       });
 
-    console.log(`   ✅ Filtered result: ${filtered.length} slots match`);
     return filtered;
   }, [availableSlots, activeCategoryId, activePackCategoryId, activeDate, selectedSlots, selectedPackSlots, isPackSelectionSheetOpen]);
 
@@ -612,8 +605,10 @@ export function SlotBookingView({
             type="button"
             className="w-full h-12 text-lg"
             disabled={!selectionComplete || selectedPackSlots.some(slot => !slot.participant) || hasMissingShirtSizes(selectedPackSlots)}
-            onClick={() => {
-              onPackCheckout(packToPurchase, selectedPackSlots);
+            onClick={async () => {
+              const success = await onPackCheckout(packToPurchase, selectedPackSlots);
+              // ⚠️ Conserver la sélection si le paiement n'a pas pu être lancé.
+              if (success === false) return;
               setIsPackSelectionSheetOpen(false);
               setPackToPurchase(null);
               setSelectedPackSlots([]);
@@ -976,7 +971,7 @@ export function SlotBookingView({
               selectedSlots.some(slot => !slot.participant) ||
               hasMissingShirtSizes(selectedSlots)
             }
-            onClick={() => {
+            onClick={async () => {
               const cleanedMealGuests = mealGuests
                 .map(guest => ({
                   ...guest,
@@ -986,7 +981,18 @@ export function SlotBookingView({
                   phone: guest.phone?.trim() || undefined,
                 }))
                 .filter(guest => guest.firstName && guest.lastName);
-              onCheckout(selectedSlots, wantsMeal && cleanedMealGuests.length > 0, mealPrice, cleanedMealGuests);
+
+              const success = await onCheckout(
+                selectedSlots,
+                wantsMeal && cleanedMealGuests.length > 0,
+                mealPrice,
+                cleanedMealGuests
+              );
+
+              // ⚠️ Ne jamais vider le panier si le paiement n'a pas pu être lancé :
+              // l'utilisateur perdait sa sélection et ne pouvait plus s'inscrire.
+              if (success === false) return;
+
               setIsCartSheetOpen(false);
               setSelectedSlots([]);
               setWantsMeal(false);

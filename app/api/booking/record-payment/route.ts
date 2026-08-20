@@ -4,6 +4,7 @@ import { adminDB } from '@/lib/firebase/admin';
 import * as admin from 'firebase-admin';
 import { Payment } from '@/types/firestore';
 import { sendPaymentNotifications } from '@/lib/email/payment-notifications';
+import { markPendingBookingPaid, resolveBookingPayload } from '@/lib/booking/pending-booking';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
@@ -46,32 +47,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2️⃣ Extraire les métadonnées
+    // 2️⃣ Extraire les métadonnées (valeurs courtes uniquement)
     const {
       userId,
       userEmail,
       eventId,
-      slotsToReserve: slotsToReserveJson,
       isPack: isPackString,
       packName,
       packId,
-      mealGuests: mealGuestsJson,
       mealPrice: mealPriceString,
       mealQuantity: mealQuantityString,
+      bookingRef,
     } = session.metadata as {
       userId: string;
       userEmail: string;
       eventId: string;
-      slotsToReserve: string;
       isPack: string;
       packName?: string;
       packId?: string;
-      mealGuests?: string;
       mealPrice?: string;
       mealQuantity?: string;
+      bookingRef?: string;
     };
 
-    if (!userId || !slotsToReserveJson) {
+    if (!userId) {
       console.error('❌ Missing metadata in session:', session.metadata);
       return NextResponse.json(
         { error: 'Missing metadata in payment session' },
@@ -79,32 +78,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3️⃣ Parser les slots
-    let slotsData: Array<{ slotId: string; participant?: PaymentParticipant }> = [];
-    try {
-      slotsData = JSON.parse(slotsToReserveJson);
-      if (!Array.isArray(slotsData)) {
-        throw new Error('slotsToReserve is invalid');
-      }
-    } catch (e) {
-      console.error('❌ Failed to parse slotsToReserve:', slotsToReserveJson, e);
+    // 3️⃣ Récupérer la charge utile (document pendingBookings ou anciennes metadata)
+    const bookingPayload = await resolveBookingPayload(session);
+    if (!bookingPayload) {
+      console.error('❌ Booking payload not found for session:', session.id);
       return NextResponse.json(
         { error: 'Invalid slot data in metadata' },
         { status: 400 }
       );
     }
 
+    const slotsData: Array<{ slotId: string; participant?: PaymentParticipant }> =
+      bookingPayload.slots as Array<{ slotId: string; participant?: PaymentParticipant }>;
+
     const isPack = isPackString === 'true';
     const amountTotal = session.amount_total || 0;
     const mealPrice = Number(mealPriceString || 0);
     const mealQuantity = Number(mealQuantityString || 0);
-    let mealGuests: PaymentMealGuest[] = [];
-    try {
-      const parsedMealGuests = mealGuestsJson ? JSON.parse(mealGuestsJson) : [];
-      mealGuests = Array.isArray(parsedMealGuests) ? parsedMealGuests : [];
-    } catch {
-      mealGuests = [];
-    }
+    const mealGuests: PaymentMealGuest[] = bookingPayload.mealGuests as PaymentMealGuest[];
 
     if (slotsData.length === 0 && mealGuests.length === 0) {
       return NextResponse.json(
@@ -146,7 +137,11 @@ export async function POST(req: NextRequest) {
       isPack: isPack,
       packName: isPack ? packName : undefined,
       packId: isPack ? packId : undefined,
-      metadata: session.metadata as Payment['metadata'],
+      metadata: {
+        ...(session.metadata || {}),
+        slotsToReserve: JSON.stringify(slotsData),
+        mealGuests: JSON.stringify(mealGuests),
+      } as Payment['metadata'],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -247,6 +242,7 @@ export async function POST(req: NextRequest) {
 
     // Exécuter le batch
     await batch.commit();
+    await markPendingBookingPaid(bookingRef);
     console.log(`✅ Payment processing COMPLETED for session ${session.id}`);
 
     try {
