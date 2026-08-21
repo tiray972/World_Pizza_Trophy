@@ -66,11 +66,18 @@ export async function sendPaymentNotifications(input: PaymentNotificationInput) 
     return;
   }
 
-  const adminEmail =
+  const configuredAdminEmail =
     input.adminEmail ||
     process.env.PAYMENT_ALERT_EMAIL ||
-    process.env.CONTACT_EMAIL ||
-    DEFAULT_ADMIN_EMAIL;
+    process.env.CONTACT_EMAIL;
+  const adminEmails = Array.from(
+    new Set(
+      [configuredAdminEmail, DEFAULT_ADMIN_EMAIL]
+        .flatMap(email => email?.split(/[;,]/) ?? [])
+        .map(email => email.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  );
 
   const participantItems = input.participants.map(participant =>
     `${escapeHtml(participant.firstName)} ${escapeHtml(participant.lastName)} - T-shirt ${escapeHtml(participant.shirtSize || "non renseigné")}${participant.email ? ` - ${escapeHtml(participant.email)}` : ""}`
@@ -125,7 +132,7 @@ export async function sendPaymentNotifications(input: PaymentNotificationInput) 
   await Promise.all([
     transporter.sendMail({
       from: `"World Pizza Trophy" <${process.env.SMTP_USER}>`,
-      to: adminEmail,
+      to: adminEmails,
       subject: `[WPT] Nouveau paiement confirmé - ${input.userEmail}`,
       html: htmlShell("Nouveau paiement confirmé", `<p><strong>Inscrit:</strong> ${userName} (${escapeHtml(input.userEmail)})</p>${sharedSummary}`),
     }),
