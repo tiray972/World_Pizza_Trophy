@@ -122,6 +122,10 @@ export function SlotBookingView({
 
   const mealGuests = wantsMeal ? additionalMealGuests : [];
 
+  // 🎟️ Minimum de créneaux imposé par l'événement (paramétré dans le dashboard)
+  const minSlotsRequired = getMinSlotsPerBooking(settings);
+  const missingSlotsCount = Math.max(0, minSlotsRequired - selectedSlots.length);
+
   // 👥 Nombre de participants attendus pour une catégorie (2 pour un duo)
   const participantsRequiredFor = (categoryId: string) =>
     getParticipantsPerSlot(categories.find(category => category.id === categoryId));
@@ -351,11 +355,18 @@ export function SlotBookingView({
                 {category.description.length > 30 ? '...' : ''}
               </CardDescription>
             </CardHeader>
-            <CardFooter className="p-3 pt-0">
+            <CardFooter className="p-3 pt-0 flex flex-wrap gap-1">
               <Badge variant="secondary" className="text-xs">
                 <CalendarIcon className="w-3 h-3 mr-1" />
                 {datesDisplay}
               </Badge>
+              {/* 👥 Catégorie en équipe : prévenir avant la sélection */}
+              {getParticipantsPerSlot(category) > 1 && (
+                <Badge className="text-xs bg-blue-600 hover:bg-blue-700">
+                  <UserIcon className="w-3 h-3 mr-1" />
+                  {getParticipantsPerSlot(category)} participants
+                </Badge>
+              )}
             </CardFooter>
           </Card>
         );
@@ -686,6 +697,12 @@ export function SlotBookingView({
           <SheetTitle>{activeCategory.name}</SheetTitle>
           <SheetDescription>
             Sélectionnez vos créneaux horaires pour cette catégorie.
+            {minSlotsRequired > 1 && missingSlotsCount > 0 && (
+              <span className="block mt-1 font-semibold text-yellow-700">
+                🎟️ {minSlotsRequired} créneaux minimum : il vous en manque encore {missingSlotsCount}
+                {selectedSlots.length > 0 ? ' (choisissez une autre catégorie ensuite)' : ''}.
+              </span>
+            )}
           </SheetDescription>
         </SheetHeader>
 
@@ -799,6 +816,19 @@ export function SlotBookingView({
           <SheetTitle>Votre Panier de Réservation</SheetTitle>
           <SheetDescription>
             Vérifiez et confirmez les créneaux sélectionnés avant le paiement.
+            {minSlotsRequired > 1 && (
+              <span
+                className={`block mt-1 font-semibold ${
+                  missingSlotsCount > 0 ? 'text-yellow-700' : 'text-green-700'
+                }`}
+              >
+                🎟️ {minSlotsRequired} créneaux minimum —{' '}
+                {missingSlotsCount > 0
+                  ? `il vous en manque ${missingSlotsCount}`
+                  : 'minimum atteint'}
+                .
+              </span>
+            )}
           </SheetDescription>
         </SheetHeader>
 
@@ -1100,6 +1130,30 @@ export function SlotBookingView({
           <p className="text-sm">
             La date limite d'inscription était le {formatDateDisplay(registrationDeadlineDate)}.
             Il n'est plus possible de réserver de créneaux.
+          </p>
+        </div>
+      )}
+
+      {/* 🎟️ Rappel permanent du minimum de créneaux (valeur du dashboard) */}
+      {!registrationClosed && minSlotsRequired > 1 && (
+        <div
+          className={`p-4 rounded-lg border shadow-sm ${
+            selectedSlots.length === 0
+              ? 'bg-blue-50 border-blue-300 text-blue-900'
+              : missingSlotsCount > 0
+                ? 'bg-yellow-50 border-yellow-400 text-yellow-900'
+                : 'bg-green-50 border-green-400 text-green-900'
+          }`}
+        >
+          <p className="font-bold">
+            🎟️ Inscription : {minSlotsRequired} créneaux minimum
+          </p>
+          <p className="text-sm">
+            {selectedSlots.length === 0
+              ? `Chaque concurrent doit s'inscrire dans au moins ${minSlotsRequired} catégories différentes pour valider son inscription.`
+              : missingSlotsCount > 0
+                ? `${selectedSlots.length} créneau(x) sélectionné(s) — il vous en manque encore ${missingSlotsCount} pour pouvoir payer.`
+                : `${selectedSlots.length} créneaux sélectionnés : vous pouvez procéder au paiement.`}
           </p>
         </div>
       )}
