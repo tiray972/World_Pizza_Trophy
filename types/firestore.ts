@@ -51,6 +51,11 @@ export interface WPTEvent {
   registrationDeadline: Date;
   status: EventStatus;
   mealPrice?: number; // 🍽️ Prix optionnel du repas par personne
+  /**
+   * 🎟️ Nombre minimum de créneaux qu'un concurrent doit réserver pour payer.
+   * Défaut: 2 (voir MIN_SLOTS_PER_BOOKING_DEFAULT). Les packs ne sont pas concernés.
+   */
+  minSlotsPerBooking?: number;
 }
 
 /* ---------------------------------
@@ -99,6 +104,11 @@ export interface Category {
   durationMinutes: number;
   activeDates: string[]; // ISO date strings (YYYY-MM-DD)
   isActive: boolean;
+  /**
+   * 👥 Nombre de participants sur un même créneau.
+   * 1 par défaut ; 2 pour les catégories en duo (ex: pizza en duo).
+   */
+  participantsPerSlot?: number;
 }
 
 /* ---------------------------------
@@ -139,7 +149,12 @@ export interface Slot {
   buyerId: string; // L'utilisateur qui a payé
   
   // 👥 Qui va utiliser ce slot
-  participant?: Participant; // Le participant (peut être différent du buyerId)
+  participant?: Participant; // Le 1er participant (peut être différent du buyerId)
+  /**
+   * Liste complète des participants du créneau (duo = 2).
+   * `participant` reste renseigné avec le premier pour la rétrocompatibilité.
+   */
+  participants?: Participant[];
   
   // 🔒 Lock temporaire (10 minutes)
   lockedUntil?: Date; // Si le slot est verrouillé, jusqu'à quand?

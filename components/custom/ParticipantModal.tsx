@@ -18,6 +18,8 @@ interface ParticipantModalProps {
   isRequired?: boolean;
   onApplyToAll?: (participant: Participant) => void;
   isPackModal?: boolean;
+  /** Rang du participant pour les catégories en duo (1, 2...). Non défini = catégorie solo. */
+  participantIndex?: number;
   onSaveParticipant?: (participant: Participant) => void; // Sauvegarde le participant dans la liste réutilisable
 }
 
@@ -29,6 +31,7 @@ export function ParticipantModal({
   isRequired = true,
   onApplyToAll,
   isPackModal = false,
+  participantIndex,
   onSaveParticipant
 }: ParticipantModalProps) {
   const [firstName, setFirstName] = useState('');
@@ -97,7 +100,16 @@ export function ParticipantModal({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Informations du Participant</DialogTitle>
+          <DialogTitle>
+            {participantIndex
+              ? `Informations du Participant ${participantIndex}`
+              : 'Informations du Participant'}
+          </DialogTitle>
+          {participantIndex && (
+            <DialogDescription className="text-sm text-blue-700">
+              👥 Cette catégorie se dispute en équipe : renseignez chaque participant séparément.
+            </DialogDescription>
+          )}
           {slotInfo && (
             <DialogDescription className="text-sm text-gray-600 mt-2">
               📍 {slotInfo}

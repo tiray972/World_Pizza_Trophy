@@ -30,7 +30,10 @@ export interface BookingMealGuest {
 export interface BookingSlot {
   slotId: string;
   categoryId?: string;
+  /** 1er participant (rétrocompatibilité avec les réservations solo). */
   participant?: BookingParticipant;
+  /** Tous les participants du créneau (2 pour une catégorie en duo). */
+  participants?: BookingParticipant[];
 }
 
 export interface PendingBookingPayload {

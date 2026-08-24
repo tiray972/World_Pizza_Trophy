@@ -198,6 +198,7 @@ export const useEvents = () => {
         registrationDeadline: convertDateToTimestamp(eventData.registrationDeadline),
         status: eventData.status,
         mealPrice: eventData.mealPrice || 0, // 🍽️ Défaut à 0 si non fourni
+        minSlotsPerBooking: eventData.minSlotsPerBooking ?? 2, // 🎟️ Minimum de créneaux
       });
       const docRef = await addDoc(collection(db, 'events'), dataToWrite);
       return docRef.id;
@@ -216,6 +217,7 @@ export const useEvents = () => {
         eventYear: data.eventYear,
         status: data.status,
         mealPrice: data.mealPrice, // 🍽️ Ajouter le prix du repas
+        minSlotsPerBooking: data.minSlotsPerBooking, // 🎟️ Minimum de créneaux par réservation
       });
 
       await updateDoc(doc(db, 'events', eventId), dataToWrite);
@@ -376,8 +378,14 @@ export const useSlots = (eventId?: string) => {
         // ✅ FIX: persist participant data written by admin reassignment
         // If participant is explicitly null, clear it in Firestore; if defined, save it.
         ...(data.participant !== undefined
-          ? { participant: data.participant ?? null }
-          : {}),
+          ? {
+              participant: data.participant ?? null,
+              // 👥 Garder la liste `participants` alignée (duo)
+              participants: data.participants ?? (data.participant ? [data.participant] : []),
+            }
+          : data.participants !== undefined
+            ? { participants: data.participants, participant: data.participants[0] ?? null }
+            : {}),
       });
 
       await updateDoc(doc(db, 'slots', slotId), dataToWrite);

@@ -77,7 +77,11 @@ export async function POST(req: Request) {
 
         if (userId && bookingPayload && eventId) {
             
-            const slotsData = bookingPayload.slots as Array<{ slotId: string; participant?: PaymentParticipant }>;
+            const slotsData = bookingPayload.slots as Array<{
+                slotId: string;
+                participant?: PaymentParticipant;
+                participants?: PaymentParticipant[];
+            }>;
 
             const isPack = isPackString === 'true';
             const mealPrice = Number(mealPriceString || 0);
@@ -141,8 +145,15 @@ export async function POST(req: Request) {
                 const participantsForEmail: PaymentParticipant[] = [];
                 for (const slotInfo of slotsData) {
                     const slotId = slotInfo.slotId;
-                    const participant = slotInfo.participant;
-                    if (participant) participantsForEmail.push(participant);
+                    // 👥 Duo : plusieurs participants sur un même créneau
+                    const slotParticipants =
+                        Array.isArray(slotInfo.participants) && slotInfo.participants.length > 0
+                            ? slotInfo.participants
+                            : slotInfo.participant
+                                ? [slotInfo.participant]
+                                : [];
+                    const participant = slotParticipants[0];
+                    participantsForEmail.push(...slotParticipants);
                     
                     const slotRef = adminDB.collection("slots").doc(slotId);
                     const slotDoc = await slotRef.get();
@@ -156,6 +167,7 @@ export async function POST(req: Request) {
                             buyerId: userId,
                             status: "paid",
                             participant: participant || null,
+                            participants: slotParticipants,
                             stripeSessionId: session.id,
                             assignmentType: "payment",
                             paidAt: admin.firestore.Timestamp.fromDate(new Date()),

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "./ui/Button";
 import { Category } from "@/types/firestore";
+import { getParticipantsPerSlot, PARTICIPANTS_PER_SLOT_MAX } from "@/lib/booking/rules";
 import { X } from "lucide-react";
 
 interface CategoryFormModalProps {
@@ -24,6 +25,7 @@ export function CategoryFormModal({
     unitPrice: 100,
     maxSlots: 20,
     durationMinutes: 15,
+    participantsPerSlot: 1,
     rules: "",
     isActive: true
   });
@@ -36,6 +38,7 @@ export function CategoryFormModal({
         unitPrice: initialData.unitPrice,
         maxSlots: initialData.maxSlots,
         durationMinutes: initialData.durationMinutes,
+        participantsPerSlot: getParticipantsPerSlot(initialData),
         rules: initialData.rules || "",
         isActive: initialData.isActive !== undefined ? initialData.isActive : true
       });
@@ -47,6 +50,7 @@ export function CategoryFormModal({
         unitPrice: 100,
         maxSlots: 20,
         durationMinutes: 15,
+        participantsPerSlot: 1,
         rules: "",
         isActive: true
       });
@@ -74,6 +78,10 @@ export function CategoryFormModal({
       unitPrice: Number(formData.unitPrice),
       maxSlots: Number(formData.maxSlots),
       durationMinutes: Number(formData.durationMinutes),
+      participantsPerSlot: Math.min(
+        Math.max(1, Number(formData.participantsPerSlot) || 1),
+        PARTICIPANTS_PER_SLOT_MAX
+      ),
       rules: formData.rules,
       isActive: formData.isActive
     });
@@ -169,6 +177,28 @@ export function CategoryFormModal({
                 onChange={handleChange}
               />
             </div>
+          </div>
+
+          {/* 👥 Nombre de participants par créneau (duo, trio...) */}
+          <div className="grid gap-2">
+            <label htmlFor="participantsPerSlot" className="text-sm font-medium">
+              👥 Participants per slot
+            </label>
+            <input
+              id="participantsPerSlot"
+              name="participantsPerSlot"
+              type="number"
+              min="1"
+              max={PARTICIPANTS_PER_SLOT_MAX}
+              step="1"
+              required
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={formData.participantsPerSlot}
+              onChange={handleChange}
+            />
+            <p className="text-xs text-muted-foreground">
+              Set 2 for a team category (e.g. Pizza en duo): candidates will have to fill in 2 competitors for the same slot.
+            </p>
           </div>
 
           <div className="grid gap-2">

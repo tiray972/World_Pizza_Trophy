@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { WPTEvent, EventStatus } from "@/types/firestore";
+import { getMinSlotsPerBooking } from "@/lib/booking/rules";
 import { Calendar, Save, AlertCircle, Plus, Activity } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -20,6 +21,7 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
     regDeadline: "",
     status: "draft" as EventStatus,
     mealPrice: 0,
+    minSlotsPerBooking: 2,
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -36,6 +38,7 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
         regDeadline: event.registrationDeadline.toISOString().split('T')[0],
         status: event.status,
         mealPrice: event.mealPrice || 0,
+        minSlotsPerBooking: getMinSlotsPerBooking(event),
       });
     }
   }, [event]);
@@ -65,6 +68,7 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
         registrationDeadline: new Date(formData.regDeadline),
         status: formData.status,
         mealPrice: Number(formData.mealPrice),
+        minSlotsPerBooking: Math.max(1, Number(formData.minSlotsPerBooking) || 1),
       };
 
       onUpdateEvent(updatedEvent);
@@ -207,6 +211,27 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
                 />
                 <p className="text-xs text-muted-foreground">
                   Enter 0 or leave empty if no meal option available
+                </p>
+              </div>
+
+              {/* 🎟️ Minimum de créneaux par réservation */}
+              <div className="grid gap-2">
+                <label htmlFor="minSlotsPerBooking" className="text-sm font-medium">
+                  🎟️ Minimum slots per booking
+                </label>
+                <input
+                  id="minSlotsPerBooking"
+                  name="minSlotsPerBooking"
+                  type="number"
+                  min="1"
+                  step="1"
+                  required
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={formData.minSlotsPerBooking}
+                  onChange={handleChange}
+                />
+                <p className="text-xs text-muted-foreground">
+                  A competitor must book at least this many slots (categories) to pay. Packs are exempt.
                 </p>
               </div>
             </div>

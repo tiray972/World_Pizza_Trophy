@@ -6,6 +6,7 @@ import { Badge } from "./ui/Badge";
 import { MealGuest, Payment, User, WPTEvent, Slot } from "@/types/firestore";
 import { AlertTriangle, CheckCircle2, RefreshCw, UserCheck, AlertOctagon, UtensilsCrossed, X } from "lucide-react";
 import { formatCurrency, formatUser, cn } from "../lib/utils";
+import { getSlotParticipants } from "@/lib/booking/rules";
 
 interface PaymentsPageProps {
   payments: Payment[];
@@ -42,8 +43,8 @@ export function PaymentsPage({
 
   const getPaymentParticipants = (payment: Payment) =>
     slots
-      .filter(slot => payment.slotIds.includes(slot.id) && slot.participant)
-      .map(slot => slot.participant!)
+      .filter(slot => payment.slotIds.includes(slot.id))
+      .flatMap(slot => getSlotParticipants(slot))
       .filter((participant, index, participants) => {
         const key = `${participant.firstName.trim().toLowerCase()}|${participant.lastName.trim().toLowerCase()}|${participant.email || ""}`;
         return participants.findIndex(candidate =>

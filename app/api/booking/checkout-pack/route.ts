@@ -8,6 +8,8 @@ import {
     createPendingBooking,
     deletePendingBooking,
 } from "@/lib/booking/pending-booking";
+import { getParticipantsPerSlot, validateBookingSelection } from "@/lib/booking/rules";
+import type { Category, Participant } from "@/types/firestore";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
@@ -16,13 +18,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 interface SlotWithParticipant {
   slotId: string;
   categoryId: string;
-  participant?: {
-    firstName: string;
-    lastName: string;
-    email?: string;
-    phone?: string;
-    shirtSize?: string;
-  };
+  participant?: Participant;
+  participants?: Participant[];
 }
 
 interface PackCheckoutBody {
@@ -63,9 +60,7 @@ export async function POST(req: NextRequest) {
         if (uniqueSlotIds.size !== slotsToReserve.length) {
             return NextResponse.json({ error: "Un créneau est sélectionné plusieurs fois." }, { status: 400 });
         }
-        if (slotsToReserve.some(slot => !slot.participant?.shirtSize)) {
-            return NextResponse.json({ error: "La taille du t-shirt est obligatoire pour chaque participant." }, { status: 400 });
-        }
+
 
         console.log(`🔵 [Pack Checkout] Starting pack checkout for user ${userId}, pack ${packId}, slots: ${slotsToReserve.length}, total: ${totalAmount}€`);
 
@@ -89,10 +84,11 @@ export async function POST(req: NextRequest) {
                     return NextResponse.json({ error: `Créneau non disponible: ${slot.slotId}` }, { status: 400 });
                 }
 
-                availableSlots.push({ 
-                    ref: slotRef, 
+                availableSlots.push({
+                    ref: slotRef,
                     data: slotData,
-                    participant: slot.participant 
+                    categoryId: (slotData.categoryId as string) || slot.categoryId,
+                    participants: participantsOfPayload(slot),
                 });
                 console.log(`✅ Slot ${slot.slotId} validated for pack checkout`);
 
@@ -100,6 +96,37 @@ export async function POST(req: NextRequest) {
                 console.error(`❌ Error validating slot ${slot.slotId}:`, slotError);
                 return NextResponse.json({ error: `Erreur lors de la vérification du créneau: ${slot.slotId}` }, { status: 500 });
             }
+        }
+
+        // 1️⃣bis Participants requis par catégorie (duo) — le minimum de créneaux
+        // ne s'applique pas aux packs, qui imposent déjà leur nombre de créneaux.
+        const categoryIds = Array.from(new Set(availableSlots.map(slot => slot.categoryId).filter(Boolean)));
+        const categoryDocs = await Promise.all(
+            categoryIds.map(categoryId => adminDB.collection("categories").doc(categoryId).get())
+        );
+        const participantsPerCategory: Record<string, number> = {};
+        const categoryNames: Record<string, string> = {};
+        categoryDocs.forEach((categoryDoc, index) => {
+            const categoryId = categoryIds[index];
+            const categoryData = categoryDoc.exists ? (categoryDoc.data() as Category) : undefined;
+            participantsPerCategory[categoryId] = getParticipantsPerSlot(categoryData);
+            categoryNames[categoryId] = categoryData?.name || "cette catégorie";
+        });
+
+        const ruleErrors = validateBookingSelection({
+            slots: availableSlots.map(slot => ({
+                slotId: slot.ref.id,
+                categoryId: slot.categoryId,
+                participants: slot.participants,
+            })),
+            participantsPerCategory,
+            categoryNames,
+            minSlots: 1,
+        });
+
+        if (ruleErrors.length > 0) {
+            console.warn(`⚠️ [Pack Checkout] Règles non respectées:`, ruleErrors);
+            return NextResponse.json({ error: ruleErrors.join(" ") }, { status: 400 });
         }
 
         console.log(`📊 [Pack Checkout] Total amount: ${totalAmount}€ (type: ${typeof totalAmount})`);
@@ -126,11 +153,15 @@ export async function POST(req: NextRequest) {
             packId,
             packName,
             totalAmount,
-            slots: slotsToReserve.map(slot => ({
-                slotId: slot.slotId,
-                categoryId: slot.categoryId,
-                participant: slot.participant,
-            })),
+            slots: slotsToReserve.map(slot => {
+                const participants = participantsOfPayload(slot);
+                return {
+                    slotId: slot.slotId,
+                    categoryId: slot.categoryId,
+                    participant: participants[0],
+                    participants,
+                };
+            }),
             mealGuests: [],
         };
         pendingBookingRef = await createPendingBooking(payload);
@@ -166,13 +197,14 @@ export async function POST(req: NextRequest) {
         const batch = adminDB.batch();
         const lockedUntil = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes (IDENTIQUE)
         
-        availableSlots.forEach(({ ref, participant }) => {
+        availableSlots.forEach(({ ref, participants }) => {
             batch.update(ref, {
                 status: 'locked', // ✅ MÊME STATUS que multi-slots
                 lockedByUserId: userId,
                 lockedUntil: admin.firestore.Timestamp.fromDate(lockedUntil),
                 stripeSessionId: session.id,
-                participant: participant || null, // ✅ Participant géré COMME multi-slots
+                participant: participants[0] || null, // ✅ Participant géré COMME multi-slots
+                participants, // 👥 Duo : tous les participants du créneau
                 buyerId: userId, // ✅ Buyer ID SET
                 packId: packId, // ✅ Tracer le pack source
             });
@@ -223,4 +255,14 @@ function isSlotReservableBy(
 
     const lockedUntil = slotData.lockedUntil?.toDate?.() ?? (slotData.lockedUntil ? new Date(slotData.lockedUntil) : null);
     return !!lockedUntil && lockedUntil < now;
+}
+
+/** Participants transmis par le client, quel que soit le format (solo ou duo). */
+function participantsOfPayload(slot: SlotWithParticipant): Participant[] {
+    const list = Array.isArray(slot.participants) && slot.participants.length > 0
+        ? slot.participants
+        : slot.participant
+            ? [slot.participant]
+            : [];
+    return list.filter(Boolean) as Participant[];
 }

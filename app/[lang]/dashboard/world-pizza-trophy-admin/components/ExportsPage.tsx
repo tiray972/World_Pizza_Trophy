@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { cn, formatTime, formatUser } from "../lib/utils";
 import { Slot, Category, User, Payment, WPTEvent } from "@/types/firestore";
+import { getSlotParticipants } from "@/lib/booking/rules";
 
 // ─────────────────────────────────────────────
 // CSV UTILITIES
@@ -55,24 +56,35 @@ function generateRunningOrder(slots: Slot[], categories: Category[], users: User
   const categoryMap = Object.fromEntries(categories.map(c => [c.id, c.name]));
   const userMap = Object.fromEntries(users.map(u => [u.id, u]));
 
-  const headers = ["#", "Date", "Start", "End", "Category", "Status", "Participant First Name", "Participant Last Name", "Participant Email", "Participant Phone", "T-Shirt Size", "Buyer (Account)", "Buyer Email"];
-  const rows = sorted.map((slot, idx) => {
+  const headers = ["#", "Date", "Start", "End", "Category", "Status", "Participant #", "Participant First Name", "Participant Last Name", "Participant Email", "Participant Phone", "T-Shirt Size", "Buyer (Account)", "Buyer Email"];
+  // 👥 Une ligne par participant : une catégorie en duo produit 2 lignes.
+  const rows = sorted.flatMap((slot, idx) => {
     const buyer = slot.buyerId ? userMap[slot.buyerId] : null;
-    return [
+    const participants = getSlotParticipants(slot);
+    const base = [
       idx + 1,
       slot.date,
       formatTime(slot.startTime),
       formatTime(slot.endTime),
       categoryMap[slot.categoryId] || slot.categoryId,
       slot.status,
-      slot.participant?.firstName || "",
-      slot.participant?.lastName || "",
-      slot.participant?.email || "",
-      slot.participant?.phone || "",
-      slot.participant?.shirtSize || "",
-      buyer ? formatUser(buyer) : "",
-      buyer?.email || "",
     ];
+    const tail = [buyer ? formatUser(buyer) : "", buyer?.email || ""];
+
+    if (participants.length === 0) {
+      return [[...base, "", "", "", "", "", "", ...tail]];
+    }
+
+    return participants.map((participant, participantIdx) => [
+      ...base,
+      participants.length > 1 ? `${participantIdx + 1}/${participants.length}` : "1",
+      participant.firstName || "",
+      participant.lastName || "",
+      participant.email || "",
+      participant.phone || "",
+      participant.shirtSize || "",
+      ...tail,
+    ]);
   });
 
   return buildCsv(headers, rows);
@@ -105,19 +117,24 @@ function generateByCategory(slots: Slot[], categories: Category[], users: User[]
 
     for (const slot of catSlots) {
       const buyer = slot.buyerId ? userMap[slot.buyerId] : null;
-      rows.push([
-        cat.name,
-        slot.date,
-        formatTime(slot.startTime),
-        formatTime(slot.endTime),
-        slot.status,
-        slot.participant?.firstName || "",
-        slot.participant?.lastName || "",
-        slot.participant?.email || "",
-        slot.participant?.phone || "",
-        slot.participant?.shirtSize || "",
-        buyer ? formatUser(buyer) : "",
-      ]);
+      const participants = getSlotParticipants(slot);
+      // 👥 Une ligne par participant (duo = 2 lignes pour le même créneau)
+      const participantRows = participants.length > 0 ? participants : [undefined];
+      for (const participant of participantRows) {
+        rows.push([
+          cat.name,
+          slot.date,
+          formatTime(slot.startTime),
+          formatTime(slot.endTime),
+          slot.status,
+          participant?.firstName || "",
+          participant?.lastName || "",
+          participant?.email || "",
+          participant?.phone || "",
+          participant?.shirtSize || "",
+          buyer ? formatUser(buyer) : "",
+        ]);
+      }
     }
 
     // Blank separator
@@ -135,23 +152,25 @@ function generateParticipantList(slots: Slot[], categories: Category[], users: U
   const participantMap = new Map<string, { participant: NonNullable<Slot["participant"]>; slots: Slot[]; buyerIds: Set<string> }>();
 
   for (const slot of slots) {
-    if (!slot.participant) continue;
-    const key = [
-      slot.participant.firstName.trim().toLowerCase(),
-      slot.participant.lastName.trim().toLowerCase(),
-      slot.participant.email?.trim().toLowerCase() || "",
-    ].join("|");
+    // 👥 Duo : chaque participant du créneau compte (t-shirts, listes d'appel)
+    for (const participant of getSlotParticipants(slot)) {
+      const key = [
+        participant.firstName.trim().toLowerCase(),
+        participant.lastName.trim().toLowerCase(),
+        participant.email?.trim().toLowerCase() || "",
+      ].join("|");
 
-    const existing = participantMap.get(key);
-    if (existing) {
-      existing.slots.push(slot);
-      if (slot.buyerId) existing.buyerIds.add(slot.buyerId);
-    } else {
-      participantMap.set(key, {
-        participant: slot.participant,
-        slots: [slot],
-        buyerIds: new Set(slot.buyerId ? [slot.buyerId] : []),
-      });
+      const existing = participantMap.get(key);
+      if (existing) {
+        existing.slots.push(slot);
+        if (slot.buyerId) existing.buyerIds.add(slot.buyerId);
+      } else {
+        participantMap.set(key, {
+          participant,
+          slots: [slot],
+          buyerIds: new Set(slot.buyerId ? [slot.buyerId] : []),
+        });
+      }
     }
   }
 
@@ -212,8 +231,8 @@ function generateFinancialDetail(slots: Slot[], payments: Payment[], users: User
       formatTime(slot.startTime),
       categoryIdBySlot[slot.id] || slot.categoryId,
       slot.status,
-      slot.participant ? `${slot.participant.firstName} ${slot.participant.lastName}` : "",
-      slot.participant?.shirtSize || "",
+      getSlotParticipants(slot).map(p => `${p.firstName} ${p.lastName}`).join(" & "),
+      getSlotParticipants(slot).map(p => p.shirtSize || "?").join(" & "),
       buyer ? formatUser(buyer) : "",
       buyer?.email || "",
       payment ? payment.amount : slot.status === "offered" ? "0" : "",
@@ -665,9 +684,13 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
                             <td className="border-r px-2 py-1.5 text-xs">{getCategoryName(slot.categoryId)}</td>
                             <td className="border-r px-2 py-1.5 text-xs">{slot.status}</td>
                             <td className="border-r px-2 py-1.5 text-xs font-medium text-green-700 dark:text-green-300">
-                              {slot.participant ? `${slot.participant.firstName} ${slot.participant.lastName}` : <span className="text-muted-foreground">—</span>}
+                              {getSlotParticipants(slot).length > 0
+                                ? getSlotParticipants(slot).map(p => `${p.firstName} ${p.lastName}`).join(" & ")
+                                : <span className="text-muted-foreground">—</span>}
                             </td>
-                            <td className="border-r px-2 py-1.5 text-xs">{slot.participant?.shirtSize || "—"}</td>
+                            <td className="border-r px-2 py-1.5 text-xs">
+                              {getSlotParticipants(slot).map(p => p.shirtSize || "?").join(" & ") || "—"}
+                            </td>
                             <td className="px-2 py-1.5 text-xs">{buyer ? formatUser(buyer) : <span className="text-muted-foreground">—</span>}</td>
                           </tr>
                         );

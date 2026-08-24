@@ -10,6 +10,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose } from '@/components/ui/sheet';
 import { ParticipantModal } from './ParticipantModal';
 import { ParticipantSelector } from './ParticipantSelector';
+import {
+  getMinSlotsPerBooking,
+  getParticipantsPerSlot,
+  validateBookingSelection,
+} from '@/lib/booking/rules';
 
 interface SelectedSlot {
   slotId: string;
@@ -17,7 +22,8 @@ interface SelectedSlot {
   categoryName: string;
   startTime: Date;
   date: string;
-  participant?: Participant; // 👈 Ajouter info du participant
+  participant?: Participant; // 👈 1er participant (rétrocompatibilité)
+  participants?: (Participant | undefined)[]; // 👥 Tous les participants du créneau (duo = 2)
 }
 
 export interface SelectedPackSlot extends SelectedSlot {
@@ -92,6 +98,8 @@ export function SlotBookingView({
   const [currentSlotForParticipant, setCurrentSlotForParticipant] = useState<SelectedSlot | null>(null);
   const [isPackParticipantModalOpen, setIsPackParticipantModalOpen] = useState(false);
   const [currentPackSlotForParticipant, setCurrentPackSlotForParticipant] = useState<SelectedPackSlot | null>(null);
+  // 👥 Index du participant en cours d'édition (catégories en duo)
+  const [currentParticipantIndex, setCurrentParticipantIndex] = useState(0);
   
   // 📋 Liste des participants réutilisables
   const [savedParticipants, setSavedParticipants] = useState<Participant[]>([]);
@@ -114,8 +122,42 @@ export function SlotBookingView({
 
   const mealGuests = wantsMeal ? additionalMealGuests : [];
 
-  const hasMissingShirtSizes = (slotsToCheck: SelectedSlot[]) =>
-    slotsToCheck.some(slot => !slot.participant?.shirtSize);
+  // 👥 Nombre de participants attendus pour une catégorie (2 pour un duo)
+  const participantsRequiredFor = (categoryId: string) =>
+    getParticipantsPerSlot(categories.find(category => category.id === categoryId));
+
+  /** Liste des participants d'un créneau, complétée à la longueur attendue. */
+  const participantsOf = (slot: SelectedSlot): (Participant | undefined)[] => {
+    const required = participantsRequiredFor(slot.categoryId);
+    const current = slot.participants ?? (slot.participant ? [slot.participant] : []);
+    return Array.from({ length: required }, (_, index) => current[index]);
+  };
+
+  /** Renseigne le participant n° index d'un créneau. */
+  const withParticipantAt = <T extends SelectedSlot>(
+    slot: T,
+    index: number,
+    participant: Participant
+  ): T => {
+    const next = participantsOf(slot);
+    next[index] = participant;
+    return { ...slot, participants: next, participant: next[0] };
+  };
+
+  /** Erreurs bloquantes sur une sélection (participants, minimum, doublons). */
+  const selectionErrors = (slotsToCheck: SelectedSlot[], enforceMinimum: boolean) =>
+    validateBookingSelection({
+      slots: slotsToCheck.map(slot => ({
+        slotId: slot.slotId,
+        categoryId: slot.categoryId,
+        participants: participantsOf(slot),
+      })),
+      participantsPerCategory: Object.fromEntries(
+        categories.map(category => [category.id, getParticipantsPerSlot(category)])
+      ),
+      categoryNames: Object.fromEntries(categories.map(category => [category.id, category.name])),
+      minSlots: enforceMinimum ? getMinSlotsPerBooking(settings) : 1,
+    });
 
   const updateAdditionalMealGuest = (index: number, field: keyof MealGuest, value: string) => {
     setAdditionalMealGuests(prev =>
@@ -387,6 +429,8 @@ export function SlotBookingView({
     const slotsNeeded = packToPurchase.slotsRequired;
     const slotsSelectedCount = selectedPackSlots.length;
     const selectionComplete = slotsSelectedCount === slotsNeeded;
+    // Les packs imposent déjà leur nombre de créneaux : pas de minimum supplémentaire.
+    const packSelectionErrors = selectionErrors(selectedPackSlots, false);
     const availablePackCategories = categories.filter(c => c.activeDates.length > 0);
 
     return (
@@ -522,26 +566,36 @@ export function SlotBookingView({
                                       Retirer
                                     </Badge>
                                   </div>
-                                  {/* 👤 Sélecteur de participant réutilisable */}
-                                  <div className="mt-2">
-                                    <ParticipantSelector
-                                      participants={savedParticipants}
-                                      selectedParticipant={slot.participant}
-                                      onSelect={(participant) => {
-                                        setSelectedPackSlots(
-                                          selectedPackSlots.map(s =>
-                                            s.slotId === slot.slotId
-                                              ? { ...s, participant }
-                                              : s
-                                          )
-                                        );
-                                      }}
-                                      onAddNew={() => {
-                                        setCurrentPackSlotForParticipant(slot);
-                                        setIsPackParticipantModalOpen(true);
-                                      }}
-                                      compact={true}
-                                    />
+                                  {/* 👤 Sélecteur(s) de participant réutilisable(s) */}
+                                  <div className="mt-2 space-y-2">
+                                    {participantsOf(slot).map((participant, index) => (
+                                      <div key={index}>
+                                        {participantsRequiredFor(slot.categoryId) > 1 && (
+                                          <p className="text-[11px] font-semibold text-gray-600 mb-1">
+                                            Participant {index + 1}
+                                          </p>
+                                        )}
+                                        <ParticipantSelector
+                                          participants={savedParticipants}
+                                          selectedParticipant={participant}
+                                          onSelect={(selected) => {
+                                            setSelectedPackSlots(
+                                              selectedPackSlots.map(s =>
+                                                s.slotId === slot.slotId
+                                                  ? withParticipantAt(s, index, selected)
+                                                  : s
+                                              )
+                                            );
+                                          }}
+                                          onAddNew={() => {
+                                            setCurrentPackSlotForParticipant(slot);
+                                            setCurrentParticipantIndex(index);
+                                            setIsPackParticipantModalOpen(true);
+                                          }}
+                                          compact={true}
+                                        />
+                                      </div>
+                                    ))}
                                   </div>
                                 </Card>
                               ))}
@@ -593,18 +647,18 @@ export function SlotBookingView({
 
         <SheetFooter className="shrink-0 mt-4 border-t pt-3 flex flex-col gap-3">
           {/* ⚠️ Vérifier que tous les participants sont remplis */}
-          {(selectedPackSlots.some(slot => !slot.participant) || hasMissingShirtSizes(selectedPackSlots)) && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-xs text-yellow-700 font-semibold">
-                ⚠️ Veuillez ajouter les informations du participant et la taille du t-shirt pour tous les créneaux
-              </p>
+          {packSelectionErrors.length > 0 && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg space-y-1">
+              {packSelectionErrors.map((message, index) => (
+                <p key={index} className="text-xs text-yellow-700 font-semibold">⚠️ {message}</p>
+              ))}
             </div>
           )}
 
           <Button
             type="button"
             className="w-full h-12 text-lg"
-            disabled={!selectionComplete || selectedPackSlots.some(slot => !slot.participant) || hasMissingShirtSizes(selectedPackSlots)}
+            disabled={!selectionComplete || packSelectionErrors.length > 0}
             onClick={async () => {
               const success = await onPackCheckout(packToPurchase, selectedPackSlots);
               // ⚠️ Conserver la sélection si le paiement n'a pas pu être lancé.
@@ -733,6 +787,11 @@ export function SlotBookingView({
     const mealPrice = settings.mealPrice || 0;
     const mealCost = wantsMeal && mealPrice > 0 ? mealPrice * mealGuests.length : 0;
     const totalPrice = slotTotal + mealCost;
+    const validMealGuestsCount = mealGuests.filter(
+      guest => guest.firstName.trim() && guest.lastName.trim()
+    ).length;
+    // Le minimum de créneaux ne s'applique pas à un panier « repas uniquement ».
+    const cartErrors = selectionErrors(selectedSlots, true);
 
     return (
       <SheetContent side="right" className="sm:max-w-lg flex flex-col">
@@ -752,10 +811,14 @@ export function SlotBookingView({
             selectedSlots.map(slot => {
               const dateObj = new Date(slot.date + 'T00:00:00');
               const displayDate = formatDateDisplay(dateObj);
-              const hasParticipant = !!slot.participant;
+              const slotParticipants = participantsOf(slot);
+              const requiredParticipants = participantsRequiredFor(slot.categoryId);
+              const allParticipantsFilled = slotParticipants.every(
+                participant => !!participant?.shirtSize
+              );
 
               return (
-                <Card key={slot.slotId} className={`p-3 bg-gray-50 shadow-sm ${hasParticipant ? 'border-green-200 border-2' : 'border-yellow-200 border-2'}`}>
+                <Card key={slot.slotId} className={`p-3 bg-gray-50 shadow-sm ${allParticipantsFilled ? 'border-green-200 border-2' : 'border-yellow-200 border-2'}`}>
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1">
                       <p className="font-semibold">{slot.categoryName}</p>
@@ -764,43 +827,63 @@ export function SlotBookingView({
                         {formatTime(slot.startTime)} - {displayDate}
                       </p>
                       
-                      {/* 👤 Afficher les infos du participant si disponibles */}
-                      {hasParticipant && (
-                        <div className="mt-2 p-2 bg-green-50 rounded border border-green-200">
-                          <p className="text-xs font-semibold text-green-700">
-                            <UserIcon className="w-3 h-3 inline mr-1" />
-                            {slot.participant!.firstName} {slot.participant!.lastName}
-                          </p>
-                          {slot.participant!.email && (
-                            <p className="text-xs text-green-600">{slot.participant!.email}</p>
-                          )}
-                          {slot.participant!.shirtSize && (
-                            <p className="text-xs text-green-600">T-shirt: {slot.participant!.shirtSize}</p>
-                          )}
-                        </div>
+                      {/* 👥 Catégorie en duo : préciser le nombre de participants attendus */}
+                      {requiredParticipants > 1 && (
+                        <p className="text-xs text-blue-700 font-semibold mt-1">
+                          👥 Catégorie à {requiredParticipants} participants
+                        </p>
+                      )}
+
+                      {/* 👤 Afficher les infos des participants renseignés */}
+                      {slotParticipants.map((participant, index) =>
+                        participant ? (
+                          <div key={index} className="mt-2 p-2 bg-green-50 rounded border border-green-200">
+                            <p className="text-xs font-semibold text-green-700">
+                              <UserIcon className="w-3 h-3 inline mr-1" />
+                              {requiredParticipants > 1 ? `${index + 1}. ` : ''}
+                              {participant.firstName} {participant.lastName}
+                            </p>
+                            {participant.email && (
+                              <p className="text-xs text-green-600">{participant.email}</p>
+                            )}
+                            {participant.shirtSize && (
+                              <p className="text-xs text-green-600">T-shirt: {participant.shirtSize}</p>
+                            )}
+                          </div>
+                        ) : null
                       )}
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      {/* Bouton pour ajouter/modifier les infos du participant */}
-                      <ParticipantSelector
-                        participants={savedParticipants}
-                        selectedParticipant={slot.participant}
-                        onSelect={(participant) => {
-                          setSelectedSlots(
-                            selectedSlots.map(s =>
-                              s.slotId === slot.slotId
-                                ? { ...s, participant }
-                                : s
-                            )
-                          );
-                        }}
-                        onAddNew={() => {
-                          setCurrentSlotForParticipant(slot);
-                          setIsParticipantModalOpen(true);
-                        }}
-                        compact={true}
-                      />
+                      {/* Bouton(s) pour ajouter/modifier les infos des participants */}
+                      {slotParticipants.map((participant, index) => (
+                        <div key={index}>
+                          {requiredParticipants > 1 && (
+                            <p className="text-[11px] font-semibold text-gray-600 mb-1">
+                              Participant {index + 1}
+                            </p>
+                          )}
+                          <ParticipantSelector
+                            participants={savedParticipants}
+                            selectedParticipant={participant}
+                            onSelect={(selected) => {
+                              setSelectedSlots(
+                                selectedSlots.map(s =>
+                                  s.slotId === slot.slotId
+                                    ? withParticipantAt(s, index, selected)
+                                    : s
+                                )
+                              );
+                            }}
+                            onAddNew={() => {
+                              setCurrentSlotForParticipant(slot);
+                              setCurrentParticipantIndex(index);
+                              setIsParticipantModalOpen(true);
+                            }}
+                            compact={true}
+                          />
+                        </div>
+                      ))}
 
                       {/* Bouton pour supprimer le créneau */}
                       <Button
@@ -949,12 +1032,12 @@ export function SlotBookingView({
             <span className="text-2xl text-primary">{formatPrice(totalPrice)}</span>
           </div>
 
-          {/* ⚠️ Vérifier que tous les participants sont remplis */}
-          {(selectedSlots.some(slot => !slot.participant) || hasMissingShirtSizes(selectedSlots)) && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-3">
-              <p className="text-xs text-yellow-700 font-semibold">
-                ⚠️ Veuillez ajouter les informations du participant et la taille du t-shirt pour tous les créneaux
-              </p>
+          {/* ⚠️ Règles bloquantes : participants, minimum de créneaux, doublons */}
+          {cartErrors.length > 0 && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-3 space-y-1">
+              {cartErrors.map((message, index) => (
+                <p key={index} className="text-xs text-yellow-700 font-semibold">⚠️ {message}</p>
+              ))}
             </div>
           )}
 
@@ -967,9 +1050,8 @@ export function SlotBookingView({
             type="button"
             className="w-full h-12 text-lg"
             disabled={
-              (selectedSlots.length === 0 && mealGuests.filter(guest => guest.firstName.trim() && guest.lastName.trim()).length === 0) ||
-              selectedSlots.some(slot => !slot.participant) ||
-              hasMissingShirtSizes(selectedSlots)
+              (selectedSlots.length === 0 && validMealGuestsCount === 0) ||
+              cartErrors.length > 0
             }
             onClick={async () => {
               const cleanedMealGuests = mealGuests
@@ -1076,20 +1158,27 @@ export function SlotBookingView({
         onClose={() => {
           setIsParticipantModalOpen(false);
           setCurrentSlotForParticipant(null);
+          setCurrentParticipantIndex(0);
         }}
         onConfirm={(participant) => {
           if (currentSlotForParticipant) {
-            // Mettre à jour le slot avec les infos du participant
+            // Mettre à jour le participant n° currentParticipantIndex du créneau
             setSelectedSlots(selectedSlots.map(slot =>
               slot.slotId === currentSlotForParticipant.slotId
-                ? { ...slot, participant }
+                ? withParticipantAt(slot, currentParticipantIndex, participant)
                 : slot
             ));
           }
           setIsParticipantModalOpen(false);
           setCurrentSlotForParticipant(null);
+          setCurrentParticipantIndex(0);
         }}
         onSaveParticipant={handleSaveParticipant}
+        participantIndex={
+          currentSlotForParticipant && participantsRequiredFor(currentSlotForParticipant.categoryId) > 1
+            ? currentParticipantIndex + 1
+            : undefined
+        }
         slotInfo={currentSlotForParticipant ? `${currentSlotForParticipant.categoryName} - ${formatTime(currentSlotForParticipant.startTime)}, ${formatDateDisplay(new Date(currentSlotForParticipant.date + 'T00:00:00'))}` : undefined}
       />
 
@@ -1099,30 +1188,37 @@ export function SlotBookingView({
         onClose={() => {
           setIsPackParticipantModalOpen(false);
           setCurrentPackSlotForParticipant(null);
+          setCurrentParticipantIndex(0);
         }}
         onConfirm={(participant) => {
           if (currentPackSlotForParticipant) {
-            // Mettre à jour le slot du pack avec les infos du participant
+            // Mettre à jour le participant n° currentParticipantIndex du créneau
             setSelectedPackSlots(selectedPackSlots.map(slot =>
               slot.slotId === currentPackSlotForParticipant.slotId
-                ? { ...slot, participant }
+                ? withParticipantAt(slot, currentParticipantIndex, participant)
                 : slot
             ));
           }
           setIsPackParticipantModalOpen(false);
           setCurrentPackSlotForParticipant(null);
+          setCurrentParticipantIndex(0);
         }}
         onApplyToAll={(participant) => {
-          // 👤 Appliquer le participant à TOUS les créneaux du pack
-          setSelectedPackSlots(selectedPackSlots.map(slot => ({
-            ...slot,
-            participant
-          })));
+          // 👤 Appliquer le participant au 1er slot de TOUS les créneaux du pack
+          setSelectedPackSlots(selectedPackSlots.map(slot =>
+            withParticipantAt(slot, 0, participant)
+          ));
           setIsPackParticipantModalOpen(false);
           setCurrentPackSlotForParticipant(null);
+          setCurrentParticipantIndex(0);
         }}
         onSaveParticipant={handleSaveParticipant}
         isPackModal={true}
+        participantIndex={
+          currentPackSlotForParticipant && participantsRequiredFor(currentPackSlotForParticipant.categoryId) > 1
+            ? currentParticipantIndex + 1
+            : undefined
+        }
         slotInfo={currentPackSlotForParticipant ? `${currentPackSlotForParticipant.categoryName} - ${formatTime(currentPackSlotForParticipant.startTime)}, ${formatDateDisplay(new Date(currentPackSlotForParticipant.date + 'T00:00:00'))}` : undefined}
       />
     </div>

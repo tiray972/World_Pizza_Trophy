@@ -10,6 +10,8 @@ import {
     type BookingMealGuest,
     type BookingSlot,
 } from "@/lib/booking/pending-booking";
+import { getMinSlotsPerBooking, getParticipantsPerSlot, validateBookingSelection } from "@/lib/booking/rules";
+import type { Category, Participant, WPTEvent } from "@/types/firestore";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
@@ -45,11 +47,6 @@ export async function POST(req: NextRequest) {
         const uniqueSlotIds = new Set(slotsToReserve.map(slot => slot.slotId));
         if (uniqueSlotIds.size !== slotsToReserve.length) {
             return NextResponse.json({ error: "Un créneau est sélectionné plusieurs fois." }, { status: 400 });
-        }
-
-        const missingShirtSize = slotsToReserve.some(slot => !slot.participant?.shirtSize);
-        if (missingShirtSize) {
-            return NextResponse.json({ error: "La taille du t-shirt est obligatoire pour chaque participant." }, { status: 400 });
         }
 
         const cleanedMealGuests = includeMeal
@@ -94,13 +91,50 @@ export async function POST(req: NextRequest) {
                 availableSlots.push({
                   ref: slotRef,
                   data: slotData,
-                  participant: slot.participant
+                  categoryId: (slotData.categoryId as string) || slot.categoryId,
+                  participants: participantsOfPayload(slot),
                 });
                 console.log(`✅ Slot ${slot.slotId} validated for checkout`);
 
             } catch (slotError) {
                 console.error(`❌ Error validating slot ${slot.slotId}:`, slotError);
                 return NextResponse.json({ error: `Erreur lors de la vérification du créneau: ${slot.slotId}` }, { status: 500 });
+            }
+        }
+
+        // 1️⃣bis Règles métier (minimum de créneaux, participants en duo, doublons)
+        if (availableSlots.length > 0) {
+            const categoryIds = Array.from(new Set(availableSlots.map(slot => slot.categoryId).filter(Boolean)));
+            const categoryDocs = await Promise.all(
+                categoryIds.map(categoryId => adminDB.collection("categories").doc(categoryId).get())
+            );
+
+            const participantsPerCategory: Record<string, number> = {};
+            const categoryNames: Record<string, string> = {};
+            categoryDocs.forEach((categoryDoc, index) => {
+                const categoryId = categoryIds[index];
+                const categoryData = categoryDoc.exists ? (categoryDoc.data() as Category) : undefined;
+                participantsPerCategory[categoryId] = getParticipantsPerSlot(categoryData);
+                categoryNames[categoryId] = categoryData?.name || "cette catégorie";
+            });
+
+            const eventDoc = eventId ? await adminDB.collection("events").doc(eventId).get() : null;
+            const eventData = eventDoc?.exists ? (eventDoc.data() as WPTEvent) : undefined;
+
+            const ruleErrors = validateBookingSelection({
+                slots: availableSlots.map(slot => ({
+                    slotId: slot.ref.id,
+                    categoryId: slot.categoryId,
+                    participants: slot.participants,
+                })),
+                participantsPerCategory,
+                categoryNames,
+                minSlots: getMinSlotsPerBooking(eventData),
+            });
+
+            if (ruleErrors.length > 0) {
+                console.warn(`⚠️ [Checkout] Règles non respectées:`, ruleErrors);
+                return NextResponse.json({ error: ruleErrors.join(" ") }, { status: 400 });
             }
         }
 
@@ -157,11 +191,15 @@ export async function POST(req: NextRequest) {
             includeMeal: !!includeMeal,
             mealPrice: mealPrice || 0,
             mealQuantity,
-            slots: slotsToReserve.map(slot => ({
-                slotId: slot.slotId,
-                categoryId: slot.categoryId,
-                participant: slot.participant,
-            })),
+            slots: slotsToReserve.map(slot => {
+                const participants = participantsOfPayload(slot);
+                return {
+                    slotId: slot.slotId,
+                    categoryId: slot.categoryId,
+                    participant: participants[0],
+                    participants,
+                };
+            }),
             mealGuests: cleanedMealGuests,
         };
         pendingBookingRef = await createPendingBooking(payload);
@@ -183,13 +221,14 @@ export async function POST(req: NextRequest) {
         const batch = adminDB.batch();
         const lockedUntil = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-        availableSlots.forEach(({ ref, participant }) => {
+        availableSlots.forEach(({ ref, participants }) => {
             batch.update(ref, {
                 status: 'locked',
                 lockedByUserId: userId,
                 lockedUntil: admin.firestore.Timestamp.fromDate(lockedUntil),
                 stripeSessionId: session.id,
-                participant: participant || null,
+                participant: participants[0] || null,
+                participants,
                 buyerId: userId,
             });
         });
@@ -238,4 +277,14 @@ function isSlotReservableBy(
 
     const lockedUntil = slotData.lockedUntil?.toDate?.() ?? (slotData.lockedUntil ? new Date(slotData.lockedUntil) : null);
     return !!lockedUntil && lockedUntil < now;
+}
+
+/** Participants transmis par le client, quel que soit le format (solo ou duo). */
+function participantsOfPayload(slot: SlotWithParticipant): Participant[] {
+    const list = Array.isArray(slot.participants) && slot.participants.length > 0
+        ? slot.participants
+        : slot.participant
+            ? [slot.participant]
+            : [];
+    return list.filter(Boolean) as Participant[];
 }

@@ -21,6 +21,7 @@ import {
   AlertCircle,
   Download
 } from 'lucide-react';
+import { getSlotParticipants } from '@/lib/booking/rules';
 
 interface UserData {
   id: string;
@@ -131,6 +132,7 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
             endTime: data.endTime instanceof Timestamp ? data.endTime.toDate() : new Date(data.endTime),
             status: data.status,
             participant: data.participant,
+            participants: data.participants, // 👥 Duo
             paidAt: data.paidAt instanceof Timestamp ? data.paidAt.toDate() : data.paidAt,
             assignmentType: data.assignmentType,
           };
@@ -427,24 +429,24 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
                               </div>
                             </div>
 
-                            {/* Participant Info */}
-                            {slot.participant && (
-                              <div className="bg-white rounded p-3 border border-green-100">
+                            {/* Participant Info (👥 duo = plusieurs participants) */}
+                            {getSlotParticipants(slot).map((participant, index) => (
+                              <div key={index} className="bg-white rounded p-3 border border-green-100 mt-2">
                                 <p className="text-xs text-gray-500 font-semibold mb-2 flex items-center gap-1">
                                   <User className="h-3 w-3" />
-                                  Participant
+                                  Participant{getSlotParticipants(slot).length > 1 ? ` ${index + 1}` : ''}
                                 </p>
                                 <p className="font-semibold text-gray-900">
-                                  {slot.participant.firstName} {slot.participant.lastName}
+                                  {participant.firstName} {participant.lastName}
                                 </p>
-                                {slot.participant.email && (
-                                  <p className="text-sm text-gray-600">{slot.participant.email}</p>
+                                {participant.email && (
+                                  <p className="text-sm text-gray-600">{participant.email}</p>
                                 )}
-                                {slot.participant.phone && (
-                                  <p className="text-sm text-gray-600">{slot.participant.phone}</p>
+                                {participant.phone && (
+                                  <p className="text-sm text-gray-600">{participant.phone}</p>
                                 )}
                               </div>
-                            )}
+                            ))}
                           </div>
                           
                           <div className="flex gap-2 mt-3 pt-3 border-t border-green-100">

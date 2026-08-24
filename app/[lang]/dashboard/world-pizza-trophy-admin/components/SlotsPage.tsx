@@ -8,6 +8,7 @@ import { CreateSlotModal } from "./CreateSlotModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Clock, User as UserIcon, Loader2, FileSpreadsheet, Plus, CalendarDays, Trash2, Eraser, AlertTriangle, Lock, ShieldAlert, UserCog, CheckCircle, Gift } from "lucide-react";
 import { formatTime, formatUser } from "../lib/utils";
+import { getSlotParticipants } from "@/lib/booking/rules";
 
 interface SlotsPageProps {
   slots: Slot[];
@@ -355,19 +356,20 @@ export function SlotsPage({
                         </div>
 
                         {/* Participant Display */}
-                        {hasParticipant && slot.participant && (
-                          <div className="mt-2 p-2 bg-green-100/50 dark:bg-green-900/30 rounded text-xs">
+                        {getSlotParticipants(slot).map((participant, index) => (
+                          <div key={index} className="mt-2 p-2 bg-green-100/50 dark:bg-green-900/30 rounded text-xs">
                             <p className="font-semibold text-green-700 dark:text-green-300">
-                              👤 {slot.participant.firstName} {slot.participant.lastName}
+                              👤 {participant.firstName} {participant.lastName}
+                              {participant.shirtSize ? ` — ${participant.shirtSize}` : ""}
                             </p>
-                            {slot.participant.email && (
-                              <p className="text-green-600 dark:text-green-400">{slot.participant.email}</p>
+                            {participant.email && (
+                              <p className="text-green-600 dark:text-green-400">{participant.email}</p>
                             )}
-                            {slot.participant.phone && (
-                              <p className="text-green-600 dark:text-green-400">{slot.participant.phone}</p>
+                            {participant.phone && (
+                              <p className="text-green-600 dark:text-green-400">{participant.phone}</p>
                             )}
                           </div>
-                        )}
+                        ))}
                       </div>
                     </div>
 

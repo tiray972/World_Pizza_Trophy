@@ -114,6 +114,7 @@ export function CategoriesPage({
         unitPrice: data.unitPrice!,
         maxSlots: data.maxSlots!,
         durationMinutes: data.durationMinutes!,
+        participantsPerSlot: data.participantsPerSlot || 1,
         rules: data.rules || "",
         isActive: data.isActive !== undefined ? data.isActive : true,
         activeDates: []

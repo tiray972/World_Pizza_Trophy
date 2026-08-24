@@ -2,7 +2,7 @@
 
 import { SlotBookingView } from "@/components/custom/SlotBookingCalendar";
 import type { SelectedPackSlot } from "@/components/custom/SlotBookingCalendar";
-import { Slot, Category, WPTEvent, Product, MealGuest } from "@/types/firestore";
+import { Slot, Category, WPTEvent, Product, MealGuest, Participant } from "@/types/firestore";
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -235,7 +235,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
   };
 
   const handleCheckout = async (
-    slotsToCheckout: { slotId: string; categoryId: string }[],
+    slotsToCheckout: { slotId: string; categoryId: string; participants?: (Participant | undefined)[] }[],
     includeMeal: boolean,
     mealPrice: number,
     mealGuests: MealGuest[]
