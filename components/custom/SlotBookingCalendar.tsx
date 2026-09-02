@@ -171,6 +171,20 @@ export function SlotBookingView({
     );
   };
 
+  /** 🍽️ Fixe le nombre de repas (ajoute ou retire des lignes). */
+  const setMealGuestsCount = (count: number) => {
+    const target = Math.max(1, Math.min(count, 50));
+    setWantsMeal(true);
+    setAdditionalMealGuests(prev => {
+      if (target === prev.length) return prev;
+      if (target < prev.length) return prev.slice(0, target);
+      return [
+        ...prev,
+        ...Array.from({ length: target - prev.length }, () => ({ firstName: '', lastName: '' })),
+      ];
+    });
+  };
+
   const addAdditionalMealGuest = () => {
     setAdditionalMealGuests(prev => [...prev, { firstName: '', lastName: '' }]);
     setWantsMeal(true);
@@ -356,6 +370,10 @@ export function SlotBookingView({
               </CardDescription>
             </CardHeader>
             <CardFooter className="p-3 pt-0 flex flex-wrap gap-1">
+              {/* 💶 Prix de la catégorie, visible directement dans la grille */}
+              <Badge className="text-xs bg-primary hover:bg-primary/90">
+                {formatPrice(category.unitPrice)}
+              </Badge>
               <Badge variant="secondary" className="text-xs">
                 <CalendarIcon className="w-3 h-3 mr-1" />
                 {datesDisplay}
@@ -802,11 +820,14 @@ export function SlotBookingView({
     }, 0);
     
     const mealPrice = settings.mealPrice || 0;
-    const mealCost = wantsMeal && mealPrice > 0 ? mealPrice * mealGuests.length : 0;
-    const totalPrice = slotTotal + mealCost;
     const validMealGuestsCount = mealGuests.filter(
       guest => guest.firstName.trim() && guest.lastName.trim()
     ).length;
+    // ⚠️ Seuls les repas nommés sont facturés : le total affiché doit s'aligner
+    // sur ce que la caisse Stripe encaissera réellement.
+    const incompleteMealGuests = mealGuests.length - validMealGuestsCount;
+    const mealCost = wantsMeal && mealPrice > 0 ? mealPrice * validMealGuestsCount : 0;
+    const totalPrice = slotTotal + mealCost;
     // Le minimum de créneaux ne s'applique pas à un panier « repas uniquement ».
     const cartErrors = selectionErrors(selectedSlots, true);
 
@@ -943,7 +964,8 @@ export function SlotBookingView({
                     Ajouter des repas
                   </p>
                   <p className="text-sm text-blue-700">
-                    {formatPrice(mealPrice)} par personne, indépendant des créneaux de compétition
+                    {formatPrice(mealPrice)} par personne, indépendant des créneaux de compétition.
+                    {' '}Vous pouvez acheter des repas <strong>sans réserver de catégorie</strong>.
                   </p>
                 </div>
                 <Button
@@ -967,6 +989,40 @@ export function SlotBookingView({
               </div>
               {wantsMeal && (
                 <div className="mt-4 space-y-3">
+                  {/* 🍽️ Nombre de repas : compteur direct (− / +) */}
+                  <div className="flex items-center justify-between rounded-md bg-white border border-blue-200 p-3">
+                    <div>
+                      <p className="text-sm font-semibold text-blue-950">Nombre de repas</p>
+                      <p className="text-xs text-blue-700">
+                        {additionalMealGuests.length} × {formatPrice(mealPrice)} ={' '}
+                        {formatPrice(additionalMealGuests.length * mealPrice)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 w-9 p-0 text-lg"
+                        disabled={additionalMealGuests.length <= 1}
+                        onClick={() => setMealGuestsCount(additionalMealGuests.length - 1)}
+                      >
+                        −
+                      </Button>
+                      <span className="w-8 text-center text-lg font-bold text-blue-900">
+                        {additionalMealGuests.length}
+                      </span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-9 w-9 p-0 text-lg bg-blue-600 hover:bg-blue-700"
+                        onClick={() => setMealGuestsCount(additionalMealGuests.length + 1)}
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+
                   <div className="rounded-md bg-white/70 border border-blue-100 p-3">
                     <p className="text-xs font-semibold text-blue-900 mb-2">Récapitulatif repas</p>
                     {mealGuests.length === 0 ? (
@@ -1050,7 +1106,7 @@ export function SlotBookingView({
             </div>
             {wantsMeal && mealCost > 0 && (
               <div className="flex justify-between text-blue-600 font-semibold">
-                <span>Repas ({mealGuests.length}):</span>
+                <span>Repas ({validMealGuestsCount}):</span>
                 <span>{formatPrice(mealCost)}</span>
               </div>
             )}
@@ -1061,6 +1117,16 @@ export function SlotBookingView({
             <span>Total à Payer:</span>
             <span className="text-2xl text-primary">{formatPrice(totalPrice)}</span>
           </div>
+
+          {/* ⚠️ Repas sans nom : ils ne seront pas facturés */}
+          {wantsMeal && incompleteMealGuests > 0 && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-3">
+              <p className="text-xs text-yellow-700 font-semibold">
+                ⚠️ {incompleteMealGuests} repas sans nom : renseignez le prénom et le nom de
+                chaque personne, sinon ces repas ne seront pas comptés.
+              </p>
+            </div>
+          )}
 
           {/* ⚠️ Règles bloquantes : participants, minimum de créneaux, doublons */}
           {cartErrors.length > 0 && (
@@ -1146,15 +1212,32 @@ export function SlotBookingView({
           }`}
         >
           <p className="font-bold">
-            🎟️ Inscription : {minSlotsRequired} créneaux minimum
+            🎟️ Compétition : {minSlotsRequired} créneaux minimum
           </p>
           <p className="text-sm">
             {selectedSlots.length === 0
-              ? `Chaque concurrent doit s'inscrire dans au moins ${minSlotsRequired} catégories différentes pour valider son inscription.`
+              ? `Un concurrent doit s'inscrire dans au moins ${minSlotsRequired} catégories différentes pour valider son inscription.`
               : missingSlotsCount > 0
                 ? `${selectedSlots.length} créneau(x) sélectionné(s) — il vous en manque encore ${missingSlotsCount} pour pouvoir payer.`
                 : `${selectedSlots.length} créneaux sélectionnés : vous pouvez procéder au paiement.`}
           </p>
+          {/* 🍽️ Le minimum ne concerne QUE les catégories : les repas s'achètent seuls */}
+          {(settings.mealPrice || 0) > 0 && (
+            <p className="text-sm mt-2 pt-2 border-t border-current/20">
+              🍽️ Ce minimum ne concerne que les catégories de compétition.{' '}
+              <strong>Les repas peuvent être achetés seuls</strong>, sans aucun créneau.
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="ml-2 h-7 text-xs bg-white"
+                onClick={() => setIsCartSheetOpen(true)}
+              >
+                <UtensilsCrossedIcon className="w-3 h-3 mr-1" />
+                Acheter des repas uniquement
+              </Button>
+            </p>
+          )}
         </div>
       )}
 
