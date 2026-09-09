@@ -65,6 +65,9 @@ interface PaymentData {
   isPack: boolean;
   packName?: string;
   metadata?: Record<string, string> | null;
+  stripeInvoiceNumber?: string | null;
+  stripeInvoicePdf?: string | null;
+  stripeInvoiceUrl?: string | null;
 }
 
 interface EventData {
@@ -160,6 +163,9 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
             isPack: data.isPack || false,
             packName: data.packName,
             metadata: data.metadata || null,
+            stripeInvoiceNumber: data.stripeInvoiceNumber || null,
+            stripeInvoicePdf: data.stripeInvoicePdf || null,
+            stripeInvoiceUrl: data.stripeInvoiceUrl || null,
           };
         });
         setPayments(paymentsList);
@@ -416,11 +422,27 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
                         {payment.status === 'paid' ? '✓ Payé' : payment.status}
                       </Badge>
                       {payment.status === 'paid' && (
-                        <div>
-                          <Button asChild size="sm" variant="outline" className="mt-1">
+                        <div className="flex flex-col items-end gap-1 mt-1">
+                          {/* 🧾 Facture officielle Stripe si elle existe */}
+                          {(payment.stripeInvoicePdf || payment.stripeInvoiceUrl) && (
+                            <Button asChild size="sm" className="bg-[#8B0000] hover:bg-[#A50000]">
+                              <a
+                                href={payment.stripeInvoicePdf || payment.stripeInvoiceUrl || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <FileText className="h-4 w-4 mr-1" />
+                                Facture PDF
+                                {payment.stripeInvoiceNumber ? ` ${payment.stripeInvoiceNumber}` : ''}
+                              </a>
+                            </Button>
+                          )}
+                          <Button asChild size="sm" variant="outline">
                             <Link href={`/${lang}/account/facture/${payment.id}`}>
                               <FileText className="h-4 w-4 mr-1" />
-                              Facture
+                              {payment.stripeInvoicePdf || payment.stripeInvoiceUrl
+                                ? 'Récapitulatif'
+                                : 'Facture'}
                             </Link>
                           </Button>
                         </div>

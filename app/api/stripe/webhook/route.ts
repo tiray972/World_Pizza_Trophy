@@ -7,6 +7,7 @@ import { Payment } from "@/types/firestore"; // Maintenant disponible
 import * as admin from "firebase-admin";
 import { sendPaymentNotifications } from "@/lib/email/payment-notifications";
 import { markPendingBookingPaid, resolveBookingPayload } from "@/lib/booking/pending-booking";
+import { getSessionInvoice } from "@/lib/booking/stripe-session";
 
 // Initialisation de Stripe (utilisation de la variable d'environnement)
 // On utilise 'as any' car ce code est exécuté côté serveur (Next.js API route)
@@ -128,6 +129,16 @@ export async function POST(req: Request) {
                     createdAt: new Date(),
                     updatedAt: new Date(),
                 };
+                // 🧾 Facture officielle Stripe si le compte l'émet
+                const stripeInvoice = await getSessionInvoice(session);
+                if (stripeInvoice) {
+                    Object.assign(paymentRecord, {
+                        stripeInvoiceNumber: stripeInvoice.number,
+                        stripeInvoiceUrl: stripeInvoice.hostedUrl,
+                        stripeInvoicePdf: stripeInvoice.pdfUrl,
+                    });
+                }
+
                 const paymentRef = adminDB.collection("payments").doc();
                 const paymentToSave = Object.fromEntries(
                     Object.entries({

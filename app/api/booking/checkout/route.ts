@@ -11,6 +11,7 @@ import {
     type BookingSlot,
 } from "@/lib/booking/pending-booking";
 import { getMinSlotsPerBooking, getParticipantsPerSlot, validateBookingSelection } from "@/lib/booking/rules";
+import { createCheckoutSession } from "@/lib/booking/stripe-session";
 import type { Category, Participant, WPTEvent } from "@/types/firestore";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
@@ -204,7 +205,7 @@ export async function POST(req: NextRequest) {
         };
         pendingBookingRef = await createPendingBooking(payload);
 
-        const session = await stripe.checkout.sessions.create({
+        const session = await createCheckoutSession({
             payment_method_types: ['card'],
             line_items: lineItems,
             mode: 'payment',

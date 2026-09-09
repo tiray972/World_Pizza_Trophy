@@ -7,7 +7,7 @@ import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { useAuth } from '@/providers/AuthProvider';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader, Printer } from 'lucide-react';
+import { ArrowLeft, FileText, Loader, Printer } from 'lucide-react';
 import {
   buildInvoiceLines,
   formatInvoiceAmount,
@@ -20,7 +20,14 @@ import {
 } from '@/lib/invoice/invoice';
 
 interface InvoiceState {
-  payment: InvoicePaymentInput & { status: string; source: string; eventId: string };
+  payment: InvoicePaymentInput & {
+    status: string;
+    source: string;
+    eventId: string;
+    stripeInvoiceNumber?: string | null;
+    stripeInvoicePdf?: string | null;
+    stripeInvoiceUrl?: string | null;
+  };
   slots: InvoiceSlotInput[];
   slotParticipants: Record<string, string[]>;
   categoryPrices: Record<string, number>;
@@ -78,6 +85,9 @@ export default function InvoicePage({
           status: paymentData.status || 'paid',
           source: paymentData.source || 'stripe',
           eventId: paymentData.eventId || '',
+          stripeInvoiceNumber: paymentData.stripeInvoiceNumber || null,
+          stripeInvoicePdf: paymentData.stripeInvoicePdf || null,
+          stripeInvoiceUrl: paymentData.stripeInvoiceUrl || null,
         };
 
         // Créneaux du paiement + catégories associées
@@ -216,10 +226,26 @@ export default function InvoicePage({
               Retour à mon compte
             </Link>
           </Button>
-          <Button className="bg-[#8B0000] hover:bg-[#A50000]" onClick={() => window.print()}>
-            <Printer className="h-4 w-4 mr-2" />
-            Télécharger / Imprimer en PDF
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {/* 🧾 Facture officielle émise par Stripe, si elle existe */}
+            {(payment.stripeInvoicePdf || payment.stripeInvoiceUrl) && (
+              <Button asChild variant="outline">
+                <a
+                  href={payment.stripeInvoicePdf || payment.stripeInvoiceUrl || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Facture officielle
+                  {payment.stripeInvoiceNumber ? ` ${payment.stripeInvoiceNumber}` : ''} (PDF)
+                </a>
+              </Button>
+            )}
+            <Button className="bg-[#8B0000] hover:bg-[#A50000]" onClick={() => window.print()}>
+              <Printer className="h-4 w-4 mr-2" />
+              Télécharger / Imprimer en PDF
+            </Button>
+          </div>
         </div>
 
         <div className="invoice-sheet bg-white shadow-lg rounded-lg p-8 md:p-12">
@@ -241,7 +267,11 @@ export default function InvoicePage({
               )}
             </div>
             <div className="text-right">
-              <p className="text-xl font-bold text-gray-900">FACTURE</p>
+              <p className="text-xl font-bold text-gray-900">
+                {payment.stripeInvoicePdf || payment.stripeInvoiceUrl
+                  ? 'RÉCAPITULATIF'
+                  : 'FACTURE'}
+              </p>
               <p className="text-sm text-gray-600 mt-1">N° {number}</p>
               <p className="text-sm text-gray-600">
                 Date : {formatInvoiceDate(payment.createdAt)}

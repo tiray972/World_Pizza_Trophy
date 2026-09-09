@@ -9,6 +9,7 @@ import {
     deletePendingBooking,
 } from "@/lib/booking/pending-booking";
 import { getParticipantsPerSlot, validateBookingSelection } from "@/lib/booking/rules";
+import { createCheckoutSession } from "@/lib/booking/stripe-session";
 import type { Category, Participant } from "@/types/firestore";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
@@ -167,7 +168,7 @@ export async function POST(req: NextRequest) {
         pendingBookingRef = await createPendingBooking(payload);
 
         // 3️⃣ Création de la Session Stripe avec price_data dynamique (COMME LE MULTI-SLOTS)
-        const session = await stripe.checkout.sessions.create({
+        const session = await createCheckoutSession({
             payment_method_types: ['card'],
             line_items: [
                 {

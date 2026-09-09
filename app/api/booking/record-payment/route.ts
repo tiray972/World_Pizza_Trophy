@@ -5,6 +5,7 @@ import * as admin from 'firebase-admin';
 import { Payment } from '@/types/firestore';
 import { sendPaymentNotifications } from '@/lib/email/payment-notifications';
 import { markPendingBookingPaid, resolveBookingPayload } from '@/lib/booking/pending-booking';
+import { getSessionInvoice } from '@/lib/booking/stripe-session';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
@@ -152,6 +153,16 @@ export async function POST(req: NextRequest) {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+
+    // 🧾 Facture officielle Stripe (numérotée, PDF hébergé) si le compte l'émet
+    const stripeInvoice = await getSessionInvoice(session);
+    if (stripeInvoice) {
+      Object.assign(paymentRecord, {
+        stripeInvoiceNumber: stripeInvoice.number,
+        stripeInvoiceUrl: stripeInvoice.hostedUrl,
+        stripeInvoicePdf: stripeInvoice.pdfUrl,
+      });
+    }
 
     const paymentRef = adminDB.collection('payments').doc();
     // ✅ Filter out undefined values to avoid Firestore errors
