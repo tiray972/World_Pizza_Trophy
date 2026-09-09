@@ -19,9 +19,11 @@ import {
   CreditCard,
   DollarSign,
   AlertCircle,
-  Download
+  UtensilsCrossed,
+  FileText
 } from 'lucide-react';
 import { getSlotParticipants } from '@/lib/booking/rules';
+import { mealGuestsOfPayment } from '@/lib/invoice/invoice';
 
 interface UserData {
   id: string;
@@ -62,6 +64,7 @@ interface PaymentData {
   slotIds: string[];
   isPack: boolean;
   packName?: string;
+  metadata?: Record<string, string> | null;
 }
 
 interface EventData {
@@ -156,6 +159,7 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
             slotIds: data.slotIds || [],
             isPack: data.isPack || false,
             packName: data.packName,
+            metadata: data.metadata || null,
           };
         });
         setPayments(paymentsList);
@@ -244,10 +248,57 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
     );
   }
 
+  const formatLongDate = (date: string) =>
+    new Date(date + 'T00:00:00').toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
+
+  const formatHour = (date: Date) =>
+    date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
   const paidSlots = userSlots.filter(s => s.status === 'paid');
   const lockedSlots = userSlots.filter(s => s.status === 'locked');
   const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
   const totalPaidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
+
+  // 👥 Nombre de participants distincts inscrits (duo compris)
+  const paidParticipantsCount = new Set(
+    paidSlots.flatMap(slot =>
+      getSlotParticipants(slot).map(
+        participant => `${participant.firstName.trim().toLowerCase()}|${participant.lastName.trim().toLowerCase()}`
+      )
+    )
+  ).size;
+
+  // ⏭️ Prochain passage à venir
+  const nextSlot = [...paidSlots]
+    .filter(slot => slot.startTime.getTime() >= Date.now())
+    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())[0];
+
+  // 🍽️ Repas payés, reconstitués depuis les paiements
+  const mealSummary = payments
+    .filter(payment => payment.status === 'paid')
+    .reduce<{ total: number; guests: string[] }>(
+      (accumulator, payment) => {
+        const guests = mealGuestsOfPayment({
+          id: payment.id,
+          amount: payment.amount,
+          createdAt: payment.createdAt,
+          slotIds: payment.slotIds,
+          metadata: payment.metadata,
+        });
+        return {
+          total: accumulator.total + guests.length,
+          guests: [
+            ...accumulator.guests,
+            ...guests.map(guest => `${guest.firstName} ${guest.lastName}`.trim()).filter(Boolean),
+          ],
+        };
+      },
+      { total: 0, guests: [] }
+    );
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -359,11 +410,21 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
                         ID: {payment.id.substring(0, 12)}... • Source: {payment.source}
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right space-y-2">
                       <p className="text-lg font-bold text-gray-900">{payment.amount.toFixed(2)} €</p>
                       <Badge className={payment.status === 'paid' ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-700'}>
                         {payment.status === 'paid' ? '✓ Payé' : payment.status}
                       </Badge>
+                      {payment.status === 'paid' && (
+                        <div>
+                          <Button asChild size="sm" variant="outline" className="mt-1">
+                            <Link href={`/${lang}/account/facture/${payment.id}`}>
+                              <FileText className="h-4 w-4 mr-1" />
+                              Facture
+                            </Link>
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -372,89 +433,134 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
           </Card>
         )}
 
-        {/* Mes Créneaux par Événement */}
+        {/* 📅 Mon programme de passage */}
         {paidSlots.length > 0 && (
           <Card className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Pizza className="h-6 w-6 text-[#8B0000]" />
-                Mes Créneaux de Compétition
+                Mon programme de passage
               </CardTitle>
               <CardDescription>
-                {paidSlots.length} créneau(x) confirmé(s)
+                {paidSlots.length} créneau(x) confirmé(s) • {paidParticipantsCount} participant(s) inscrit(s)
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* ... existing code ...*/}
+            <CardContent className="space-y-8">
+              {/* ⏭️ Prochain passage mis en avant */}
+              {nextSlot && (
+                <div className="rounded-lg border-2 border-[#8B0000] bg-[#8B0000]/5 p-4">
+                  <p className="text-xs uppercase font-semibold text-[#8B0000] mb-1">
+                    Prochain passage
+                  </p>
+                  <p className="text-lg font-bold text-gray-900">{nextSlot.categoryName}</p>
+                  <p className="text-sm text-gray-700">
+                    {formatLongDate(nextSlot.date)} à {formatHour(nextSlot.startTime)}
+                    {' — '}
+                    {getSlotParticipants(nextSlot).map(p => `${p.firstName} ${p.lastName}`).join(' & ') || 'participant à renseigner'}
+                  </p>
+                </div>
+              )}
+
               {Object.entries(events).map(([eventId, event]) => {
-                const eventSlots = paidSlots.filter(s => s.eventId === eventId);
+                const eventSlots = paidSlots
+                  .filter(s => s.eventId === eventId)
+                  .sort((a, b) =>
+                    a.date === b.date
+                      ? a.startTime.getTime() - b.startTime.getTime()
+                      : a.date.localeCompare(b.date)
+                  );
                 if (eventSlots.length === 0) return null;
 
                 return (
-                  <div key={eventId} className="border-b pb-6 last:border-b-0">
-                    <h3 className="font-semibold text-lg text-gray-900 mb-4">
+                  <div key={eventId}>
+                    <h3 className="font-semibold text-lg text-gray-900 mb-3">
                       {event.name} ({event.eventYear})
                     </h3>
-                    <div className="space-y-3">
-                      {eventSlots.map(slot => (
-                        <div
-                          key={slot.id}
-                          className="bg-green-50 border border-green-200 rounded-lg p-4"
-                        >
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Slot Details */}
-                            <div>
-                              <p className="font-semibold text-gray-900">{slot.categoryName}</p>
-                              <div className="flex gap-4 text-sm text-gray-600 mt-2">
-                                <span className="flex items-center gap-1">
-                                  <CalendarIcon className="h-4 w-4" />
-                                  {new Date(slot.date + 'T00:00:00').toLocaleDateString('fr-FR', {
-                                    weekday: 'short',
-                                    day: 'numeric',
-                                    month: 'short',
-                                  })}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <ClockIcon className="h-4 w-4" />
-                                  {slot.startTime.toLocaleTimeString('fr-FR', {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                  {' - '}
-                                  {slot.endTime.toLocaleTimeString('fr-FR', {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                </span>
-                              </div>
-                            </div>
 
-                            {/* Participant Info (👥 duo = plusieurs participants) */}
-                            {getSlotParticipants(slot).map((participant, index) => (
-                              <div key={index} className="bg-white rounded p-3 border border-green-100 mt-2">
-                                <p className="text-xs text-gray-500 font-semibold mb-2 flex items-center gap-1">
-                                  <User className="h-3 w-3" />
-                                  Participant{getSlotParticipants(slot).length > 1 ? ` ${index + 1}` : ''}
-                                </p>
-                                <p className="font-semibold text-gray-900">
-                                  {participant.firstName} {participant.lastName}
-                                </p>
-                                {participant.email && (
-                                  <p className="text-sm text-gray-600">{participant.email}</p>
+                    {/* Tableau (écrans moyens et plus) */}
+                    <div className="hidden md:block overflow-x-auto rounded-lg border">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr className="text-left text-xs uppercase text-gray-500">
+                            <th className="px-4 py-3">Date</th>
+                            <th className="px-4 py-3">Horaire</th>
+                            <th className="px-4 py-3">Catégorie</th>
+                            <th className="px-4 py-3">Participant(s)</th>
+                            <th className="px-4 py-3">Statut</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {eventSlots.map(slot => (
+                            <tr key={slot.id} className="border-t">
+                              <td className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">
+                                {formatLongDate(slot.date)}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap font-mono text-gray-700">
+                                {formatHour(slot.startTime)} – {formatHour(slot.endTime)}
+                              </td>
+                              <td className="px-4 py-3">{slot.categoryName}</td>
+                              <td className="px-4 py-3">
+                                {getSlotParticipants(slot).length === 0 ? (
+                                  <span className="text-gray-400">À renseigner</span>
+                                ) : (
+                                  <div className="space-y-1">
+                                    {getSlotParticipants(slot).map((participant, index) => (
+                                      <div key={index}>
+                                        <span className="font-medium text-gray-900">
+                                          {participant.firstName} {participant.lastName}
+                                        </span>
+                                        {participant.shirtSize && (
+                                          <span className="text-xs text-gray-500 ml-2">
+                                            T-shirt {participant.shirtSize}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
                                 )}
-                                {participant.phone && (
-                                  <p className="text-sm text-gray-600">{participant.phone}</p>
-                                )}
-                              </div>
-                            ))}
+                              </td>
+                              <td className="px-4 py-3">
+                                <Badge className="bg-green-600 hover:bg-green-700">✓ Confirmé</Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Cartes (mobile) */}
+                    <div className="md:hidden space-y-3">
+                      {eventSlots.map(slot => (
+                        <div key={slot.id} className="rounded-lg border border-green-200 bg-green-50 p-4">
+                          <div className="flex justify-between items-start gap-2">
+                            <p className="font-semibold text-gray-900">{slot.categoryName}</p>
+                            <Badge className="bg-green-600 hover:bg-green-700 shrink-0">✓</Badge>
                           </div>
-                          
-                          <div className="flex gap-2 mt-3 pt-3 border-t border-green-100">
-                            <Badge className="bg-green-600 hover:bg-green-700">✓ Confirmé</Badge>
-                            {slot.paidAt && (
-                              <span className="text-xs text-gray-500">
-                                Payé le {slot.paidAt.toLocaleDateString('fr-FR')}
-                              </span>
+                          <div className="flex flex-wrap gap-3 text-sm text-gray-600 mt-2">
+                            <span className="flex items-center gap-1">
+                              <CalendarIcon className="h-4 w-4" />
+                              {formatLongDate(slot.date)}
+                            </span>
+                            <span className="flex items-center gap-1 font-mono">
+                              <ClockIcon className="h-4 w-4" />
+                              {formatHour(slot.startTime)} – {formatHour(slot.endTime)}
+                            </span>
+                          </div>
+                          <div className="mt-3 pt-3 border-t border-green-100 space-y-1">
+                            {getSlotParticipants(slot).length === 0 ? (
+                              <p className="text-sm text-gray-400">Participant à renseigner</p>
+                            ) : (
+                              getSlotParticipants(slot).map((participant, index) => (
+                                <p key={index} className="text-sm text-gray-800 flex items-center gap-1">
+                                  <User className="h-3 w-3" />
+                                  {participant.firstName} {participant.lastName}
+                                  {participant.shirtSize && (
+                                    <span className="text-xs text-gray-500">
+                                      (T-shirt {participant.shirtSize})
+                                    </span>
+                                  )}
+                                </p>
+                              ))
                             )}
                           </div>
                         </div>
@@ -467,6 +573,34 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
           </Card>
         )}
 
+        {/* 🍽️ Repas réservés */}
+        {mealSummary.total > 0 && (
+          <Card className="mb-8 border-blue-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UtensilsCrossed className="h-6 w-6 text-blue-600" />
+                Repas réservés
+              </CardTitle>
+              <CardDescription>
+                {mealSummary.total} repas payé(s)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {mealSummary.guests.map((guest, index) => (
+                  <Badge key={index} variant="secondary" className="text-sm py-1">
+                    <User className="h-3 w-3 mr-1" />
+                    {guest}
+                  </Badge>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-3">
+                Besoin de repas supplémentaires ? Vous pouvez en commander à tout moment depuis la
+                page de réservation, sans reprendre de catégorie.
+              </p>
+            </CardContent>
+          </Card>
+        )}
         {/* Créneaux en attente de paiement */}
         {lockedSlots.length > 0 && (
           <Card className="mb-8 border-yellow-200 bg-yellow-50">
