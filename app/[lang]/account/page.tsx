@@ -170,6 +170,44 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
         });
         setPayments(paymentsList);
 
+        // 🧾 Stripe crée la facture quelques secondes après le paiement :
+        // on complète à la demande celles qui manquent encore.
+        const missingInvoices = paymentsList.filter(
+          payment => payment.status === 'paid' && !payment.stripeInvoicePdf && !payment.stripeInvoiceUrl
+        );
+        if (missingInvoices.length > 0) {
+          const idToken = await user.getIdToken();
+          for (const payment of missingInvoices) {
+            try {
+              const response = await fetch('/api/booking/invoice', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${idToken}`,
+                },
+                body: JSON.stringify({ paymentId: payment.id }),
+              });
+              if (!response.ok) continue;
+              const invoice = await response.json();
+              if (!invoice.available) continue;
+              setPayments(previous =>
+                previous.map(item =>
+                  item.id === payment.id
+                    ? {
+                        ...item,
+                        stripeInvoiceNumber: invoice.number,
+                        stripeInvoicePdf: invoice.pdfUrl,
+                        stripeInvoiceUrl: invoice.hostedUrl,
+                      }
+                    : item
+                )
+              );
+            } catch (invoiceError) {
+              console.warn('Facture Stripe indisponible pour le moment:', invoiceError);
+            }
+          }
+        }
+
         // 4. Récupérer les catégories pour les noms et prix
         const categoryIds = [...new Set(slots.map(s => s.categoryId))];
         const categoriesMap: Record<string, CategoryData> = {};
