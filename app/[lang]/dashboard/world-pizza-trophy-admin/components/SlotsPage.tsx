@@ -9,6 +9,7 @@ import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Clock, User as UserIcon, Loader2, FileSpreadsheet, Plus, CalendarDays, Trash2, Eraser, AlertTriangle, Lock, ShieldAlert, UserCog, CheckCircle, Gift } from "lucide-react";
 import { formatTime, formatUser } from "../lib/utils";
 import { getSlotParticipants } from "@/lib/booking/rules";
+import { getAuth } from "firebase/auth";
 
 interface SlotsPageProps {
   slots: Slot[];
@@ -66,6 +67,8 @@ export function SlotsPage({
 
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  // 🧹 Nettoyage des données de participant restées sur des créneaux libérés
+  const [isCleaning, setIsCleaning] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   // Filter slots for current date view
@@ -200,6 +203,38 @@ export function SlotsPage({
     }).format(date);
   };
 
+  const handleCleanupOrphanParticipants = async () => {
+    if (!selectedEvent) return;
+    setIsCleaning(true);
+    try {
+      const currentUser = getAuth().currentUser;
+      if (!currentUser) {
+        alert("Session expirée, reconnectez-vous.");
+        return;
+      }
+      const response = await fetch("/api/booking/cleanup-orphan-participants", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${await currentUser.getIdToken()}`,
+        },
+        body: JSON.stringify({ eventId: selectedEvent.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Nettoyage impossible");
+      alert(
+        data.cleanedCount > 0
+          ? `${data.cleanedCount} créneau(x) nettoyé(s) : les noms des réservations abandonnées ont été supprimés.`
+          : "Aucun créneau à nettoyer : tout est déjà propre."
+      );
+    } catch (error) {
+      console.error("❌ Nettoyage impossible:", error);
+      alert("Le nettoyage a échoué. Réessayez dans un instant.");
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
   if (!selectedEvent) {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] text-center p-8 space-y-4">
@@ -240,6 +275,20 @@ export function SlotsPage({
             <FileSpreadsheet className="h-3 w-3" />
             Google Sheets Connected
           </div>
+
+          <Button
+            variant="outline"
+            onClick={handleCleanupOrphanParticipants}
+            disabled={isCleaning}
+            title="Supprimer les noms restés sur des créneaux redevenus disponibles (réservations abandonnées)"
+          >
+            {isCleaning ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Eraser className="mr-2 h-4 w-4" />
+            )}
+            Nettoyer les créneaux libérés
+          </Button>
 
           <div className="flex flex-col items-end">
             <Button

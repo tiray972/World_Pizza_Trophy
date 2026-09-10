@@ -3,6 +3,7 @@ import { Button } from "./ui/Button";
 import { Slot, User, Category, Participant, SlotStatus } from "@/types/firestore";
 import { X, UserPlus, Gift, CreditCard, Zap } from "lucide-react";
 import { formatTime, formatUser } from "../lib/utils";
+import { getSlotParticipants } from "@/lib/booking/rules";
 
 interface AssignSlotModalProps {
   isOpen: boolean;
@@ -189,13 +190,15 @@ export function AssignSlotModal({
           </div>
 
           {/* ──────────── CURRENT PARTICIPANT INFO ──────────── */}
-          {slot.participant && (
+          {getSlotParticipants(slot).length > 0 && (
             <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
               <p className="text-xs font-semibold text-green-700 dark:text-green-300 mb-1">Current Participant:</p>
-              <p className="text-sm text-green-800 dark:text-green-200">
-                {slot.participant.firstName} {slot.participant.lastName}
-                {slot.participant.email && ` (${slot.participant.email})`}
-              </p>
+              {getSlotParticipants(slot).map((participant, index) => (
+                <p key={index} className="text-sm text-green-800 dark:text-green-200">
+                  {participant.firstName} {participant.lastName}
+                  {participant.email && ` (${participant.email})`}
+                </p>
+              ))}
             </div>
           )}
 
