@@ -124,6 +124,7 @@ export function SlotBookingView({
 
   // 🎟️ Minimum de créneaux imposé par l'événement (paramétré dans le dashboard)
   const minSlotsRequired = getMinSlotsPerBooking(settings);
+  const hasTeamCategory = categories.some(category => getParticipantsPerSlot(category) > 1);
   const missingSlotsCount = Math.max(0, minSlotsRequired - selectedSlots.length);
 
   // 👥 Nombre de participants attendus pour une catégorie (2 pour un duo)
@@ -380,9 +381,12 @@ export function SlotBookingView({
               </Badge>
               {/* 👥 Catégorie en équipe : prévenir avant la sélection */}
               {getParticipantsPerSlot(category) > 1 && (
-                <Badge className="text-xs bg-blue-600 hover:bg-blue-700">
+                <Badge
+                  className="text-xs bg-blue-600 hover:bg-blue-700"
+                  title={`Catégorie en équipe : un seul créneau et un seul tarif pour ${getParticipantsPerSlot(category)} participants`}
+                >
                   <UserIcon className="w-3 h-3 mr-1" />
-                  {getParticipantsPerSlot(category)} participants
+                  En équipe · {getParticipantsPerSlot(category)} participants
                 </Badge>
               )}
             </CardFooter>
@@ -715,10 +719,18 @@ export function SlotBookingView({
           <SheetTitle>{activeCategory.name}</SheetTitle>
           <SheetDescription>
             Sélectionnez vos créneaux horaires pour cette catégorie.
+            {activeCategory && participantsRequiredFor(activeCategory.id) > 1 && (
+              <span className="block mt-1 font-semibold text-blue-700">
+                👥 Catégorie en équipe : un seul créneau et un seul tarif pour{' '}
+                {participantsRequiredFor(activeCategory.id)} participants. Vous renseignerez leurs
+                noms dans le panier.
+              </span>
+            )}
             {minSlotsRequired > 1 && missingSlotsCount > 0 && (
               <span className="block mt-1 font-semibold text-yellow-700">
-                🎟️ {minSlotsRequired} créneaux minimum : il vous en manque encore {missingSlotsCount}
-                {selectedSlots.length > 0 ? ' (choisissez une autre catégorie ensuite)' : ''}.
+                🎟️ {minSlotsRequired} catégories minimum : il vous en manque encore{' '}
+                {missingSlotsCount}
+                {selectedSlots.length > 0 ? ' — choisissez ensuite une autre catégorie' : ''}.
               </span>
             )}
           </SheetDescription>
@@ -843,7 +855,7 @@ export function SlotBookingView({
                   missingSlotsCount > 0 ? 'text-yellow-700' : 'text-green-700'
                 }`}
               >
-                🎟️ {minSlotsRequired} créneaux minimum —{' '}
+                🎟️ {minSlotsRequired} catégories minimum —{' '}
                 {missingSlotsCount > 0
                   ? `il vous en manque ${missingSlotsCount}`
                   : 'minimum atteint'}
@@ -881,7 +893,8 @@ export function SlotBookingView({
                       {/* 👥 Catégorie en duo : préciser le nombre de participants attendus */}
                       {requiredParticipants > 1 && (
                         <p className="text-xs text-blue-700 font-semibold mt-1">
-                          👥 Catégorie à {requiredParticipants} participants
+                          👥 Catégorie en équipe : {requiredParticipants} participants sur ce
+                          créneau, un seul tarif
                         </p>
                       )}
 
@@ -1212,15 +1225,23 @@ export function SlotBookingView({
           }`}
         >
           <p className="font-bold">
-            🎟️ Compétition : {minSlotsRequired} créneaux minimum
+            🎟️ Inscription : {minSlotsRequired} catégories minimum
           </p>
           <p className="text-sm">
             {selectedSlots.length === 0
-              ? `Un concurrent doit s'inscrire dans au moins ${minSlotsRequired} catégories différentes pour valider son inscription.`
+              ? `Vous devez vous inscrire dans au moins ${minSlotsRequired} catégories différentes. Une catégorie = un créneau = un passage.`
               : missingSlotsCount > 0
-                ? `${selectedSlots.length} créneau(x) sélectionné(s) — il vous en manque encore ${missingSlotsCount} pour pouvoir payer.`
-                : `${selectedSlots.length} créneaux sélectionnés : vous pouvez procéder au paiement.`}
+                ? `${selectedSlots.length} catégorie(s) sélectionnée(s) — il vous en manque encore ${missingSlotsCount} pour pouvoir payer.`
+                : `${selectedSlots.length} catégories sélectionnées : vous pouvez procéder au paiement.`}
           </p>
+          {/* 👥 Lever la confusion : une catégorie en équipe reste UNE catégorie */}
+          {hasTeamCategory && (
+            <p className="text-sm mt-2">
+              👥 Les catégories en équipe (badge « 2 participants ») comptent pour{' '}
+              <strong>une seule catégorie</strong> : un seul créneau, un seul tarif, et vous y
+              inscrivez simplement 2 personnes.
+            </p>
+          )}
           {/* 🍽️ Le minimum ne concerne QUE les catégories : les repas s'achètent seuls */}
           {(settings.mealPrice || 0) > 0 && (
             <p className="text-sm mt-2 pt-2 border-t border-current/20">

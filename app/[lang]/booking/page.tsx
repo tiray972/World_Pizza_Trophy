@@ -61,6 +61,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
             registrationDeadline: (data.registrationDeadline as Timestamp).toDate(),
             status: data.status,
             mealPrice: data.mealPrice || 0, // 🍽️ Ajouter le prix du repas
+            minSlotsPerBooking: data.minSlotsPerBooking, // 🎟️ Minimum de catégories
           } as WPTEvent;
         });
 

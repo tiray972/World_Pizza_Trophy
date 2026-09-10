@@ -74,7 +74,7 @@ export function validateBookingSelection(input: BookingRulesInput): string[] {
   // 1️⃣ Minimum de créneaux (ignoré si le panier ne contient que des repas)
   if (slots.length > 0 && slots.length < minSlots) {
     errors.push(
-      `Vous devez réserver au moins ${minSlots} créneaux (${minSlots} catégories) pour valider votre inscription.`
+      `Vous devez vous inscrire dans au moins ${minSlots} catégories différentes pour valider votre inscription (une catégorie = un créneau).`
     );
   }
 
