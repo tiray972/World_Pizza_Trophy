@@ -13,6 +13,7 @@ import { ParticipantSelector } from './ParticipantSelector';
 import {
   getMinSlotsPerBooking,
   getParticipantsPerSlot,
+  minSlotsErrorMessage,
   validateBookingSelection,
 } from '@/lib/booking/rules';
 
@@ -842,6 +843,11 @@ export function SlotBookingView({
     const totalPrice = slotTotal + mealCost;
     // Le minimum de créneaux ne s'applique pas à un panier « repas uniquement ».
     const cartErrors = selectionErrors(selectedSlots, true);
+    // Le minimum a droit à son propre encart, avec le bouton pour y remédier.
+    const otherCartErrors = cartErrors.filter(
+      message => message !== minSlotsErrorMessage(minSlotsRequired)
+    );
+    const missingCategories = selectedSlots.length > 0 ? missingSlotsCount : 0;
 
     return (
       <SheetContent side="right" className="sm:max-w-lg flex flex-col">
@@ -1141,10 +1147,39 @@ export function SlotBookingView({
             </div>
           )}
 
-          {/* ⚠️ Règles bloquantes : participants, minimum de créneaux, doublons */}
-          {cartErrors.length > 0 && (
+          {/* 🎟️ Minimum non atteint : on explique et on propose l'action */}
+          {missingCategories > 0 && (
+            <div className="p-3 bg-yellow-50 border border-yellow-300 rounded-lg mb-3 space-y-2">
+              <p className="text-sm font-bold text-yellow-900">
+                🎟️ Il vous manque {missingCategories} catégorie
+                {missingCategories > 1 ? 's' : ''} pour pouvoir payer
+              </p>
+              <p className="text-xs text-yellow-800">
+                L'inscription se fait dans {minSlotsRequired} catégories différentes minimum.
+                {selectedSlots.some(slot => participantsRequiredFor(slot.categoryId) > 1)
+                  ? " Une catégorie en équipe compte pour une seule catégorie, même avec 2 participants."
+                  : ''}
+              </p>
+              <p className="text-xs text-yellow-700">
+                💡 Vous pouvez aussi inscrire une autre personne sur un créneau supplémentaire :
+                chaque passage compte.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full bg-white"
+                onClick={() => setIsCartSheetOpen(false)}
+              >
+                Choisir une autre catégorie
+              </Button>
+            </div>
+          )}
+
+          {/* ⚠️ Autres règles bloquantes : participants manquants, doublons */}
+          {otherCartErrors.length > 0 && (
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-3 space-y-1">
-              {cartErrors.map((message, index) => (
+              {otherCartErrors.map((message, index) => (
                 <p key={index} className="text-xs text-yellow-700 font-semibold">⚠️ {message}</p>
               ))}
             </div>
@@ -1234,6 +1269,15 @@ export function SlotBookingView({
                 ? `${selectedSlots.length} catégorie(s) sélectionnée(s) — il vous en manque encore ${missingSlotsCount} pour pouvoir payer.`
                 : `${selectedSlots.length} catégories sélectionnées : vous pouvez procéder au paiement.`}
           </p>
+          {/* 💡 Deux personnes différentes sur une même catégorie : c'est permis */}
+          {selectedSlots.length > 0 && missingSlotsCount > 0 && (
+            <p className="text-sm mt-2">
+              💡 Une même personne ne peut pas concourir deux fois dans la même catégorie, mais vous
+              pouvez inscrire <strong>une autre personne</strong> sur un créneau supplémentaire :
+              chaque passage compte.
+            </p>
+          )}
+
           {/* 👥 Lever la confusion : une catégorie en équipe reste UNE catégorie */}
           {hasTeamCategory && (
             <p className="text-sm mt-2">

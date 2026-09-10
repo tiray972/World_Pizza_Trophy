@@ -45,6 +45,11 @@ export function isParticipantComplete(participant?: Partial<Participant> | null)
   return !!participant?.firstName?.trim() && !!participant?.lastName?.trim() && !!participant?.shirtSize;
 }
 
+/** Message unique du minimum de catégories (réutilisé pour le filtrer côté panier). */
+export function minSlotsErrorMessage(minSlots: number): string {
+  return `Vous devez vous inscrire dans au moins ${minSlots} catégories différentes pour valider votre inscription (une catégorie = un créneau).`;
+}
+
 export interface BookingSelectionSlot {
   slotId: string;
   categoryId: string;
@@ -73,9 +78,7 @@ export function validateBookingSelection(input: BookingRulesInput): string[] {
 
   // 1️⃣ Minimum de créneaux (ignoré si le panier ne contient que des repas)
   if (slots.length > 0 && slots.length < minSlots) {
-    errors.push(
-      `Vous devez vous inscrire dans au moins ${minSlots} catégories différentes pour valider votre inscription (une catégorie = un créneau).`
-    );
+    errors.push(minSlotsErrorMessage(minSlots));
   }
 
   // 2️⃣ Participants complets et en nombre suffisant
