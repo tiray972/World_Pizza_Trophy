@@ -205,6 +205,65 @@ function generateParticipantList(slots: Slot[], categories: Category[], users: U
   return buildCsv(headers, rows);
 }
 
+/** 3bis. GRILLE DES JURYS — quelles catégories tournent quel jour, et à quelles heures */
+export interface CategoryDayCell {
+  slotCount: number;
+  bookedCount: number;
+  firstStart: Date;
+  lastEnd: Date;
+}
+
+export function buildCategorySchedule(slots: Slot[], categories: Category[]) {
+  const dates = Array.from(new Set(slots.map(slot => slot.date))).sort();
+  const grid = new Map<string, Map<string, CategoryDayCell>>();
+
+  for (const slot of slots) {
+    const byDate = grid.get(slot.categoryId) ?? new Map<string, CategoryDayCell>();
+    const cell = byDate.get(slot.date);
+
+    if (!cell) {
+      byDate.set(slot.date, {
+        slotCount: 1,
+        bookedCount: slot.status === "paid" || slot.status === "offered" ? 1 : 0,
+        firstStart: slot.startTime,
+        lastEnd: slot.endTime,
+      });
+    } else {
+      cell.slotCount += 1;
+      if (slot.status === "paid" || slot.status === "offered") cell.bookedCount += 1;
+      if (slot.startTime < cell.firstStart) cell.firstStart = slot.startTime;
+      if (slot.endTime > cell.lastEnd) cell.lastEnd = slot.endTime;
+    }
+    grid.set(slot.categoryId, byDate);
+  }
+
+  // Les catégories sans créneau restent visibles : c'est une information utile.
+  const rows = categories
+    .filter(category => grid.has(category.id) || true)
+    .map(category => ({ category, byDate: grid.get(category.id) ?? new Map<string, CategoryDayCell>() }));
+
+  return { dates, rows };
+}
+
+function generateCategorySchedule(slots: Slot[], categories: Category[]): string {
+  const { dates, rows } = buildCategorySchedule(slots, categories);
+
+  const headers = ["Catégorie", ...dates.flatMap(date => [`${date} — horaires`, `${date} — créneaux`]), "Jours", "Total créneaux"];
+  const csvRows = rows.map(({ category, byDate }) => {
+    const cells = dates.flatMap(date => {
+      const cell = byDate.get(date);
+      return cell
+        ? [`${formatTime(cell.firstStart)}-${formatTime(cell.lastEnd)}`, `${cell.bookedCount}/${cell.slotCount}`]
+        : ["", ""];
+    });
+    const activeDays = dates.filter(date => byDate.has(date)).length;
+    const totalSlots = Array.from(byDate.values()).reduce((sum, cell) => sum + cell.slotCount, 0);
+    return [category.name, ...cells, activeDays, totalSlots];
+  });
+
+  return buildCsv(headers, csvRows);
+}
+
 /** 4. FINANCIAL DETAIL — All paid/offered slots with amounts */
 function generateFinancialDetail(slots: Slot[], payments: Payment[], users: User[]): string {
   const headers = ["Date", "Slot Date", "Slot Time", "Category", "Status", "Participant", "T-Shirt Size", "Buyer", "Buyer Email", "Amount (€)", "Payment Method", "Stripe Session", "Recorded At"];
@@ -423,6 +482,19 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
   const totalRevenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
   const registeredUsers = users.filter(u => u.registrations[eventId]).length;
 
+  // 🗓️ Grille catégories × jours, affichée directement à l'écran
+  const categorySchedule = useMemo(
+    () => buildCategorySchedule(slots, categories),
+    [slots, categories]
+  );
+
+  const formatDayLabel = (date: string) =>
+    new Date(`${date}T00:00:00`).toLocaleDateString("fr-FR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+
   const EXPORT_CARDS: ExportCard[] = [
     {
       id: "running_order",
@@ -441,6 +513,15 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
       color: "purple",
       filename: `WPT_${eventYear}_By_Category.csv`,
       generate: () => generateByCategory(slots, categories, users),
+    },
+    {
+      id: "category_schedule",
+      title: "Grille des jurys (catégories × jours)",
+      description: "Quelle catégorie tourne quel jour et sur quelle plage horaire — pour affecter les jurés.",
+      icon: <Calendar className="h-5 w-5" />,
+      color: "purple",
+      filename: `WPT_${eventYear}_Grille_Jurys.csv`,
+      generate: () => generateCategorySchedule(slots, categories),
     },
     {
       id: "participants",
@@ -550,6 +631,83 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
             <div className="text-xs text-muted-foreground mt-1">Revenus enregistrés</div>
           </div>
         </div>
+      )}
+
+      {/* ── 🗓️ GRILLE DES JURYS ── */}
+      {categorySchedule.dates.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Grille des jurys — catégories par jour
+            </CardTitle>
+            <CardDescription>
+              Quelle catégorie se dispute quel jour, sur quelle plage horaire, et combien de
+              créneaux sont déjà pris. Les catégories en équipe sont signalées.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="border rounded-md overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr>
+                    <th className="bg-gray-100 dark:bg-zinc-800 border px-3 py-2 text-left text-xs font-semibold text-muted-foreground">
+                      Catégorie
+                    </th>
+                    {categorySchedule.dates.map(date => (
+                      <th
+                        key={date}
+                        className="bg-gray-100 dark:bg-zinc-800 border px-3 py-2 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap capitalize"
+                      >
+                        {formatDayLabel(date)}
+                      </th>
+                    ))}
+                    <th className="bg-gray-100 dark:bg-zinc-800 border px-3 py-2 text-left text-xs font-semibold text-muted-foreground">
+                      Jours
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {categorySchedule.rows.map(({ category, byDate }) => {
+                    const activeDays = categorySchedule.dates.filter(date => byDate.has(date)).length;
+                    return (
+                      <tr key={category.id} className="border-b hover:bg-muted/30">
+                        <td className="border-r px-3 py-2 font-medium whitespace-nowrap">
+                          {category.name}
+                          {(category.participantsPerSlot || 1) > 1 && (
+                            <span className="ml-2 text-xs text-blue-600 dark:text-blue-400">
+                              👥 {category.participantsPerSlot}
+                            </span>
+                          )}
+                        </td>
+                        {categorySchedule.dates.map(date => {
+                          const cell = byDate.get(date);
+                          return (
+                            <td key={date} className="border-r px-3 py-2 whitespace-nowrap">
+                              {cell ? (
+                                <div>
+                                  <span className="font-mono text-xs">
+                                    {formatTime(cell.firstStart)} – {formatTime(cell.lastEnd)}
+                                  </span>
+                                  <span className="block text-xs text-muted-foreground">
+                                    {cell.bookedCount}/{cell.slotCount} créneaux pris
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="px-3 py-2 text-center font-semibold">{activeDays}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* ── CSV EXPORTS ── */}
