@@ -26,10 +26,17 @@ export function getParticipantsPerSlot(
   return Math.min(Math.floor(value), PARTICIPANTS_PER_SLOT_MAX);
 }
 
-/** Liste des participants d'un créneau, quel que soit le format stocké. */
+/**
+ * Liste des participants d'un créneau, quel que soit le format stocké.
+ *
+ * ⚠️ Un créneau redevenu disponible n'a, par définition, aucun participant :
+ * on ignore les données résiduelles d'une réservation abandonnée pour ne
+ * jamais afficher le nom d'un candidat sur un créneau libre.
+ */
 export function getSlotParticipants(
-  slot: Pick<Slot, "participant" | "participants">
+  slot: Pick<Slot, "participant" | "participants"> & { status?: string }
 ): Participant[] {
+  if (slot.status === "available") return [];
   if (Array.isArray(slot.participants) && slot.participants.length > 0) {
     return slot.participants;
   }

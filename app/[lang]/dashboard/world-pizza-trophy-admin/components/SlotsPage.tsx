@@ -320,7 +320,8 @@ export function SlotsPage({
             ) : (
               currentSlots.map((slot) => {
                 const assignedUser = users.find(u => u.id === slot.buyerId);
-                const hasParticipant = !!slot.participant;
+                // 👥 Un créneau disponible n'affiche jamais de participant résiduel
+                const hasParticipant = getSlotParticipants(slot).length > 0;
 
                 return (
                   <div
