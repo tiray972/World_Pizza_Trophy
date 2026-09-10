@@ -55,6 +55,16 @@ export interface BookingSelectionSlot {
   categoryId: string;
   categoryName?: string;
   participants: (Participant | undefined)[];
+  /** Horaires du créneau : servent à détecter deux passages simultanés. */
+  startTime?: Date | string | null;
+  endTime?: Date | string | null;
+}
+
+function toTime(value?: Date | string | null): number | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  const time = date.getTime();
+  return Number.isFinite(time) ? time : null;
 }
 
 export interface BookingRulesInput {
@@ -116,6 +126,36 @@ export function validateBookingSelection(input: BookingRulesInput): string[] {
       seen.add(key);
     }
     seenByCategory.set(slot.categoryId, seen);
+  }
+
+  // 4️⃣ Une même personne ne peut pas passer sur deux créneaux en même temps
+  for (let i = 0; i < slots.length; i++) {
+    for (let j = i + 1; j < slots.length; j++) {
+      const first = slots[i];
+      const second = slots[j];
+
+      const firstStart = toTime(first.startTime);
+      const firstEnd = toTime(first.endTime) ?? firstStart;
+      const secondStart = toTime(second.startTime);
+      const secondEnd = toTime(second.endTime) ?? secondStart;
+      if (firstStart === null || secondStart === null) continue;
+
+      const overlap = firstStart < (secondEnd ?? secondStart) && secondStart < (firstEnd ?? firstStart);
+      if (!overlap) continue;
+
+      const firstKeys = new Set(
+        first.participants.filter(isParticipantComplete).map(participant => participantKey(participant!))
+      );
+      const shared = second.participants
+        .filter(isParticipantComplete)
+        .filter(participant => firstKeys.has(participantKey(participant!)));
+
+      for (const participant of shared) {
+        errors.push(
+          `${participant!.firstName} ${participant!.lastName} est inscrit(e) sur deux créneaux à la même heure (${nameOf(first.categoryId)} et ${nameOf(second.categoryId)}) : choisissez un autre horaire.`
+        );
+      }
+    }
   }
 
   return Array.from(new Set(errors));

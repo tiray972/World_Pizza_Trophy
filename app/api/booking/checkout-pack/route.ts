@@ -119,6 +119,8 @@ export async function POST(req: NextRequest) {
                 slotId: slot.ref.id,
                 categoryId: slot.categoryId,
                 participants: slot.participants,
+                startTime: slot.data.startTime?.toDate?.() ?? slot.data.startTime,
+                endTime: slot.data.endTime?.toDate?.() ?? slot.data.endTime,
             })),
             participantsPerCategory,
             categoryNames,

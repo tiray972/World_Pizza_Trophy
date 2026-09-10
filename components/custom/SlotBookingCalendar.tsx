@@ -22,6 +22,7 @@ interface SelectedSlot {
   categoryId: string;
   categoryName: string;
   startTime: Date;
+  endTime?: Date;
   date: string;
   participant?: Participant; // 👈 1er participant (rétrocompatibilité)
   participants?: (Participant | undefined)[]; // 👥 Tous les participants du créneau (duo = 2)
@@ -67,6 +68,15 @@ const formatDateISO = (date: Date): string => {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+/** Convertit une valeur Firestore (Timestamp, Date ou chaîne) en Date. */
+const toDateValue = (value: unknown): Date => {
+  if (value instanceof Date) return value;
+  if (value && typeof value === 'object' && 'toDate' in value) {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  return new Date(value as string);
 };
 
 const getCategoryName = (categoryId: string, categories: Category[]): string =>
@@ -157,6 +167,8 @@ export function SlotBookingView({
         slotId: slot.slotId,
         categoryId: slot.categoryId,
         participants: participantsOf(slot),
+        startTime: slot.startTime,
+        endTime: slot.endTime,
       })),
       participantsPerCategory: Object.fromEntries(
         categories.map(category => [category.id, getParticipantsPerSlot(category)])
@@ -298,6 +310,7 @@ export function SlotBookingView({
         categoryId: slot.categoryId,
         categoryName: getCategoryName(slot.categoryId, categories),
         startTime,
+        endTime: toDateValue(slot.endTime),
         date: slot.date,
       };
       setSelectedSlots([...selectedSlots, newSlot]);
@@ -328,6 +341,7 @@ export function SlotBookingView({
           categoryId: slot.categoryId,
           categoryName: getCategoryName(slot.categoryId, categories),
           startTime,
+          endTime: toDateValue(slot.endTime),
           date: slot.date,
         };
         setSelectedPackSlots([...selectedPackSlots, newSlot]);
