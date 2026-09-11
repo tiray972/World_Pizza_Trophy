@@ -153,7 +153,13 @@
           "Trama croccante all'esterno, soffice all'interno",
           "Condimenti equilibrati e armoniosi",
           "Scioglimento perfetto del formaggio"
-        ]
+        ],
+        "specs": {
+          "duration": "12 min",
+          "durationMinutes": 12,
+          "format": "Tonda",
+          "oven": "Forno elettrico"
+        }
       },
       "calzone": {
         "name": "Calzone",
@@ -163,7 +169,13 @@
           "Sigillo ermetico",
           "Cottura omogenea",
           "Ripieno ben distribuito"
-        ]
+        ],
+        "specs": {
+          "duration": "15 min",
+          "durationMinutes": 15,
+          "format": "Mezzaluna",
+          "oven": "Forno elettrico"
+        }
       },
       "napolitaine": {
         "name": "Napoletana",
@@ -174,7 +186,13 @@
           "Pomodori San Marzano",
           "Mozzarella di bufala",
           "Cottura in forno a legna (minimo 900°C)"
-        ]
+        ],
+        "specs": {
+          "duration": "8 min",
+          "durationMinutes": 8,
+          "format": "Tonda",
+          "oven": "Forno elettrico"
+        }
       },
       "dessert": {
         "name": "Pizza Dolce",
@@ -184,7 +202,13 @@
           "Presentazione attraente",
           "Equilibrio dei sapori dolci",
           "Tecnica di cottura padroneggiata"
-        ]
+        ],
+        "specs": {
+          "duration": "15 min",
+          "durationMinutes": 15,
+          "format": "Tonda",
+          "oven": "Forno elettrico"
+        }
       },
       "pala": {
         "name": "Pala",
@@ -194,7 +218,13 @@
           "Spessore regolare",
           "Condimenti generosi",
           "Cottura omogenea"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "≈ 60 × 30 cm",
+          "oven": "Forno elettrico"
+        }
       },
       "focaccia": {
         "name": "Focaccia",
@@ -204,7 +234,13 @@
           "Ben aerata e soffice",
           "Condimento generoso",
           "Condimento equilibrato"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "Libera (al padellino)",
+          "oven": "Forno elettrico"
+        }
       },
       "teglia": {
         "name": "Teglia",
@@ -214,7 +250,13 @@
           "Spessore regolare",
           "Condimenti ben distribuiti",
           "Taglio netto e regolare"
-        ]
+        ],
+        "specs": {
+          "duration": "25 min",
+          "durationMinutes": 25,
+          "format": "60 × 40 cm",
+          "oven": "Forno elettrico"
+        }
       },
       "doue": {
         "name": "Pizza Dué - Trofeo Chef Ziolo",
@@ -224,7 +266,13 @@
           "Preparazione e cottura simultanea",
           "Tecnica e organizzazione",
           "Originalità delle preparazioni"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "Tonda — squadra di 2",
+          "oven": "Forno elettrico"
+        }
       },
       "pasta": {
         "name": "Pasta",
@@ -234,7 +282,13 @@
           "Qualità degli ingredienti",
           "Cottura perfetta",
           "Presentazione elegante"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "Pasta libera — 3 piatti identici",
+          "oven": "—"
+        }
       },
       "freestyle": {
         "name": "Freestyle",
@@ -244,7 +298,13 @@
           "Creatività e originalità prioritarie",
           "Tecnica ed esecuzione",
           "Presentazione innovativa"
-        ]
+        ],
+        "specs": {
+          "duration": "A tempo",
+          "durationMinutes": null,
+          "format": "Stile libero (senza silicone)",
+          "oven": "—"
+        }
       },
       "rapidite": {
         "name": "Rapidità",
@@ -254,7 +314,13 @@
           "Qualità del prodotto finale",
           "Organizzazione dello spazio",
           "Rispetto delle norme igieniche sotto pressione"
-        ]
+        ],
+        "specs": {
+          "duration": "A tempo",
+          "durationMinutes": null,
+          "format": "Stendere 5 panetti su 5 dischi da 33 cm",
+          "oven": "—"
+        }
       },
       "large": {
         "name": "Large",
@@ -264,8 +330,26 @@
           "Cottura omogenea",
           "Condimenti generosi ed equilibrati",
           "Presentazione spettacolare"
-        ]
+        ],
+        "specs": {
+          "duration": "15 min",
+          "durationMinutes": 15,
+          "format": "Impasto personale del concorrente",
+          "oven": "—"
+        }
       }
+    },
+    "specsTable": {
+      "title": "Tempo di prestazione e giorni di gara",
+      "subtitle": "Durate ufficiali da rispettare, formato imposto e giorni di gara di ogni categoria.",
+      "category": "Categoria",
+      "duration": "Tempo di prestazione",
+      "format": "Formato imposto",
+      "oven": "Cottura",
+      "days": "Giorni di gara",
+      "price": "Tariffa",
+      "notSpecified": "Da confermare",
+      "teamNote": "Categoria a squadre: 2 partecipanti."
     }
   },
   "header": {

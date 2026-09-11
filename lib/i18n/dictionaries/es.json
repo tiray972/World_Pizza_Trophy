@@ -153,7 +153,13 @@
           "Textura crujiente exterior, suave interior",
           "Coberturas equilibradas y armoniosas",
           "Derretimiento perfecto del queso"
-        ]
+        ],
+        "specs": {
+          "duration": "12 min",
+          "durationMinutes": 12,
+          "format": "Redonda",
+          "oven": "Horno eléctrico"
+        }
       },
       "calzone": {
         "name": "Calzone",
@@ -163,7 +169,13 @@
           "Sello hermético",
           "Horneado homogéneo",
           "Relleno bien distribuido"
-        ]
+        ],
+        "specs": {
+          "duration": "15 min",
+          "durationMinutes": 15,
+          "format": "Media luna",
+          "oven": "Horno eléctrico"
+        }
       },
       "napolitaine": {
         "name": "Napolitana",
@@ -174,7 +186,13 @@
           "Tomates San Marzano",
           "Mozzarella di bufala",
           "Horneado en horno de leña (mínimo 900°C)"
-        ]
+        ],
+        "specs": {
+          "duration": "8 min",
+          "durationMinutes": 8,
+          "format": "Redonda",
+          "oven": "Horno eléctrico"
+        }
       },
       "dessert": {
         "name": "Pizza Postre",
@@ -184,7 +202,13 @@
           "Presentación atractiva",
           "Balance de sabores dulces",
           "Técnica de horneado dominada"
-        ]
+        ],
+        "specs": {
+          "duration": "15 min",
+          "durationMinutes": 15,
+          "format": "Redonda",
+          "oven": "Horno eléctrico"
+        }
       },
       "pala": {
         "name": "Pala",
@@ -194,7 +218,13 @@
           "Espesor regular",
           "Coberturas generosas",
           "Horneado homogéneo"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "≈ 60 × 30 cm",
+          "oven": "Horno eléctrico"
+        }
       },
       "focaccia": {
         "name": "Focaccia",
@@ -204,7 +234,13 @@
           "Bien aireada y esponjosa",
           "Cobertura generosa",
           "Condimento equilibrado"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "Libre (al padellino)",
+          "oven": "Horno eléctrico"
+        }
       },
       "teglia": {
         "name": "Teglia",
@@ -214,7 +250,13 @@
           "Espesor regular",
           "Coberturas bien distribuidas",
           "Corte limpio y regular"
-        ]
+        ],
+        "specs": {
+          "duration": "25 min",
+          "durationMinutes": 25,
+          "format": "60 × 40 cm",
+          "oven": "Horno eléctrico"
+        }
       },
       "doue": {
         "name": "Pizza Dué - Trofeo Chef Ziolo",
@@ -224,7 +266,13 @@
           "Preparación y horneado simultáneo",
           "Técnica y organización",
           "Originalidad de preparaciones"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "Redonda — equipo de 2",
+          "oven": "Horno eléctrico"
+        }
       },
       "pasta": {
         "name": "Pasta",
@@ -234,7 +282,13 @@
           "Calidad de ingredientes",
           "Cocción perfecta",
           "Presentación elegante"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "Masa libre — 3 platos idénticos",
+          "oven": "—"
+        }
       },
       "freestyle": {
         "name": "Freestyle",
@@ -244,7 +298,13 @@
           "Creatividad e originalidad primordiales",
           "Técnica y ejecución",
           "Presentación innovadora"
-        ]
+        ],
+        "specs": {
+          "duration": "Cronometrado",
+          "durationMinutes": null,
+          "format": "Estilo libre (sin silicona)",
+          "oven": "—"
+        }
       },
       "rapidite": {
         "name": "Rapidez",
@@ -254,7 +314,13 @@
           "Calidad del producto final",
           "Organización del espacio",
           "Respeto de reglas de higiene bajo presión"
-        ]
+        ],
+        "specs": {
+          "duration": "Cronometrado",
+          "durationMinutes": null,
+          "format": "Estirar 5 bolas sobre 5 discos de 33 cm",
+          "oven": "—"
+        }
       },
       "large": {
         "name": "Grande",
@@ -264,8 +330,26 @@
           "Horneado homogéneo",
           "Coberturas generosas y equilibradas",
           "Presentación espectacular"
-        ]
+        ],
+        "specs": {
+          "duration": "15 min",
+          "durationMinutes": 15,
+          "format": "Masa propia del concursante",
+          "oven": "—"
+        }
       }
+    },
+    "specsTable": {
+      "title": "Tiempo de prestación y días de paso",
+      "subtitle": "Duraciones oficiales, formato exigido y días de paso de cada categoría.",
+      "category": "Categoría",
+      "duration": "Tiempo de prestación",
+      "format": "Formato exigido",
+      "oven": "Cocción",
+      "days": "Días de paso",
+      "price": "Tarifa",
+      "notSpecified": "Por confirmar",
+      "teamNote": "Categoría en equipo: 2 participantes."
     }
   },
   "header": {

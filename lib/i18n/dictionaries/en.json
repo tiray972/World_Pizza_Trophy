@@ -153,7 +153,13 @@
           "Crispy exterior, soft interior texture",
           "Balanced and harmonious toppings",
           "Perfect cheese melting"
-        ]
+        ],
+        "specs": {
+          "duration": "12 min",
+          "durationMinutes": 12,
+          "format": "Round",
+          "oven": "Electric oven"
+        }
       },
       "calzone": {
         "name": "Calzone",
@@ -163,7 +169,13 @@
           "Hermetic seal",
           "Homogeneous baking",
           "Well-distributed filling"
-        ]
+        ],
+        "specs": {
+          "duration": "15 min",
+          "durationMinutes": 15,
+          "format": "Half-moon",
+          "oven": "Electric oven"
+        }
       },
       "napolitaine": {
         "name": "Neapolitan",
@@ -174,7 +186,13 @@
           "San Marzano tomatoes",
           "Buffalo mozzarella",
           "Wood-fired oven baking (900°C minimum)"
-        ]
+        ],
+        "specs": {
+          "duration": "8 min",
+          "durationMinutes": 8,
+          "format": "Round",
+          "oven": "Electric oven"
+        }
       },
       "dessert": {
         "name": "Dessert Pizza",
@@ -184,7 +202,13 @@
           "Attractive presentation",
           "Balance of sweet flavors",
           "Mastered baking technique"
-        ]
+        ],
+        "specs": {
+          "duration": "15 min",
+          "durationMinutes": 15,
+          "format": "Round",
+          "oven": "Electric oven"
+        }
       },
       "pala": {
         "name": "Pala",
@@ -194,7 +218,13 @@
           "Regular thickness",
           "Generous toppings",
           "Homogeneous baking"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "≈ 60 × 30 cm",
+          "oven": "Electric oven"
+        }
       },
       "focaccia": {
         "name": "Focaccia",
@@ -204,7 +234,13 @@
           "Well-aerated and fluffy",
           "Generous topping",
           "Balanced seasoning"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "Free (al padellino)",
+          "oven": "Electric oven"
+        }
       },
       "teglia": {
         "name": "Teglia",
@@ -214,7 +250,13 @@
           "Regular thickness",
           "Well-distributed toppings",
           "Clean and regular cutting"
-        ]
+        ],
+        "specs": {
+          "duration": "25 min",
+          "durationMinutes": 25,
+          "format": "60 × 40 cm",
+          "oven": "Electric oven"
+        }
       },
       "doue": {
         "name": "Pizza Dué - Chef Ziolo Trophy",
@@ -224,7 +266,13 @@
           "Simultaneous preparation and baking",
           "Technique and organization",
           "Originality of preparations"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "Round — team of 2",
+          "oven": "Electric oven"
+        }
       },
       "pasta": {
         "name": "Pasta",
@@ -234,7 +282,13 @@
           "Quality of ingredients",
           "Perfect cooking",
           "Elegant presentation"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "Free dough — 3 identical plates",
+          "oven": "—"
+        }
       },
       "freestyle": {
         "name": "Freestyle",
@@ -244,7 +298,13 @@
           "Creativity and originality paramount",
           "Technique and execution",
           "Innovative presentation"
-        ]
+        ],
+        "specs": {
+          "duration": "Timed",
+          "durationMinutes": null,
+          "format": "Free style (no silicone)",
+          "oven": "—"
+        }
       },
       "rapidite": {
         "name": "Speed",
@@ -254,7 +314,13 @@
           "Quality of final product",
           "Space organization",
           "Respect for hygiene rules under pressure"
-        ]
+        ],
+        "specs": {
+          "duration": "Timed",
+          "durationMinutes": null,
+          "format": "Stretch 5 dough balls onto 5 discs of 33 cm",
+          "oven": "—"
+        }
       },
       "large": {
         "name": "Large",
@@ -264,8 +330,26 @@
           "Homogeneous baking",
           "Generous and balanced toppings",
           "Spectacular presentation"
-        ]
+        ],
+        "specs": {
+          "duration": "15 min",
+          "durationMinutes": 15,
+          "format": "Competitor's own dough",
+          "oven": "—"
+        }
       }
+    },
+    "specsTable": {
+      "title": "Performance time and competition days",
+      "subtitle": "Official time limits, required format and competition days for each category.",
+      "category": "Category",
+      "duration": "Performance time",
+      "format": "Required format",
+      "oven": "Baking",
+      "days": "Competition days",
+      "price": "Price",
+      "notSpecified": "To be confirmed",
+      "teamNote": "Team category: 2 competitors."
     }
   },
   "header": {

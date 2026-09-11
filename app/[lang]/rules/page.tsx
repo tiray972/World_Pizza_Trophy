@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
 
 type SupportedLang = "fr" | "en" | "es" | "it";
 
@@ -15,6 +17,65 @@ export default function RulesPage({ params }: Props) {
   const [dictionary, setDictionary] = useState<any>(null);
   const [lang, setLang] = useState<SupportedLang>("fr");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  // 📅 Jours de passage et tarifs réels, lus depuis l'événement ouvert
+  const [liveCategories, setLiveCategories] = useState<
+    { name: string; dates: string[]; unitPrice: number }[]
+  >([]);
+
+  useEffect(() => {
+    const loadLiveSchedule = async () => {
+      try {
+        const eventsSnapshot = await getDocs(
+          query(collection(db, "events"), where("status", "==", "open"))
+        );
+        if (eventsSnapshot.empty) return;
+
+        // Événement le plus proche dans le temps
+        const events = eventsSnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            start:
+              doc.data().eventStartDate instanceof Timestamp
+                ? (doc.data().eventStartDate as Timestamp).toDate()
+                : new Date(doc.data().eventStartDate),
+          }))
+          .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+        const categoriesSnapshot = await getDocs(
+          query(collection(db, "categories"), where("eventId", "==", events[0].id))
+        );
+        const slotsSnapshot = await getDocs(
+          query(collection(db, "slots"), where("eventId", "==", events[0].id))
+        );
+
+        const datesByCategory = new Map<string, Set<string>>();
+        slotsSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          const dates = datesByCategory.get(data.categoryId) ?? new Set<string>();
+          if (data.date) dates.add(data.date);
+          datesByCategory.set(data.categoryId, dates);
+        });
+
+        setLiveCategories(
+          categoriesSnapshot.docs.map(doc => {
+            const data = doc.data();
+            const fromSlots = Array.from(datesByCategory.get(doc.id) ?? []);
+            const dates = fromSlots.length > 0 ? fromSlots : (data.activeDates || []);
+            return {
+              name: data.name || "",
+              dates: [...dates].sort(),
+              unitPrice: Number(data.unitPrice || 0),
+            };
+          })
+        );
+      } catch (error) {
+        // Page publique : sans accès aux données, on affiche le règlement sans les dates.
+        console.warn("Planning indisponible:", error);
+      }
+    };
+
+    loadLiveSchedule();
+  }, []);
 
   useEffect(() => {
     params.then(({ lang: rawLang }) => {
@@ -56,6 +117,40 @@ export default function RulesPage({ params }: Props) {
     { id: "large", name: categoryRules.large.name },
   ];
 
+  // Rapprochement entre les catégories du règlement et celles de la base
+  const CATEGORY_MATCHERS: Record<string, string[]> = {
+    classique: ["classique", "classica", "classic"],
+    calzone: ["calzone"],
+    napolitaine: ["napolit", "napolet"],
+    dessert: ["dessert", "dolce"],
+    focaccia: ["focaccia"],
+    pala: ["pala"],
+    teglia: ["teglia"],
+    doue: ["due", "duè", "doue", "doué", "ziolo"],
+    pasta: ["pasta"],
+    freestyle: ["freestyle", "free style"],
+    rapidite: ["rapid", "veloce"],
+    large: ["large", "xxl"],
+  };
+
+  const normalize = (value: string) =>
+    value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const liveDataFor = (slug: string) => {
+    const fragments = CATEGORY_MATCHERS[slug] || [slug];
+    return liveCategories.find(category =>
+      fragments.some(fragment => normalize(category.name).includes(normalize(fragment)))
+    );
+  };
+
+  const formatDay = (date: string) =>
+    new Date(`${date}T00:00:00`).toLocaleDateString(
+      lang === "en" ? "en-GB" : lang === "es" ? "es-ES" : lang === "it" ? "it-IT" : "fr-FR",
+      { day: "numeric", month: "long" }
+    );
+
+  const specsLabels = rulesDetail.specsTable;
+
   const selectedCategoryData = selectedCategory
     ? categoryRules[selectedCategory as keyof typeof categoryRules]
     : null;
@@ -74,6 +169,61 @@ export default function RulesPage({ params }: Props) {
             {rules.subtitle}
           </p>
         </header>
+
+        {/* ⏱️ Temps de prestation et jours de passage */}
+        <section className="mb-16 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="p-6 md:p-8 border-b border-gray-100">
+            <h2 className="text-2xl md:text-3xl font-bold text-[#8B0000]">
+              ⏱️ {specsLabels.title}
+            </h2>
+            <p className="text-gray-600 mt-2">{specsLabels.subtitle}</p>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr className="text-left text-xs uppercase text-gray-500">
+                  <th className="px-4 py-3">{specsLabels.category}</th>
+                  <th className="px-4 py-3 whitespace-nowrap">{specsLabels.duration}</th>
+                  <th className="px-4 py-3">{specsLabels.format}</th>
+                  <th className="px-4 py-3">{specsLabels.oven}</th>
+                  <th className="px-4 py-3">{specsLabels.days}</th>
+                  <th className="px-4 py-3 text-right">{specsLabels.price}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allCategories.map((cat) => {
+                  const data = categoryRules[cat.id as keyof typeof categoryRules];
+                  const specs = data?.specs;
+                  const live = liveDataFor(cat.id);
+
+                  return (
+                    <tr
+                      key={cat.id}
+                      className="border-t border-gray-100 hover:bg-gray-50/70 transition-colors cursor-pointer"
+                      onClick={() => setSelectedCategory(cat.id)}
+                    >
+                      <td className="px-4 py-3 font-semibold text-gray-900">{cat.name}</td>
+                      <td className="px-4 py-3 whitespace-nowrap font-bold text-[#8B0000]">
+                        {specs?.duration || specsLabels.notSpecified}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">{specs?.format || "—"}</td>
+                      <td className="px-4 py-3 text-gray-700">{specs?.oven || "—"}</td>
+                      <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                        {live && live.dates.length > 0
+                          ? live.dates.map(formatDay).join(" & ")
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">
+                        {live && live.unitPrice > 0 ? `${live.unitPrice} €` : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar - Categories */}
@@ -247,6 +397,35 @@ export default function RulesPage({ params }: Props) {
                       {selectedCategoryData.description}
                     </p>
                   </div>
+
+                  {/* ⏱️ Fiche technique de la catégorie */}
+                  {selectedCategoryData.specs && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                      <div className="bg-[#8B0000] text-white rounded-xl p-4">
+                        <p className="text-xs uppercase opacity-80">{specsLabels.duration}</p>
+                        <p className="text-2xl font-bold mt-1">{selectedCategoryData.specs.duration}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <p className="text-xs uppercase text-gray-500">{specsLabels.format}</p>
+                        <p className="font-semibold text-gray-900 mt-1">{selectedCategoryData.specs.format}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <p className="text-xs uppercase text-gray-500">{specsLabels.oven}</p>
+                        <p className="font-semibold text-gray-900 mt-1">{selectedCategoryData.specs.oven}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                        <p className="text-xs uppercase text-gray-500">{specsLabels.days}</p>
+                        <p className="font-semibold text-gray-900 mt-1">
+                          {(() => {
+                            const live = liveDataFor(selectedCategory as string);
+                            return live && live.dates.length > 0
+                              ? live.dates.map(formatDay).join(" & ")
+                              : "—";
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="bg-gray-50 p-8 rounded-xl">
                     <h3 className="text-2xl font-bold text-gray-900 mb-6">

@@ -153,7 +153,13 @@
           "Texture croustillante à l'extérieur, moelleuse à l'intérieur",
           "Garnitures équilibrées et harmonieuses",
           "Cuisson parfaite du fromage"
-        ]
+        ],
+        "specs": {
+          "duration": "12 min",
+          "durationMinutes": 12,
+          "format": "Ronde",
+          "oven": "Four électrique"
+        }
       },
       "calzone": {
         "name": "Calzone",
@@ -163,7 +169,13 @@
           "Fermeture hermétique",
           "Cuisson homogène",
           "Garniture bien répartie"
-        ]
+        ],
+        "specs": {
+          "duration": "15 min",
+          "durationMinutes": 15,
+          "format": "Demi-lune",
+          "oven": "Four électrique"
+        }
       },
       "napolitaine": {
         "name": "Napolitaine",
@@ -174,7 +186,13 @@
           "Tomates San Marzano",
           "Mozzarella di bufala",
           "Cuisson au feu de bois (900°C minimum)"
-        ]
+        ],
+        "specs": {
+          "duration": "8 min",
+          "durationMinutes": 8,
+          "format": "Ronde",
+          "oven": "Four électrique"
+        }
       },
       "dessert": {
         "name": "Pizza Dessert",
@@ -184,7 +202,13 @@
           "Présentation attrayante",
           "Équilibre des saveurs sucrées",
           "Technique de cuisson maîtrisée"
-        ]
+        ],
+        "specs": {
+          "duration": "15 min",
+          "durationMinutes": 15,
+          "format": "Ronde",
+          "oven": "Four électrique"
+        }
       },
       "pala": {
         "name": "Pala",
@@ -194,7 +218,13 @@
           "Épaisseur régulière",
           "Garnitures généreuses",
           "Cuisson homogène"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "≈ 60 × 30 cm",
+          "oven": "Four électrique"
+        }
       },
       "focaccia": {
         "name": "Focaccia",
@@ -204,7 +234,13 @@
           "Bien aérée et moelleuse",
           "Garniture généreuse",
           "Assaisonnement équilibré"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "Libre (al padellino)",
+          "oven": "Four électrique"
+        }
       },
       "teglia": {
         "name": "Teglia",
@@ -214,7 +250,13 @@
           "Épaisseur régulière",
           "Garnitures bien réparties",
           "Découpe nette et régulière"
-        ]
+        ],
+        "specs": {
+          "duration": "25 min",
+          "durationMinutes": 25,
+          "format": "60 × 40 cm",
+          "oven": "Four électrique"
+        }
       },
       "doue": {
         "name": "Pizza Dué - Trophée Chef Ziolo",
@@ -224,7 +266,13 @@
           "Préparation et cuisson simultanée",
           "Technique et organisation",
           "Originalité des préparations"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "Ronde — en équipe de 2",
+          "oven": "Four électrique"
+        }
       },
       "pasta": {
         "name": "Pasta",
@@ -234,7 +282,13 @@
           "Qualité des ingrédients",
           "Cuisson parfaite",
           "Présentation élégante"
-        ]
+        ],
+        "specs": {
+          "duration": "20 min",
+          "durationMinutes": 20,
+          "format": "Pâte libre — 3 assiettes identiques",
+          "oven": "—"
+        }
       },
       "freestyle": {
         "name": "Freestyle",
@@ -244,7 +298,13 @@
           "Créativité et originalité primordiales",
           "Technique et exécution",
           "Présentation innovante"
-        ]
+        ],
+        "specs": {
+          "duration": "Chronométré",
+          "durationMinutes": null,
+          "format": "Style libre (sans silicone)",
+          "oven": "—"
+        }
       },
       "rapidite": {
         "name": "Rapidité",
@@ -254,7 +314,13 @@
           "Qualité du produit final",
           "Organisation de l'espace",
           "Respect des règles d'hygiène même sous pression"
-        ]
+        ],
+        "specs": {
+          "duration": "Chronométré",
+          "durationMinutes": null,
+          "format": "Étalage de 5 pâtons sur 5 disques de 33 cm",
+          "oven": "—"
+        }
       },
       "large": {
         "name": "Large",
@@ -264,8 +330,26 @@
           "Cuisson homogène",
           "Garnitures généreuses et équilibrées",
           "Présentation spectaculaire"
-        ]
+        ],
+        "specs": {
+          "duration": "15 min",
+          "durationMinutes": 15,
+          "format": "Empattement personnel fourni par le concurrent",
+          "oven": "—"
+        }
       }
+    },
+    "specsTable": {
+      "title": "Temps de prestation et jours de passage",
+      "subtitle": "Durées officielles à respecter, format imposé et jours de passage de chaque catégorie.",
+      "category": "Catégorie",
+      "duration": "Temps de prestation",
+      "format": "Format imposé",
+      "oven": "Cuisson",
+      "days": "Jours de passage",
+      "price": "Tarif",
+      "notSpecified": "À préciser",
+      "teamNote": "Catégorie en équipe : 2 participants."
     }
   },
   "header": {
