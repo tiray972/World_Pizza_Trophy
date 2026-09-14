@@ -46,6 +46,7 @@ export const AUTH_TEXTS = {
     forgotInvalidEmail: "Adresse email invalide",
     forgotTooMany: "Trop de tentatives. Réessayez dans quelques minutes.",
     backToLogin: "Retour à la connexion",
+    forgotGoogleHint: "Vous vous êtes inscrit avec Google ? Votre compte n'a pas de mot de passe : revenez à la connexion et utilisez le bouton « Continuer avec Google ».",
   },
   en: {
     loginTitle: "Sign in",
@@ -86,6 +87,7 @@ export const AUTH_TEXTS = {
     forgotInvalidEmail: "Invalid email address",
     forgotTooMany: "Too many attempts. Please try again in a few minutes.",
     backToLogin: "Back to sign in",
+    forgotGoogleHint: "Signed up with Google? Your account has no password: go back to sign in and use the \u201cContinue with Google\u201d button.",
   },
   es: {
     loginTitle: "Iniciar sesión",
@@ -126,6 +128,7 @@ export const AUTH_TEXTS = {
     forgotInvalidEmail: "Dirección de email no válida",
     forgotTooMany: "Demasiados intentos. Inténtalo de nuevo en unos minutos.",
     backToLogin: "Volver al inicio de sesión",
+    forgotGoogleHint: "¿Te registraste con Google? Tu cuenta no tiene contraseña: vuelve al inicio de sesión y usa el botón «Continuar con Google».",
   },
   it: {
     loginTitle: "Accedi",
@@ -166,6 +169,7 @@ export const AUTH_TEXTS = {
     forgotInvalidEmail: "Indirizzo email non valido",
     forgotTooMany: "Troppi tentativi. Riprova tra qualche minuto.",
     backToLogin: "Torna all'accesso",
+    forgotGoogleHint: "Ti sei registrato con Google? Il tuo account non ha una password: torna all'accesso e usa il pulsante \u201cContinua con Google\u201d.",
   },
 } as const;
 

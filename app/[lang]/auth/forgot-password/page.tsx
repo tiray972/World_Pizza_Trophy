@@ -55,7 +55,10 @@ export default function ForgotPasswordPage() {
           <div className="text-center">
             <MailCheck className="h-12 w-12 text-green-600 mx-auto mb-4" />
             <h1 className="text-2xl font-bold mb-2">{t.forgotSent}</h1>
-            <p className="text-sm text-gray-600 leading-relaxed mb-6">{t.forgotSentBody}</p>
+            <p className="text-sm text-gray-600 leading-relaxed mb-4">{t.forgotSentBody}</p>
+            <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-md p-3 mb-6 leading-relaxed text-left">
+              {t.forgotGoogleHint}
+            </p>
             <Button asChild className="w-full">
               <Link href={`/${currentLang}/auth/login`}>
                 <span>{t.backToLogin}</span>
@@ -92,6 +95,10 @@ export default function ForgotPasswordPage() {
                 <span>{t.forgotSubmit}</span>
               </Button>
             </form>
+
+            <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-md p-3 mt-4 leading-relaxed">
+              {t.forgotGoogleHint}
+            </p>
 
             <div className="text-center text-sm mt-4">
               <Link href={`/${currentLang}/auth/login`} className="text-primary font-semibold">
