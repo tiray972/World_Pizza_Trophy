@@ -5,6 +5,7 @@ import { TriggerRefreshProvider } from "@/providers/TriggerRefreshprovider";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { SlotSyncProvider } from "@/providers/SlotSyncProvider";
 import { AnalyticsProvider } from "@/providers/AnalyticsProvider";
+import { TranslationCrashGuard } from "@/components/TranslationCrashGuard";
 
 const francois = localFont({
   src: "../../fonts/FrancoisOne-Regular.ttf",
@@ -76,6 +77,7 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
       </head>
 
       <body className={`${francois.variable} antialiased`} suppressHydrationWarning>
+        <TranslationCrashGuard />
         <AuthProvider>
           <SlotSyncProvider>
             <AnalyticsProvider>
