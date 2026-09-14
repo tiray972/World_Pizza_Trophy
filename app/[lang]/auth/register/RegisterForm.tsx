@@ -10,12 +10,14 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
+import { authTexts } from "@/lib/i18n/auth-texts";
 
 export default function RegisterForm() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentLang = pathname?.split("/")[1] || "fr";
+  const t = authTexts(currentLang);
   const redirectPath = searchParams?.get("redirect") || "booking";
   const redirectUrl = `/${currentLang}/${redirectPath}`;
 
@@ -27,7 +29,7 @@ export default function RegisterForm() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      toast.error("Les mots de passe ne correspondent pas");
+      toast.error(t.passwordMismatch);
       return;
     }
     setIsLoading(true);
@@ -57,7 +59,7 @@ export default function RegisterForm() {
 
         if (!profileResponse.ok) {
           console.error('❌ Erreur lors de la création du profil:', profileData);
-          toast.error("Erreur lors de la création du profil", { 
+          toast.error(t.profileError, { 
             description: profileData.details || "Veuillez réessayer" 
           });
           setIsLoading(false);
@@ -67,16 +69,16 @@ export default function RegisterForm() {
         console.log('✅ Profil utilisateur créé avec succès');
       } catch (profileError) {
         console.error('❌ Erreur réseau lors de la création du profil:', profileError);
-        toast.error("Erreur réseau", { description: "Impossible de créer le profil" });
+        toast.error(t.networkError, { description: t.profileImpossible });
         setIsLoading(false);
         return;
       }
 
-      toast.success("Inscription réussie !");
+      toast.success(t.registerSuccess);
       router.replace(redirectUrl);
     } catch (err: any) {
       console.error('❌ Erreur lors de l\'inscription Firebase:', err);
-      toast.error("Erreur lors de l'inscription", { description: err.message });
+      toast.error(t.registerError, { description: err.message });
     } finally {
       setIsLoading(false);
     }
@@ -111,7 +113,7 @@ export default function RegisterForm() {
 
         if (!profileResponse.ok) {
           console.error('❌ Erreur lors de la création du profil:', profileData);
-          toast.error("Erreur lors de la création du profil", { 
+          toast.error(t.profileError, { 
             description: profileData.details || "Veuillez réessayer" 
           });
           setIsLoading(false);
@@ -121,16 +123,16 @@ export default function RegisterForm() {
         console.log('✅ Profil utilisateur créé avec succès');
       } catch (profileError) {
         console.error('❌ Erreur réseau lors de la création du profil:', profileError);
-        toast.error("Erreur réseau", { description: "Impossible de créer le profil" });
+        toast.error(t.networkError, { description: t.profileImpossible });
         setIsLoading(false);
         return;
       }
 
-      toast.success("Inscription réussie avec Google !");
+      toast.success(t.googleSuccess);
       router.replace(redirectUrl);
     } catch (err: any) {
       console.error('❌ Erreur lors de l\'inscription Google:', err);
-      toast.error("Erreur Google", { description: err.message });
+      toast.error(t.googleError, { description: err.message });
     } finally {
       setIsLoading(false);
     }
@@ -139,42 +141,42 @@ export default function RegisterForm() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
       <div className="w-full max-w-md bg-white p-6 rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold text-center mb-2">Créer un Compte</h1>
-        <p className="text-sm text-center text-gray-500 mb-4">Inscrivez-vous pour commencer</p>
+        <h1 className="text-2xl font-bold text-center mb-2">{t.registerTitle}</h1>
+        <p className="text-sm text-center text-gray-500 mb-4">{t.registerSubtitle}</p>
         <Button variant="outline" onClick={handleGoogleRegister} disabled={isLoading} className="w-full mb-4 flex justify-center items-center">
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          S'inscrire avec Google
+          <span>{t.googleRegister}</span>
         </Button>
         <div className="relative my-4">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t border-gray-300" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-gray-400">Ou utiliser votre email</span>
+            <span className="bg-white px-2 text-gray-400">{t.orEmail}</span>
           </div>
         </div>
         <form onSubmit={handleRegister} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="nom@exemple.com" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isLoading} />
+            <Label htmlFor="email">{t.email}</Label>
+            <Input id="email" type="email" placeholder={t.emailPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isLoading} />
           </div>
           <div className="flex flex-col gap-1">
-            <Label htmlFor="password">Mot de passe</Label>
-            <Input id="password" type="password" placeholder="Minimum 6 caractères" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoading} />
+            <Label htmlFor="password">{t.password}</Label>
+            <Input id="password" type="password" placeholder={t.passwordPlaceholder} value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoading} />
           </div>
           <div className="flex flex-col gap-1">
-            <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
+            <Label htmlFor="confirmPassword">{t.confirmPassword}</Label>
             <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required disabled={isLoading} />
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            S'inscrire
+            <span>{t.submitRegister}</span>
           </Button>
         </form>
         <div className="text-center text-sm mt-4">
-          Déjà un compte ?{" "}
+          {t.hasAccount}{" "}
           <Link href={`/${currentLang}/auth/login`} className="text-primary font-semibold">
-            Se connecter
+            {t.goLogin}
           </Link>
         </div>
       </div>

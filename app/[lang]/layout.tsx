@@ -35,8 +35,13 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
   const { lang } = await params;
 
   return (
-    <html lang={lang}>
+    // 🌍 translate="no" : le site est déjà traduit en 4 langues. La traduction
+    // automatique du navigateur (Chrome/Edge) remplace les nœuds de texte de la
+    // page et fait planter React ("client-side exception", page blanche) dès
+    // qu'un composant se met à jour. Elle est donc désactivée ici.
+    <html lang={lang} translate="no">
       <head>
+        <meta name="google" content="notranslate" />
         {/* PWA */}
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#000000" />
