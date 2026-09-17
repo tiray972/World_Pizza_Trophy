@@ -92,7 +92,7 @@ export default function App() {
   // Firebase hooks - loads data in real-time
   const { events, createEvent, updateEvent } = useEvents();
   const { users, updateUser } = useUsers();
-  const { slots, createSlots, updateSlot, deleteSlot, deleteSlotsByDate } = useSlots(selectedEventId);
+  const { slots, createSlots, updateSlot, transferSlot, deleteSlot, deleteSlotsByDate } = useSlots(selectedEventId);
   const { categories, createCategory, updateCategory, deleteCategory } = useCategories(selectedEventId);
   const { products, createProduct, updateProduct, deleteProduct } = useProducts(selectedEventId);
   const { vouchers, createVoucher, deleteVoucher } = useVouchers(selectedEventId);
@@ -265,6 +265,23 @@ export default function App() {
     await updateSlot(updatedSlot.id, updatedSlot);
   };
 
+  /**
+   * 🔁 Transfère une réservation vers un autre créneau et fait suivre la
+   * référence dans les paiements : le montant reste rattaché au créneau
+   * réellement disputé, et le suivi financier reste juste.
+   */
+  const handleTransferSlot = async (source: Slot, targetSlotId: string) => {
+    await transferSlot(source, targetSlotId);
+
+    const affectedPayments = payments.filter(payment => payment.slotIds?.includes(source.id));
+    for (const payment of affectedPayments) {
+      await updatePayment(payment.id, {
+        slotIds: payment.slotIds.map(slotId => (slotId === source.id ? targetSlotId : slotId)),
+        updatedAt: new Date(),
+      });
+    }
+  };
+
   const handleUpdateSlotsBulk = async (updatedSlots: Slot[]) => {
     for (const slot of updatedSlots) {
       await updateSlot(slot.id, slot);
@@ -383,6 +400,7 @@ export default function App() {
             categories={eventCategories}
             selectedEvent={selectedEvent}
             onUpdateSlot={handleUpdateSlot}
+            onTransferSlot={handleTransferSlot}
             onCreateSlot={handleCreateSlots}
             onDeleteSlot={handleDeleteSlot}
             onDeleteDate={handleDeleteDate}

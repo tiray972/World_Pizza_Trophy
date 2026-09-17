@@ -16,6 +16,8 @@ import {
   Timestamp,
   orderBy,
   limit,
+  writeBatch,
+  deleteField,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { WPTEvent, User, Slot, Category, Product, Voucher, Payment, AnalyticsSummary, PageView, TrackingEvent } from '@/types/firestore';
@@ -418,6 +420,56 @@ export const useSlots = (eventId?: string) => {
     }
   };
 
+  /**
+   * 🔁 Transfère une réservation d'un créneau vers un autre (erreur de
+   * catégorie ou d'horaire). L'acheteur, le participant, le lien vers le
+   * paiement Stripe et la date de paiement suivent : l'argent reste rattaché au
+   * créneau réellement disputé, et l'ancien redevient vendable.
+   *
+   * Les deux écritures sont faites dans un même lot : soit tout passe, soit
+   * rien, pour ne jamais avoir la place occupée deux fois ni perdue.
+   */
+  const transferSlot = async (source: Slot, targetSlotId: string, adminId = 'admin_current') => {
+    try {
+      const batch = writeBatch(db);
+
+      batch.update(
+        doc(db, 'slots', targetSlotId),
+        removeUndefinedValues({
+          status: source.status,
+          buyerId: source.buyerId || null,
+          participant: source.participant || null,
+          participants: source.participants ?? (source.participant ? [source.participant] : []),
+          stripeSessionId: source.stripeSessionId || null,
+          paidAt: source.paidAt ? convertDateToTimestamp(source.paidAt) : null,
+          assignmentType: source.assignmentType || 'manual',
+          assignedByAdminId: adminId,
+          assignedAt: convertDateToTimestamp(new Date()),
+          transferredFromSlotId: source.id,
+        })
+      );
+
+      batch.update(doc(db, 'slots', source.id), {
+        status: 'available',
+        participant: deleteField(),
+        participants: deleteField(),
+        buyerId: deleteField(),
+        lockedByUserId: deleteField(),
+        lockedUntil: deleteField(),
+        paidAt: deleteField(),
+        assignmentType: deleteField(),
+        assignedByAdminId: deleteField(),
+        assignedAt: deleteField(),
+        stripeSessionId: null,
+        transferredToSlotId: targetSlotId,
+      });
+
+      await batch.commit();
+    } catch (err) {
+      throw new Error(`Failed to transfer slot: ${err}`);
+    }
+  };
+
   const deleteSlot = async (slotId: string) => {
     try {
       await deleteDoc(doc(db, 'slots', slotId));
@@ -441,7 +493,7 @@ export const useSlots = (eventId?: string) => {
     }
   };
 
-  return { slots, loading, error, createSlots, updateSlot, deleteSlot, deleteSlotsByDate };
+  return { slots, loading, error, createSlots, updateSlot, transferSlot, deleteSlot, deleteSlotsByDate };
 };
 
 // ============================================================================

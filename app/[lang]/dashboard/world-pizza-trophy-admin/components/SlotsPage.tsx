@@ -4,9 +4,10 @@ import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
 import { Slot, User, SlotStatus, Category, WPTEvent, Participant } from "@/types/firestore";
 import { AssignSlotModal } from "./AssignSlotModal";
+import { TransferSlotModal } from "./TransferSlotModal";
 import { CreateSlotModal } from "./CreateSlotModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
-import { Clock, User as UserIcon, Loader2, FileSpreadsheet, Plus, CalendarDays, Trash2, Eraser, AlertTriangle, Lock, ShieldAlert, UserCog, CheckCircle, Gift } from "lucide-react";
+import { Clock, User as UserIcon, Loader2, FileSpreadsheet, Plus, CalendarDays, Trash2, Eraser, AlertTriangle, Lock, ShieldAlert, UserCog, CheckCircle, Gift, ArrowRightLeft } from "lucide-react";
 import { formatTime, formatUser } from "../lib/utils";
 import { getSlotParticipants } from "@/lib/booking/rules";
 import { getAuth } from "firebase/auth";
@@ -17,6 +18,8 @@ interface SlotsPageProps {
   categories: Category[];
   selectedEvent: WPTEvent | undefined; // Pass current event
   onUpdateSlot: (slot: Slot) => void | Promise<void>;
+  /** 🔁 Déplace une réservation (acheteur, participant, paiement) vers un autre créneau. */
+  onTransferSlot?: (slot: Slot, targetSlotId: string) => Promise<void>;
   onCreateSlot: (slotsData: Omit<Slot, "id" | "status" | "userId" | "stripeSessionId" | "eventId">[]) => Promise<void>;
   onDeleteSlot: (slotId: string) => Promise<void>;
   onDeleteDate: (date: string) => Promise<void>;
@@ -28,6 +31,7 @@ export function SlotsPage({
   categories,
   selectedEvent,
   onUpdateSlot,
+  onTransferSlot,
   onCreateSlot,
   onDeleteSlot,
   onDeleteDate
@@ -69,6 +73,8 @@ export function SlotsPage({
   const [isSyncing, setIsSyncing] = useState(false);
   // 🧹 Nettoyage des données de participant restées sur des créneaux libérés
   const [isCleaning, setIsCleaning] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [slotToTransfer, setSlotToTransfer] = useState<Slot | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   // Filter slots for current date view
@@ -509,6 +515,23 @@ export function SlotsPage({
                           >
                             {assignedUser ? "Reassign" : "Assign"}
                           </Button>
+
+                          {/* 🔁 Erreur de catégorie ou d'horaire : on déplace la réservation */}
+                          {onTransferSlot && slot.status !== 'available' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-700 dark:hover:bg-blue-950/30"
+                              onClick={() => {
+                                setSlotToTransfer(slot);
+                                setIsTransferModalOpen(true);
+                              }}
+                              title="Transférer cette réservation vers un autre créneau"
+                            >
+                              <ArrowRightLeft className="h-3 w-3 mr-1" />
+                              Transférer
+                            </Button>
+                          )}
                         </div>
                       ) : (
                         <Button size="sm" variant="outline" disabled className="opacity-50">
@@ -545,6 +568,22 @@ export function SlotsPage({
         categories={categories}
         knownParticipants={knownParticipants}
         defaultMode={isOfferModalOpen ? 'offer' : 'assign'}
+      />
+
+      <TransferSlotModal
+        isOpen={isTransferModalOpen}
+        onClose={() => {
+          setIsTransferModalOpen(false);
+          setSlotToTransfer(null);
+        }}
+        onConfirm={async (targetSlotId) => {
+          if (slotToTransfer && onTransferSlot) {
+            await onTransferSlot(slotToTransfer, targetSlotId);
+          }
+        }}
+        slot={slotToTransfer}
+        slots={slots}
+        categories={categories}
       />
 
       <CreateSlotModal
