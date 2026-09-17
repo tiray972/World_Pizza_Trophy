@@ -16,7 +16,7 @@ interface SlotsPageProps {
   users: User[];
   categories: Category[];
   selectedEvent: WPTEvent | undefined; // Pass current event
-  onUpdateSlot: (slot: Slot) => void;
+  onUpdateSlot: (slot: Slot) => void | Promise<void>;
   onCreateSlot: (slotsData: Omit<Slot, "id" | "status" | "userId" | "stripeSessionId" | "eventId">[]) => Promise<void>;
   onDeleteSlot: (slotId: string) => Promise<void>;
   onDeleteDate: (date: string) => Promise<void>;
@@ -141,9 +141,23 @@ export function SlotsPage({
         assignmentType: newStatus === 'offered' ? 'manual' : 'manual',
       };
 
-      onUpdateSlot(updatedSlot);
-      const action = newStatus === 'offered' ? 'OFFERED' : 'ASSIGNED';
-      console.log(`[AUDIT] Slot ${selectedSlot.id} ${action} to User ${userId} (participant: ${participant?.firstName} ${participant?.lastName}) by admin.`);
+      try {
+        // ⚠️ Sans await, un échec d'écriture passait inaperçu : l'interface
+        // se fermait comme si l'attribution avait fonctionné.
+        await onUpdateSlot(updatedSlot);
+        const action = newStatus === 'offered' ? 'OFFERED' : 'ASSIGNED';
+        console.log(`[AUDIT] Slot ${selectedSlot.id} ${action} to User ${userId} (participant: ${participant?.firstName} ${participant?.lastName}) by admin.`);
+      } catch (error) {
+        console.error('❌ Attribution impossible:', error);
+        alert(
+          "L'attribution n'a pas pu être enregistrée. Le créneau n'a pas été modifié.\n\n" +
+          (error instanceof Error ? error.message : String(error))
+        );
+        setIsOfferModalOpen(false);
+        setIsSyncing(false);
+        setSyncMessage(null);
+        return;
+      }
     }
 
     setIsOfferModalOpen(false);

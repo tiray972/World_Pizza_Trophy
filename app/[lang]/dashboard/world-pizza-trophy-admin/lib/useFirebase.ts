@@ -57,11 +57,34 @@ function convertDateToTimestamp(value: Date | null): Timestamp | null {
  * Remove undefined values from an object.
  * Firestore doesn't allow undefined values in documents.
  */
+/**
+ * Retire les valeurs `undefined`, **y compris dans les objets imbriqués**.
+ *
+ * Firestore rejette l'écriture entière dès qu'un champ vaut `undefined`
+ * ("Unsupported field value: undefined"). Un participant saisi sans email ni
+ * téléphone suffisait donc à faire échouer toute l'attribution d'un créneau.
+ */
 function removeUndefinedValues(obj: Record<string, any>): Record<string, any> {
+  const clean = (value: any): any => {
+    if (Array.isArray(value)) {
+      return value.filter(item => item !== undefined).map(clean);
+    }
+    // On ne touche ni aux Date ni aux Timestamp Firestore
+    if (value && typeof value === 'object' && !(value instanceof Date) && !('toDate' in value)) {
+      const cleaned: Record<string, any> = {};
+      for (const [key, nested] of Object.entries(value)) {
+        if (nested === undefined) continue;
+        cleaned[key] = clean(nested);
+      }
+      return cleaned;
+    }
+    return value;
+  };
+
   const cleaned: Record<string, any> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value !== undefined) {
-      cleaned[key] = value;
+      cleaned[key] = clean(value);
     }
   }
   return cleaned;

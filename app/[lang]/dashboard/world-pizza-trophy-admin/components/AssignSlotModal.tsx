@@ -31,7 +31,8 @@ export function AssignSlotModal({
     firstName: "",
     lastName: "",
     email: "",
-    phone: ""
+    phone: "",
+    shirtSize: ""
   });
   // 'auto' = computed from user payment status, 'offered' = force offered, 'paid' = force paid
   const [statusMode, setStatusMode] = useState<'auto' | 'offered' | 'paid'>(
@@ -43,7 +44,7 @@ export function AssignSlotModal({
       setSelectedUserId(slot?.buyerId || "");
       setIsSubmitting(false);
       setShowParticipantForm(false);
-      setParticipantData({ firstName: "", lastName: "", email: "", phone: "" });
+      setParticipantData({ firstName: "", lastName: "", email: "", phone: "", shirtSize: "" });
       setStatusMode(defaultMode === 'offer' ? 'offered' : 'auto');
     }
   }, [isOpen, slot, defaultMode]);
@@ -60,14 +61,17 @@ export function AssignSlotModal({
 
     setIsSubmitting(true);
     try {
-      const participant: Participant | undefined = showParticipantForm && (participantData.firstName || participantData.lastName)
-        ? {
-          firstName: participantData.firstName,
-          lastName: participantData.lastName,
-          email: participantData.email || undefined,
-          phone: participantData.phone || undefined
-        }
-        : undefined;
+      // ⚠️ Aucun champ `undefined` : Firestore refuse l'écriture entière.
+      const participant: Participant | undefined =
+        showParticipantForm && (participantData.firstName || participantData.lastName)
+          ? {
+              firstName: participantData.firstName.trim(),
+              lastName: participantData.lastName.trim(),
+              ...(participantData.email.trim() ? { email: participantData.email.trim() } : {}),
+              ...(participantData.phone.trim() ? { phone: participantData.phone.trim() } : {}),
+              ...(participantData.shirtSize ? { shirtSize: participantData.shirtSize as Participant["shirtSize"] } : {}),
+            }
+          : undefined;
 
       const forcedStatus: SlotStatus | undefined = statusMode !== 'auto'
         ? (statusMode as SlotStatus)
@@ -268,6 +272,22 @@ export function AssignSlotModal({
                   value={participantData.phone}
                   onChange={(e) => handleParticipantChange("phone", e.target.value)}
                 />
+              </div>
+
+              {/* 👕 Taille de t-shirt : reprise dans les exports et la liste des inscrits */}
+              <div className="grid gap-2">
+                <label htmlFor="shirtSize" className="text-xs font-medium">T-Shirt Size</label>
+                <select
+                  id="shirtSize"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={participantData.shirtSize}
+                  onChange={(e) => handleParticipantChange("shirtSize", e.target.value)}
+                >
+                  <option value="">—</option>
+                  {["XS", "S", "M", "L", "XL", "XXL", "XXXL"].map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
               </div>
             </div>
           )}
