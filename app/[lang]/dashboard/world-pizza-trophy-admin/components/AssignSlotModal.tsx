@@ -12,6 +12,8 @@ interface AssignSlotModalProps {
   slot: Slot | null;
   users: User[];
   categories: Category[];
+  /** Participants déjà saisis sur l'événement, pour les réutiliser sans tout retaper. */
+  knownParticipants?: { participant: Participant; buyerIds: Set<string> }[];
   defaultMode?: 'assign' | 'offer';
 }
 
@@ -22,6 +24,7 @@ export function AssignSlotModal({
   slot,
   users,
   categories,
+  knownParticipants = [],
   defaultMode = 'assign',
 }: AssignSlotModalProps) {
   const [selectedUserId, setSelectedUserId] = useState<string>("");
@@ -35,6 +38,7 @@ export function AssignSlotModal({
     shirtSize: ""
   });
   // 'auto' = computed from user payment status, 'offered' = force offered, 'paid' = force paid
+  const [selectedParticipantKey, setSelectedParticipantKey] = useState<string>("");
   const [statusMode, setStatusMode] = useState<'auto' | 'offered' | 'paid'>(
     defaultMode === 'offer' ? 'offered' : 'auto'
   );
@@ -45,6 +49,7 @@ export function AssignSlotModal({
       setIsSubmitting(false);
       setShowParticipantForm(false);
       setParticipantData({ firstName: "", lastName: "", email: "", phone: "", shirtSize: "" });
+      setSelectedParticipantKey("");
       setStatusMode(defaultMode === 'offer' ? 'offered' : 'auto');
     }
   }, [isOpen, slot, defaultMode]);
@@ -88,7 +93,46 @@ export function AssignSlotModal({
 
   const handleParticipantChange = (field: string, value: string) => {
     setParticipantData(prev => ({ ...prev, [field]: value }));
+    // Saisie manuelle : on quitte la sélection d'un participant existant
+    setSelectedParticipantKey("");
   };
+
+  const participantKeyOf = (participant: Participant) =>
+    [
+      participant.firstName.trim().toLowerCase(),
+      participant.lastName.trim().toLowerCase(),
+      participant.email?.trim().toLowerCase() || "",
+    ].join("|");
+
+  /** Remplit le formulaire avec un participant déjà enregistré. */
+  const handleSelectKnownParticipant = (key: string) => {
+    setSelectedParticipantKey(key);
+    if (!key) return;
+
+    const match = knownParticipants.find(entry => participantKeyOf(entry.participant) === key);
+    if (!match) return;
+
+    setParticipantData({
+      firstName: match.participant.firstName || "",
+      lastName: match.participant.lastName || "",
+      email: match.participant.email || "",
+      phone: match.participant.phone || "",
+      shirtSize: match.participant.shirtSize || "",
+    });
+  };
+
+  // Les participants déjà liés à l'acheteur sélectionné remontent en premier
+  const participantsOfSelectedUser = knownParticipants.filter(entry =>
+    selectedUserId ? entry.buyerIds.has(selectedUserId) : false
+  );
+  const otherParticipants = knownParticipants.filter(
+    entry => !participantsOfSelectedUser.includes(entry)
+  );
+
+  const participantLabel = (participant: Participant) =>
+    `${participant.firstName} ${participant.lastName}` +
+    (participant.shirtSize ? ` — ${participant.shirtSize}` : "") +
+    (participant.email ? ` (${participant.email})` : "");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -226,6 +270,52 @@ export function AssignSlotModal({
               <p className="text-xs font-semibold text-muted-foreground">
                 👤 Participant Details (can be different from buyer)
               </p>
+
+              {/* ♻️ Réutiliser un participant déjà saisi plutôt que tout retaper */}
+              {knownParticipants.length > 0 && (
+                <div className="grid gap-2">
+                  <label htmlFor="knownParticipant" className="text-xs font-medium">
+                    Existing participant
+                  </label>
+                  <select
+                    id="knownParticipant"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={selectedParticipantKey}
+                    onChange={(e) => handleSelectKnownParticipant(e.target.value)}
+                  >
+                    <option value="">— New participant (type below) —</option>
+
+                    {participantsOfSelectedUser.length > 0 && (
+                      <optgroup label="Participants of this buyer">
+                        {participantsOfSelectedUser.map(entry => (
+                          <option
+                            key={participantKeyOf(entry.participant)}
+                            value={participantKeyOf(entry.participant)}
+                          >
+                            {participantLabel(entry.participant)}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {otherParticipants.length > 0 && (
+                      <optgroup label="All participants">
+                        {otherParticipants.map(entry => (
+                          <option
+                            key={participantKeyOf(entry.participant)}
+                            value={participantKeyOf(entry.participant)}
+                          >
+                            {participantLabel(entry.participant)}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                  <p className="text-[11px] text-muted-foreground">
+                    Selecting someone fills the fields below — you can still edit them.
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-2">

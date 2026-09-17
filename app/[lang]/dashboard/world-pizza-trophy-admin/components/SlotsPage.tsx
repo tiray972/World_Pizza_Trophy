@@ -217,6 +217,41 @@ export function SlotsPage({
     }).format(date);
   };
 
+  // 👥 Participants déjà saisis sur l'événement, pour ne pas les retaper
+  const knownParticipants = useMemo(() => {
+    const byKey = new Map<string, { participant: Participant; buyerIds: Set<string> }>();
+
+    for (const slot of slots) {
+      for (const participant of getSlotParticipants(slot)) {
+        const key = [
+          participant.firstName.trim().toLowerCase(),
+          participant.lastName.trim().toLowerCase(),
+          participant.email?.trim().toLowerCase() || "",
+        ].join("|");
+
+        const existing = byKey.get(key);
+        if (existing) {
+          // On garde la fiche la plus complète
+          existing.participant = {
+            ...existing.participant,
+            ...Object.fromEntries(Object.entries(participant).filter(([, value]) => !!value)),
+          } as Participant;
+          if (slot.buyerId) existing.buyerIds.add(slot.buyerId);
+        } else {
+          byKey.set(key, {
+            participant,
+            buyerIds: new Set(slot.buyerId ? [slot.buyerId] : []),
+          });
+        }
+      }
+    }
+
+    return Array.from(byKey.values()).sort((a, b) =>
+      a.participant.lastName.localeCompare(b.participant.lastName) ||
+      a.participant.firstName.localeCompare(b.participant.firstName)
+    );
+  }, [slots]);
+
   const handleCleanupOrphanParticipants = async () => {
     if (!selectedEvent) return;
     setIsCleaning(true);
@@ -508,6 +543,7 @@ export function SlotsPage({
         slot={selectedSlot}
         users={users}
         categories={categories}
+        knownParticipants={knownParticipants}
         defaultMode={isOfferModalOpen ? 'offer' : 'assign'}
       />
 
