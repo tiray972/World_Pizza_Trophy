@@ -4,6 +4,7 @@ import { Slot, Category } from "@/types/firestore";
 import { X, ArrowRight, Loader2 } from "lucide-react";
 import { formatTime } from "../lib/utils";
 import { getSlotParticipants } from "@/lib/booking/rules";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 interface TransferSlotModalProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ export function TransferSlotModal({
   const [targetDate, setTargetDate] = useState<string>("all");
   const [selectedTargetId, setSelectedTargetId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Confirmation explicite avant de déplacer une réservation payée
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const categoryName = (categoryId: string) =>
     categories.find(category => category.id === categoryId)?.name || categoryId;
@@ -58,6 +61,8 @@ export function TransferSlotModal({
 
   const participants = getSlotParticipants(slot);
 
+  const targetSlot = availableSlots.find(candidate => candidate.id === selectedTargetId);
+
   const handleConfirm = async () => {
     if (!selectedTargetId) return;
     setIsSubmitting(true);
@@ -65,12 +70,6 @@ export function TransferSlotModal({
       await onConfirm(selectedTargetId);
       setSelectedTargetId("");
       onClose();
-    } catch (error) {
-      console.error("❌ Transfert impossible:", error);
-      alert(
-        "Le transfert n'a pas pu être effectué. Rien n'a été modifié.\n\n" +
-          (error instanceof Error ? error.message : String(error))
-      );
     } finally {
       setIsSubmitting(false);
     }
@@ -171,7 +170,11 @@ export function TransferSlotModal({
           <Button type="button" variant="outline" onClick={onClose}>
             Annuler
           </Button>
-          <Button type="button" onClick={handleConfirm} disabled={!selectedTargetId || isSubmitting}>
+          <Button
+            type="button"
+            onClick={() => setIsConfirmOpen(true)}
+            disabled={!selectedTargetId || isSubmitting}
+          >
             {isSubmitting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -181,6 +184,41 @@ export function TransferSlotModal({
           </Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={handleConfirm}
+        title="Confirmer le transfert ?"
+        description={
+          <>
+            La réservation, le participant et le paiement seront déplacés vers le nouveau créneau.
+            L&apos;ancien créneau repartira en vente. Le montant encaissé ne change pas.
+          </>
+        }
+        details={[
+          {
+            label: "Participant",
+            value:
+              participants
+                .map(participant => `${participant.firstName} ${participant.lastName}`)
+                .join(" & ") || "—",
+          },
+          {
+            label: "Créneau actuel",
+            value: `${categoryName(slot.categoryId)} — ${slot.date} ${formatTime(slot.startTime)}`,
+          },
+          {
+            label: "Nouveau créneau",
+            value: targetSlot
+              ? `${categoryName(targetSlot.categoryId)} — ${targetSlot.date} ${formatTime(targetSlot.startTime)}`
+              : "—",
+          },
+          { label: "Paiement", value: slot.stripeSessionId ? "Stripe, suit le créneau" : "Aucun paiement lié" },
+        ]}
+        confirmLabel="Transférer la réservation"
+        tone="neutral"
+      />
     </div>
   );
 }

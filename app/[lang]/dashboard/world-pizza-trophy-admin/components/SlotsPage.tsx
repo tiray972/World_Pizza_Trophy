@@ -5,6 +5,7 @@ import { Badge } from "./ui/Badge";
 import { Slot, User, SlotStatus, Category, WPTEvent, Participant } from "@/types/firestore";
 import { AssignSlotModal } from "./AssignSlotModal";
 import { TransferSlotModal } from "./TransferSlotModal";
+import { ConfirmDialog } from "./ConfirmDialog";
 import { CreateSlotModal } from "./CreateSlotModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Clock, User as UserIcon, Loader2, FileSpreadsheet, Plus, CalendarDays, Trash2, Eraser, AlertTriangle, Lock, ShieldAlert, UserCog, CheckCircle, Gift, ArrowRightLeft, Unlock } from "lucide-react";
@@ -78,7 +79,7 @@ export function SlotsPage({
   const [isCleaning, setIsCleaning] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [slotToTransfer, setSlotToTransfer] = useState<Slot | null>(null);
-  const [releasingSlotId, setReleasingSlotId] = useState<string | null>(null);
+  const [slotToRelease, setSlotToRelease] = useState<Slot | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   // Filter slots for current date view
@@ -193,7 +194,11 @@ export function SlotsPage({
   const handleConfirmDelete = async () => {
     // 1. Paid Slot Protection
     if (slotToDelete?.status === 'paid') {
-      alert("PROTECTION ALERT: You cannot delete a 'PAID' slot directly.\n\nPlease refund the transaction or manually release the slot first to acknowledge the financial change.");
+      alert(
+        "PROTECTION : impossible de supprimer un créneau payé.\n\n" +
+        "• Le participant s'est trompé de catégorie ou d'horaire ? Utilisez « Transférer ».\n" +
+        "• Il annule et vous le remboursez ? Remboursez d'abord sur Stripe, puis supprimez."
+      );
       setIsDeleteModalOpen(false);
       return;
     }
@@ -202,7 +207,10 @@ export function SlotsPage({
     if (isDeletingDate && activeDate) {
       const hasPaidSlots = currentSlots.some(s => s.status === 'paid');
       if (hasPaidSlots) {
-        alert("PROTECTION ALERT: This date contains 'PAID' slots. You cannot bulk delete it.\n\nPlease resolve the paid slots individually first.");
+        alert(
+          "PROTECTION : cette journée contient des créneaux payés.\n\n" +
+          "Traitez-les un par un (Transférer ou rembourser) avant de supprimer la journée."
+        );
         setIsDeleteModalOpen(false);
         return;
       }
@@ -262,38 +270,18 @@ export function SlotsPage({
     );
   }, [slots]);
 
-  const handleReleaseSlot = async (slot: Slot) => {
-    if (!onReleaseSlot) return;
+  /**
+   * 🔒 Un créneau réellement payé (session Stripe) ne peut pas être libéré :
+   * l'argent encaissé doit rester rattaché à un créneau. Dans ce cas, c'est
+   * « Transférer » qui déplace la réservation.
+   */
+  const isRealPayment = (slot: Slot) =>
+    !!slot.stripeSessionId || slot.assignmentType === 'payment';
 
-    const participants = getSlotParticipants(slot)
-      .map(participant => `${participant.firstName} ${participant.lastName}`)
-      .join(" & ");
-
-    // ⚠️ Un créneau lié à un paiement Stripe doit être transféré, pas libéré :
-    // sinon l'argent encaissé n'est plus rattaché à aucun créneau.
-    const warning = slot.stripeSessionId
-      ? "\n\n⚠️ ATTENTION : ce créneau est lié à un PAIEMENT STRIPE. En le libérant, le montant encaissé ne sera plus rattaché à aucun créneau. Utilisez plutôt « Transférer » pour déplacer la réservation."
-      : "";
-
-    const confirmed = window.confirm(
-      `Libérer ce créneau et le remettre en vente ?\n\n${getCategoryName(slot.categoryId)} — ${slot.date} à ${formatTime(slot.startTime)}` +
-        (participants ? `\nParticipant : ${participants}` : "") +
-        warning
-    );
-    if (!confirmed) return;
-
-    setReleasingSlotId(slot.id);
-    try {
-      await onReleaseSlot(slot);
-    } catch (error) {
-      console.error("❌ Libération impossible:", error);
-      alert(
-        "Le créneau n'a pas pu être libéré.\n\n" +
-          (error instanceof Error ? error.message : String(error))
-      );
-    } finally {
-      setReleasingSlotId(null);
-    }
+  const handleConfirmRelease = async () => {
+    if (!slotToRelease || !onReleaseSlot) return;
+    if (isRealPayment(slotToRelease)) return; // garde-fou côté action
+    await onReleaseSlot(slotToRelease);
   };
 
   const handleCleanupOrphanParticipants = async () => {
@@ -559,13 +547,21 @@ export function SlotsPage({
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-amber-600 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-950/30"
-                              onClick={() => handleReleaseSlot(slot)}
-                              disabled={releasingSlotId === slot.id}
-                              title="Libérer ce créneau et le remettre en vente"
+                              className={
+                                isRealPayment(slot)
+                                  ? "opacity-50"
+                                  : "text-amber-600 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-950/30"
+                              }
+                              onClick={() => setSlotToRelease(slot)}
+                              disabled={isRealPayment(slot)}
+                              title={
+                                isRealPayment(slot)
+                                  ? "Créneau payé par le participant : utilisez « Transférer » pour déplacer sa réservation"
+                                  : "Libérer ce créneau et le remettre en vente"
+                              }
                             >
-                              {releasingSlotId === slot.id ? (
-                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              {isRealPayment(slot) ? (
+                                <Lock className="h-3 w-3 mr-1" />
                               ) : (
                                 <Unlock className="h-3 w-3 mr-1" />
                               )}
@@ -625,6 +621,40 @@ export function SlotsPage({
         categories={categories}
         knownParticipants={knownParticipants}
         defaultMode={isOfferModalOpen ? 'offer' : 'assign'}
+      />
+
+      <ConfirmDialog
+        isOpen={!!slotToRelease}
+        onClose={() => setSlotToRelease(null)}
+        onConfirm={handleConfirmRelease}
+        title="Libérer ce créneau ?"
+        description={
+          <>
+            Le créneau repartira en vente. Le participant et l&apos;acheteur en seront détachés.
+            Cette action ne rembourse rien et ne peut pas être annulée automatiquement.
+          </>
+        }
+        details={
+          slotToRelease
+            ? [
+                { label: "Catégorie", value: getCategoryName(slotToRelease.categoryId) },
+                {
+                  label: "Créneau",
+                  value: `${slotToRelease.date} à ${formatTime(slotToRelease.startTime)}`,
+                },
+                {
+                  label: "Participant",
+                  value:
+                    getSlotParticipants(slotToRelease)
+                      .map(participant => `${participant.firstName} ${participant.lastName}`)
+                      .join(" & ") || "—",
+                },
+                { label: "Statut actuel", value: slotToRelease.status },
+              ]
+            : []
+        }
+        confirmLabel="Libérer le créneau"
+        tone="warning"
       />
 
       <TransferSlotModal
