@@ -332,7 +332,8 @@ export const useSlots = (eventId?: string) => {
           const raw = doc.data();
           return convertFirestoreDocumentData(
             { id: doc.id, ...raw } as Slot,
-            ['startTime', 'endTime', 'assignedAt']
+            // 🕑 paidAt sert à trier les inscrits par ordre d'inscription
+            ['startTime', 'endTime', 'assignedAt', 'paidAt']
           );
         });
         setSlots(data);

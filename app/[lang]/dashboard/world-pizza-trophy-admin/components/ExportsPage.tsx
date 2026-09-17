@@ -144,12 +144,44 @@ function generateByCategory(slots: Slot[], categories: Category[], users: User[]
   return buildCsv(headers, rows);
 }
 
-/** 3. PARTICIPANT LIST — Actual competitors with participation count and shirt size */
-function generateParticipantList(slots: Slot[], categories: Category[], users: User[]): string {
-  const headers = ["First Name", "Last Name", "Email", "Phone", "T-Shirt Size", "Participations", "Categories", "Slot Dates", "Buyer", "Buyer Email"];
+/** Date d'inscription d'un créneau (paiement), quel que soit le format stocké. */
+function slotPaidDate(slot: Slot): Date | undefined {
+  const value = slot.paidAt as unknown;
+  if (!value) return undefined;
+  if (value instanceof Date) return value;
+  if (typeof value === "object" && value !== null && "toDate" in value) {
+    return (value as { toDate: () => Date }).toDate();
+  }
+  const parsed = new Date(value as string);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+export interface ParticipantRow {
+  key: string;
+  participant: NonNullable<Slot["participant"]>;
+  slots: Slot[];
+  buyers: User[];
+  registeredAt?: Date;
+  categories: string;
+  slotDates: string;
+}
+
+/**
+ * Inscrits réels, regroupés par personne et **triés du premier inscrit au
+ * dernier** (date de paiement du premier créneau). Les inscriptions sans date
+ * connue (attributions manuelles, anciennes données) ferment la liste.
+ */
+export function buildParticipantRows(
+  slots: Slot[],
+  categories: Category[],
+  users: User[]
+): ParticipantRow[] {
   const categoryMap = Object.fromEntries(categories.map(category => [category.id, category.name]));
   const userMap = Object.fromEntries(users.map(user => [user.id, user]));
-  const participantMap = new Map<string, { participant: NonNullable<Slot["participant"]>; slots: Slot[]; buyerIds: Set<string> }>();
+  const participantMap = new Map<
+    string,
+    { participant: NonNullable<Slot["participant"]>; slots: Slot[]; buyerIds: Set<string> }
+  >();
 
   for (const slot of slots) {
     // 👥 Duo : chaque participant du créneau compte (t-shirts, listes d'appel)
@@ -174,33 +206,75 @@ function generateParticipantList(slots: Slot[], categories: Category[], users: U
     }
   }
 
-  const rows = Array.from(participantMap.values())
-    .sort((a, b) =>
-      a.participant.lastName.localeCompare(b.participant.lastName) ||
-      a.participant.firstName.localeCompare(b.participant.firstName)
-    )
-    .map(({ participant, slots: participantSlots, buyerIds }) => {
+  return Array.from(participantMap.entries())
+    .map(([key, { participant, slots: participantSlots, buyerIds }]) => {
       const sortedParticipantSlots = [...participantSlots].sort((a, b) => {
         if (a.date !== b.date) return a.date.localeCompare(b.date);
         return a.startTime.getTime() - b.startTime.getTime();
       });
-      const categoriesForParticipant = Array.from(new Set(sortedParticipantSlots.map(slot => categoryMap[slot.categoryId] || slot.categoryId))).join(" | ");
-      const slotDates = sortedParticipantSlots.map(slot => `${slot.date} ${formatTime(slot.startTime)}`).join(" | ");
-      const buyers = Array.from(buyerIds).map(buyerId => userMap[buyerId]).filter(Boolean);
 
-      return [
-        participant.firstName,
-        participant.lastName,
-        participant.email || "",
-        participant.phone || "",
-        participant.shirtSize || "",
-        participantSlots.length,
-        categoriesForParticipant,
-        slotDates,
-        buyers.map(formatUser).join(" | "),
-        buyers.map(buyer => buyer.email).join(" | "),
-      ];
+      const paidDates = participantSlots
+        .map(slotPaidDate)
+        .filter((date): date is Date => !!date)
+        .sort((a, b) => a.getTime() - b.getTime());
+
+      return {
+        key,
+        participant,
+        slots: sortedParticipantSlots,
+        buyers: Array.from(buyerIds).map(buyerId => userMap[buyerId]).filter(Boolean),
+        registeredAt: paidDates[0],
+        categories: Array.from(
+          new Set(sortedParticipantSlots.map(slot => categoryMap[slot.categoryId] || slot.categoryId))
+        ).join(" | "),
+        slotDates: sortedParticipantSlots
+          .map(slot => `${slot.date} ${formatTime(slot.startTime)}`)
+          .join(" | "),
+      };
+    })
+    .sort((a, b) => {
+      // Du plus ancien inscrit au dernier
+      if (a.registeredAt && b.registeredAt) return a.registeredAt.getTime() - b.registeredAt.getTime();
+      if (a.registeredAt) return -1;
+      if (b.registeredAt) return 1;
+      return (
+        a.participant.lastName.localeCompare(b.participant.lastName) ||
+        a.participant.firstName.localeCompare(b.participant.firstName)
+      );
     });
+}
+
+/** 3. PARTICIPANT LIST — inscrits dans leur ordre d'inscription */
+function generateParticipantList(slots: Slot[], categories: Category[], users: User[]): string {
+  const headers = [
+    "#",
+    "Registered At",
+    "First Name",
+    "Last Name",
+    "Email",
+    "Phone",
+    "T-Shirt Size",
+    "Participations",
+    "Categories",
+    "Slot Dates",
+    "Buyer",
+    "Buyer Email",
+  ];
+
+  const rows = buildParticipantRows(slots, categories, users).map((row, index) => [
+    index + 1,
+    row.registeredAt ? row.registeredAt.toLocaleString("fr-FR") : "",
+    row.participant.firstName,
+    row.participant.lastName,
+    row.participant.email || "",
+    row.participant.phone || "",
+    row.participant.shirtSize || "",
+    row.slots.length,
+    row.categories,
+    row.slotDates,
+    row.buyers.map(formatUser).join(" | "),
+    row.buyers.map(buyer => buyer.email).join(" | "),
+  ]);
 
   return buildCsv(headers, rows);
 }
@@ -438,8 +512,11 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
   const [isSheetConnected, setIsSheetConnected] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
-  const [previewMode, setPreviewMode] = useState<"planning" | "payments" | "meals">("planning");
+  const [previewMode, setPreviewMode] = useState<"planning" | "participants" | "payments" | "meals">("planning");
   const [previewCategoryId, setPreviewCategoryId] = useState<string>("all");
+  // 🔎 Filtres de l'aperçu
+  const [previewSearch, setPreviewSearch] = useState("");
+  const [previewStatus, setPreviewStatus] = useState<"all" | "paid" | "available" | "locked">("all");
 
   const eventId = selectedEvent?.id || "";
   const eventYear = selectedEvent?.eventYear || new Date().getFullYear();
@@ -450,18 +527,56 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
       return a.startTime.getTime() - b.startTime.getTime();
     }), [slots]);
 
-  const filteredPreviewSlots = useMemo(() =>
-    previewCategoryId === "all"
-      ? sortedSlots
-      : sortedSlots.filter(slot => slot.categoryId === previewCategoryId),
-    [previewCategoryId, sortedSlots]
-  );
-
   const getCategoryName = (categoryId: string) =>
     categories.find(c => c.id === categoryId)?.name || categoryId;
 
   const userMap = useMemo(() =>
     Object.fromEntries(users.map(u => [u.id, u])), [users]);
+
+  const filteredPreviewSlots = useMemo(() => {
+    const needle = previewSearch.trim().toLowerCase();
+    return sortedSlots.filter(slot => {
+      if (previewCategoryId !== "all" && slot.categoryId !== previewCategoryId) return false;
+      if (previewStatus !== "all" && slot.status !== previewStatus) return false;
+      if (!needle) return true;
+
+      const buyer = slot.buyerId ? userMap[slot.buyerId] : null;
+      const haystack = [
+        ...getSlotParticipants(slot).flatMap(participant => [
+          participant.firstName,
+          participant.lastName,
+          participant.email,
+        ]),
+        buyer ? formatUser(buyer) : "",
+        buyer?.email,
+        getCategoryName(slot.categoryId),
+      ];
+      return haystack.some(value => (value || "").toLowerCase().includes(needle));
+    });
+  }, [previewCategoryId, previewStatus, previewSearch, sortedSlots, userMap]
+  );
+
+  // 👥 Inscrits, du premier au dernier, filtrés comme le reste de l'aperçu
+  const previewParticipantRows = useMemo(() => {
+    const needle = previewSearch.trim().toLowerCase();
+    return buildParticipantRows(slots, categories, users).filter(row => {
+      if (previewCategoryId !== "all" && !row.slots.some(slot => slot.categoryId === previewCategoryId)) {
+        return false;
+      }
+      if (previewStatus !== "all" && !row.slots.some(slot => slot.status === previewStatus)) {
+        return false;
+      }
+      if (!needle) return true;
+      return [
+        row.participant.firstName,
+        row.participant.lastName,
+        row.participant.email,
+        row.participant.phone,
+        row.categories,
+        ...row.buyers.map(formatUser),
+      ].some(value => (value || "").toLowerCase().includes(needle));
+    });
+  }, [slots, categories, users, previewCategoryId, previewStatus, previewSearch]);
 
   const previewPaymentRows = useMemo(() => {
     const rows = payments.map(payment => {
@@ -526,7 +641,7 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
     {
       id: "participants",
       title: "Liste des participants",
-      description: "Liste complète des compétiteurs avec coordonnées, statut de paiement et créneaux assignés.",
+      description: "Compétiteurs du premier au dernier inscrit, avec date d'inscription, coordonnées et créneaux assignés.",
       icon: <Users className="h-5 w-5" />,
       color: "green",
       filename: `WPT_${eventYear}_Participants.csv`,
@@ -794,9 +909,30 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
                     <option key={category.id} value={category.id}>{category.name}</option>
                   ))}
                 </select>
+
+                {/* 🔎 Recherche libre : nom, email, acheteur, catégorie */}
+                <input
+                  type="search"
+                  value={previewSearch}
+                  onChange={(e) => setPreviewSearch(e.target.value)}
+                  placeholder="Rechercher un nom, un email..."
+                  className="h-9 w-56 rounded-md border border-input bg-background px-3 text-sm"
+                />
+
+                <select
+                  value={previewStatus}
+                  onChange={(e) => setPreviewStatus(e.target.value as typeof previewStatus)}
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="all">Tous les statuts</option>
+                  <option value="paid">Payés</option>
+                  <option value="locked">En cours de paiement</option>
+                  <option value="available">Disponibles</option>
+                </select>
                 <div className="flex rounded-md border bg-muted/40 p-1">
                   {[
                     { id: "planning", label: "Planning" },
+                    { id: "participants", label: "Inscrits" },
                     { id: "payments", label: "Paiements" },
                     { id: "meals", label: "Repas" },
                   ].map(item => (
@@ -857,6 +993,41 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
                   </table>
                 )}
 
+                {/* 👥 Inscrits, du premier au dernier */}
+                {previewMode === "participants" && (
+                  <table className="w-full text-sm border-collapse">
+                    <thead className="sticky top-0 z-10">
+                      <tr>
+                        {["#", "Inscrit le", "Prénom", "Nom", "Email", "Téléphone", "T-shirt", "Passages", "Catégories", "Acheteur"].map(h => (
+                          <th key={h} className="bg-gray-100 dark:bg-zinc-800 border px-2 py-1.5 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewParticipantRows.length === 0 ? (
+                        <tr><td colSpan={10} className="text-center py-8 text-muted-foreground text-sm">Aucun inscrit pour ce filtre.</td></tr>
+                      ) : previewParticipantRows.map((row, idx) => (
+                        <tr key={row.key} className="border-b hover:bg-muted/30">
+                          <td className="bg-gray-50 dark:bg-zinc-900 border-r text-center text-xs text-muted-foreground px-2">{idx + 1}</td>
+                          <td className="border-r px-2 py-1.5 text-xs whitespace-nowrap">
+                            {row.registeredAt
+                              ? row.registeredAt.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" })
+                              : <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className="border-r px-2 py-1.5 text-xs">{row.participant.firstName}</td>
+                          <td className="border-r px-2 py-1.5 text-xs font-medium">{row.participant.lastName}</td>
+                          <td className="border-r px-2 py-1.5 text-xs">{row.participant.email || "—"}</td>
+                          <td className="border-r px-2 py-1.5 text-xs">{row.participant.phone || "—"}</td>
+                          <td className="border-r px-2 py-1.5 text-xs">{row.participant.shirtSize || "—"}</td>
+                          <td className="border-r px-2 py-1.5 text-xs text-center">{row.slots.length}</td>
+                          <td className="border-r px-2 py-1.5 text-xs">{row.categories || "—"}</td>
+                          <td className="px-2 py-1.5 text-xs">{row.buyers.map(formatUser).join(" | ") || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+
                 {previewMode === "payments" && (
                   <table className="w-full text-sm border-collapse">
                     <thead className="sticky top-0 z-10">
@@ -913,6 +1084,7 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
             <div className="flex items-center justify-between mt-4">
               <p className="text-xs text-muted-foreground">
                 {previewMode === "planning" && `${filteredPreviewSlots.length} créneaux affichés`}
+                {previewMode === "participants" && `${previewParticipantRows.length} inscrit(s) affiché(s), du premier au dernier inscrit`}
                 {previewMode === "payments" && `${previewPaymentRows.length} paiements affichés`}
                 {previewMode === "meals" && `${previewMealRows.length} repas affichés`}
                 {lastSynced ? ` • Dernière sync: ${lastSynced}` : ""}
