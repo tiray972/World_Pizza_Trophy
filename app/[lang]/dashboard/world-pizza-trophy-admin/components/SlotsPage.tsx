@@ -7,7 +7,7 @@ import { AssignSlotModal } from "./AssignSlotModal";
 import { TransferSlotModal } from "./TransferSlotModal";
 import { CreateSlotModal } from "./CreateSlotModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
-import { Clock, User as UserIcon, Loader2, FileSpreadsheet, Plus, CalendarDays, Trash2, Eraser, AlertTriangle, Lock, ShieldAlert, UserCog, CheckCircle, Gift, ArrowRightLeft } from "lucide-react";
+import { Clock, User as UserIcon, Loader2, FileSpreadsheet, Plus, CalendarDays, Trash2, Eraser, AlertTriangle, Lock, ShieldAlert, UserCog, CheckCircle, Gift, ArrowRightLeft, Unlock } from "lucide-react";
 import { formatTime, formatUser } from "../lib/utils";
 import { getSlotParticipants } from "@/lib/booking/rules";
 import { getAuth } from "firebase/auth";
@@ -20,6 +20,8 @@ interface SlotsPageProps {
   onUpdateSlot: (slot: Slot) => void | Promise<void>;
   /** 🔁 Déplace une réservation (acheteur, participant, paiement) vers un autre créneau. */
   onTransferSlot?: (slot: Slot, targetSlotId: string) => Promise<void>;
+  /** 🔓 Remet un créneau en vente (efface participant, acheteur et verrou). */
+  onReleaseSlot?: (slot: Slot) => Promise<void>;
   onCreateSlot: (slotsData: Omit<Slot, "id" | "status" | "userId" | "stripeSessionId" | "eventId">[]) => Promise<void>;
   onDeleteSlot: (slotId: string) => Promise<void>;
   onDeleteDate: (date: string) => Promise<void>;
@@ -32,6 +34,7 @@ export function SlotsPage({
   selectedEvent,
   onUpdateSlot,
   onTransferSlot,
+  onReleaseSlot,
   onCreateSlot,
   onDeleteSlot,
   onDeleteDate
@@ -75,6 +78,7 @@ export function SlotsPage({
   const [isCleaning, setIsCleaning] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [slotToTransfer, setSlotToTransfer] = useState<Slot | null>(null);
+  const [releasingSlotId, setReleasingSlotId] = useState<string | null>(null);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   // Filter slots for current date view
@@ -257,6 +261,40 @@ export function SlotsPage({
       a.participant.firstName.localeCompare(b.participant.firstName)
     );
   }, [slots]);
+
+  const handleReleaseSlot = async (slot: Slot) => {
+    if (!onReleaseSlot) return;
+
+    const participants = getSlotParticipants(slot)
+      .map(participant => `${participant.firstName} ${participant.lastName}`)
+      .join(" & ");
+
+    // ⚠️ Un créneau lié à un paiement Stripe doit être transféré, pas libéré :
+    // sinon l'argent encaissé n'est plus rattaché à aucun créneau.
+    const warning = slot.stripeSessionId
+      ? "\n\n⚠️ ATTENTION : ce créneau est lié à un PAIEMENT STRIPE. En le libérant, le montant encaissé ne sera plus rattaché à aucun créneau. Utilisez plutôt « Transférer » pour déplacer la réservation."
+      : "";
+
+    const confirmed = window.confirm(
+      `Libérer ce créneau et le remettre en vente ?\n\n${getCategoryName(slot.categoryId)} — ${slot.date} à ${formatTime(slot.startTime)}` +
+        (participants ? `\nParticipant : ${participants}` : "") +
+        warning
+    );
+    if (!confirmed) return;
+
+    setReleasingSlotId(slot.id);
+    try {
+      await onReleaseSlot(slot);
+    } catch (error) {
+      console.error("❌ Libération impossible:", error);
+      alert(
+        "Le créneau n'a pas pu être libéré.\n\n" +
+          (error instanceof Error ? error.message : String(error))
+      );
+    } finally {
+      setReleasingSlotId(null);
+    }
+  };
 
   const handleCleanupOrphanParticipants = async () => {
     if (!selectedEvent) return;
@@ -515,6 +553,25 @@ export function SlotsPage({
                           >
                             {assignedUser ? "Reassign" : "Assign"}
                           </Button>
+
+                          {/* 🔓 Remettre le créneau en vente */}
+                          {onReleaseSlot && slot.status !== 'available' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-amber-600 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-950/30"
+                              onClick={() => handleReleaseSlot(slot)}
+                              disabled={releasingSlotId === slot.id}
+                              title="Libérer ce créneau et le remettre en vente"
+                            >
+                              {releasingSlotId === slot.id ? (
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <Unlock className="h-3 w-3 mr-1" />
+                              )}
+                              Libérer
+                            </Button>
+                          )}
 
                           {/* 🔁 Erreur de catégorie ou d'horaire : on déplace la réservation */}
                           {onTransferSlot && slot.status !== 'available' && (

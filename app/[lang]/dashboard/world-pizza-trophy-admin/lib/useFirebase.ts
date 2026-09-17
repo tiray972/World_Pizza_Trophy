@@ -470,6 +470,34 @@ export const useSlots = (eventId?: string) => {
     }
   };
 
+  /**
+   * 🔓 Remet un créneau en vente : efface le participant, l'acheteur, le
+   * verrou et le lien de paiement. C'est l'action que le message de protection
+   * des créneaux payés demandait sans qu'elle existe.
+   *
+   * Un créneau lié à un paiement Stripe doit plutôt être transféré : libérer
+   * casse le lien entre l'argent encaissé et le créneau.
+   */
+  const releaseSlot = async (slotId: string) => {
+    try {
+      await updateDoc(doc(db, 'slots', slotId), {
+        status: 'available',
+        participant: deleteField(),
+        participants: deleteField(),
+        buyerId: deleteField(),
+        lockedByUserId: deleteField(),
+        lockedUntil: deleteField(),
+        paidAt: deleteField(),
+        assignmentType: deleteField(),
+        assignedByAdminId: deleteField(),
+        assignedAt: deleteField(),
+        stripeSessionId: null,
+      });
+    } catch (err) {
+      throw new Error(`Failed to release slot: ${err}`);
+    }
+  };
+
   const deleteSlot = async (slotId: string) => {
     try {
       await deleteDoc(doc(db, 'slots', slotId));
@@ -493,7 +521,7 @@ export const useSlots = (eventId?: string) => {
     }
   };
 
-  return { slots, loading, error, createSlots, updateSlot, transferSlot, deleteSlot, deleteSlotsByDate };
+  return { slots, loading, error, createSlots, updateSlot, transferSlot, releaseSlot, deleteSlot, deleteSlotsByDate };
 };
 
 // ============================================================================
