@@ -338,9 +338,25 @@ function generateCategorySchedule(slots: Slot[], categories: Category[]): string
   return buildCsv(headers, csvRows);
 }
 
+/**
+ * Part d'un paiement imputable a UN creneau : le montant total moins les repas,
+ * divise par le nombre de creneaux couverts. Sans cela, un paiement de 3
+ * creneaux affichait son montant complet sur chacune des 3 lignes.
+ */
+function slotShareOfPayment(payment: Payment): number {
+  const metadata = (payment.metadata || {}) as Record<string, string>;
+  const mealTotal = Number(metadata.mealPrice || 0) * Number(metadata.mealQuantity || 0);
+  const slotCount = payment.slotIds?.length || 0;
+  if (slotCount === 0) return 0;
+  return Math.max(0, (payment.amount || 0) - mealTotal) / slotCount;
+}
+
 /** 4. FINANCIAL DETAIL — All paid/offered slots with amounts */
 function generateFinancialDetail(slots: Slot[], payments: Payment[], users: User[]): string {
-  const headers = ["Date", "Slot Date", "Slot Time", "Category", "Status", "Participant", "T-Shirt Size", "Buyer", "Buyer Email", "Amount (€)", "Payment Method", "Stripe Session", "Recorded At"];
+  // ⚠️ "Payment Total" est le montant de la transaction entiere : il se repete
+  // sur chaque creneau du meme paiement. Pour additionner une colonne sans
+  // compter deux fois, utiliser "Slot Share (€)".
+  const headers = ["Date", "Slot Date", "Slot Time", "Category", "Status", "Participant", "T-Shirt Size", "Buyer", "Buyer Email", "Slot Share (€)", "Payment Total (€)", "Payment Method", "Stripe Session", "Recorded At"];
 
   const userMap = Object.fromEntries(users.map(u => [u.id, u]));
   const categoryIdBySlot = Object.fromEntries(slots.map(slot => [slot.id, slot.categoryId]));
@@ -368,6 +384,7 @@ function generateFinancialDetail(slots: Slot[], payments: Payment[], users: User
       getSlotParticipants(slot).map(p => p.shirtSize || "?").join(" & "),
       buyer ? formatUser(buyer) : "",
       buyer?.email || "",
+      payment ? slotShareOfPayment(payment).toFixed(2) : slot.status === "offered" ? "0" : "",
       payment ? payment.amount : slot.status === "offered" ? "0" : "",
       payment?.source || "",
       slot.stripeSessionId || "",
