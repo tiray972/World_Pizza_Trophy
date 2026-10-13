@@ -18,9 +18,10 @@ import {
   limit,
   writeBatch,
   deleteField,
+  runTransaction,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
-import { WPTEvent, User, Slot, Category, Product, Voucher, Payment, AnalyticsSummary, PageView, TrackingEvent } from '@/types/firestore';
+import { WPTEvent, User, Slot, Category, Product, Voucher, Payment, AnalyticsSummary, PageView, TrackingEvent, Participant } from '@/types/firestore';
 
 // ============================================================================
 // CONVERSION HELPERS (Firestore Timestamp ↔ Date)
@@ -471,6 +472,58 @@ export const useSlots = (eventId?: string) => {
   };
 
   /**
+   * 🎁 Offre plusieurs créneaux d'un coup (vue tableau des participants).
+   *
+   * Transaction : chaque créneau est relu au moment de l'écriture. Si l'un
+   * d'eux a été pris entre-temps (réservation en ligne, autre admin), RIEN
+   * n'est écrit et l'erreur indique lesquels — on ne surcharge jamais une
+   * réservation existante.
+   */
+  const offerSlots = async (
+    offers: { slotId: string; buyerId: string; participant: Participant; label?: string }[],
+    adminId = 'admin_current'
+  ) => {
+    if (offers.length === 0) return;
+    if (offers.length > 400) {
+      throw new Error("Trop de créneaux en une seule fois (400 maximum). Répartissez en plusieurs fois.");
+    }
+
+    await runTransaction(db, async transaction => {
+      const references = offers.map(offer => doc(db, 'slots', offer.slotId));
+      const snapshots = await Promise.all(references.map(reference => transaction.get(reference)));
+
+      const unavailable = snapshots
+        .map((snapshot, index) => ({ snapshot, offer: offers[index] }))
+        .filter(({ snapshot }) => !snapshot.exists() || snapshot.data()?.status !== 'available');
+
+      if (unavailable.length > 0) {
+        throw new Error(
+          `${unavailable.length} créneau(x) ne sont plus disponibles : ` +
+            unavailable.map(({ offer }) => offer.label || offer.slotId).join(', ') +
+            '. Rien n\'a été modifié — relancez la proposition.'
+        );
+      }
+
+      const now = convertDateToTimestamp(new Date());
+      references.forEach((reference, index) => {
+        const offer = offers[index];
+        transaction.update(
+          reference,
+          removeUndefinedValues({
+            status: 'offered',
+            buyerId: offer.buyerId,
+            participant: offer.participant,
+            participants: [offer.participant],
+            assignmentType: 'manual',
+            assignedByAdminId: adminId,
+            assignedAt: now,
+          })
+        );
+      });
+    });
+  };
+
+  /**
    * 🔓 Remet un créneau en vente : efface le participant, l'acheteur, le
    * verrou et le lien de paiement. C'est l'action que le message de protection
    * des créneaux payés demandait sans qu'elle existe.
@@ -521,7 +574,7 @@ export const useSlots = (eventId?: string) => {
     }
   };
 
-  return { slots, loading, error, createSlots, updateSlot, transferSlot, releaseSlot, deleteSlot, deleteSlotsByDate };
+  return { slots, loading, error, createSlots, updateSlot, transferSlot, releaseSlot, offerSlots, deleteSlot, deleteSlotsByDate };
 };
 
 // ============================================================================

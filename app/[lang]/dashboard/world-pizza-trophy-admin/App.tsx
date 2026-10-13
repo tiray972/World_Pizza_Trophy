@@ -92,7 +92,7 @@ export default function App() {
   // Firebase hooks - loads data in real-time
   const { events, createEvent, updateEvent } = useEvents();
   const { users, updateUser } = useUsers();
-  const { slots, createSlots, updateSlot, transferSlot, releaseSlot, deleteSlot, deleteSlotsByDate } = useSlots(selectedEventId);
+  const { slots, createSlots, updateSlot, transferSlot, releaseSlot, offerSlots, deleteSlot, deleteSlotsByDate } = useSlots(selectedEventId);
   const { categories, createCategory, updateCategory, deleteCategory } = useCategories(selectedEventId);
   const { products, createProduct, updateProduct, deleteProduct } = useProducts(selectedEventId);
   const { vouchers, createVoucher, deleteVoucher } = useVouchers(selectedEventId);
@@ -402,6 +402,7 @@ export default function App() {
             onUpdateSlot={handleUpdateSlot}
             onTransferSlot={handleTransferSlot}
             onReleaseSlot={async (slot) => { await releaseSlot(slot.id); }}
+            onOfferSlots={offerSlots}
             onCreateSlot={handleCreateSlots}
             onDeleteSlot={handleDeleteSlot}
             onDeleteDate={handleDeleteDate}

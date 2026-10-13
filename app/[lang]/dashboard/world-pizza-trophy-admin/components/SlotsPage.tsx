@@ -6,6 +6,7 @@ import { Slot, User, SlotStatus, Category, WPTEvent, Participant } from "@/types
 import { AssignSlotModal } from "./AssignSlotModal";
 import { TransferSlotModal } from "./TransferSlotModal";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { ParticipantMatrix, SlotOffer } from "./ParticipantMatrix";
 import { CreateSlotModal } from "./CreateSlotModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Clock, User as UserIcon, Loader2, FileSpreadsheet, Plus, CalendarDays, Trash2, Eraser, AlertTriangle, Lock, ShieldAlert, UserCog, CheckCircle, Gift, ArrowRightLeft, Unlock } from "lucide-react";
@@ -23,6 +24,8 @@ interface SlotsPageProps {
   onTransferSlot?: (slot: Slot, targetSlotId: string) => Promise<void>;
   /** 🔓 Remet un créneau en vente (efface participant, acheteur et verrou). */
   onReleaseSlot?: (slot: Slot) => Promise<void>;
+  /** 🎁 Offre plusieurs créneaux en une fois (vue tableau des participants). */
+  onOfferSlots?: (offers: SlotOffer[]) => Promise<void>;
   onCreateSlot: (slotsData: Omit<Slot, "id" | "status" | "userId" | "stripeSessionId" | "eventId">[]) => Promise<void>;
   onDeleteSlot: (slotId: string) => Promise<void>;
   onDeleteDate: (date: string) => Promise<void>;
@@ -36,6 +39,7 @@ export function SlotsPage({
   onUpdateSlot,
   onTransferSlot,
   onReleaseSlot,
+  onOfferSlots,
   onCreateSlot,
   onDeleteSlot,
   onDeleteDate
@@ -80,6 +84,8 @@ export function SlotsPage({
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [slotToTransfer, setSlotToTransfer] = useState<Slot | null>(null);
   const [slotToRelease, setSlotToRelease] = useState<Slot | null>(null);
+  // Vue : liste des créneaux par jour, ou tableau participants × catégories
+  const [viewMode, setViewMode] = useState<'list' | 'matrix'>('list');
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   // Filter slots for current date view
@@ -390,6 +396,36 @@ export function SlotsPage({
         </div>
       </div>
 
+      {/* 🔀 Bascule de vue */}
+      <div className="inline-flex rounded-md border bg-muted/40 p-1">
+        {[
+          { id: 'list' as const, label: 'Liste par jour' },
+          { id: 'matrix' as const, label: 'Tableau participants × catégories' },
+        ].map(view => (
+          <button
+            key={view.id}
+            type="button"
+            onClick={() => setViewMode(view.id)}
+            className={`h-8 rounded px-4 text-sm font-medium transition ${
+              viewMode === view.id ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'
+            }`}
+          >
+            {view.label}
+          </button>
+        ))}
+      </div>
+
+      {viewMode === 'matrix' ? (
+        onOfferSlots ? (
+          <ParticipantMatrix
+            slots={slots}
+            categories={categories}
+            users={users}
+            onOfferSlots={onOfferSlots}
+          />
+        ) : null
+      ) : (
+      <>
       <div className="flex items-center space-x-2 border-b pb-4 overflow-x-auto">
         {availableDates.length > 0 ? (
           availableDates.map(date => (
@@ -611,6 +647,8 @@ export function SlotsPage({
           </div>
         </CardContent>
       </Card>
+      </>
+      )}
 
       <AssignSlotModal
         isOpen={isAssignModalOpen}
