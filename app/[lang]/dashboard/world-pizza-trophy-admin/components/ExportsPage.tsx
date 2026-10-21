@@ -10,6 +10,7 @@ import {
 import { cn, formatTime, formatUser } from "../lib/utils";
 import { Slot, Category, User, Payment, WPTEvent } from "@/types/firestore";
 import { getSlotParticipants } from "@/lib/booking/rules";
+import { ScheduleMailingCard } from "./ScheduleMailingCard";
 
 // ─────────────────────────────────────────────
 // CSV UTILITIES
@@ -764,6 +765,9 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
           </div>
         </div>
       )}
+
+      {/* ── 📧 PROGRAMMES DE PASSAGE PAR EMAIL ── */}
+      {eventId && <ScheduleMailingCard eventId={eventId} />}
 
       {/* ── 🗓️ GRILLE DES JURYS ── */}
       {categorySchedule.dates.length > 0 && (
