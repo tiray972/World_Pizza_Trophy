@@ -10,7 +10,8 @@ import {
 } from "@/lib/booking/pending-booking";
 import { getParticipantsPerSlot, validateBookingSelection } from "@/lib/booking/rules";
 import { createCheckoutSession } from "@/lib/booking/stripe-session";
-import type { Category, Participant } from "@/types/firestore";
+import type { Category, Participant, Product } from "@/types/firestore";
+import { clampPackQuantity, packAllowsCategory, packMealsIncluded, UNNAMED_PACK_MEAL } from "@/lib/booking/packs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
@@ -30,7 +31,12 @@ interface PackCheckoutBody {
   eventId: string;
   packId: string;
   packName: string;
-  totalAmount: number;
+  /** Ignoré : le prix est recalculé côté serveur depuis le produit. */
+  totalAmount?: number;
+  /** Nombre d'exemplaires du même pack (1 par défaut). */
+  quantity?: number;
+  /** Noms des repas inclus dans le pack. */
+  mealGuests?: { firstName?: string; lastName?: string }[];
   lang: string;
 }
 
@@ -39,7 +45,8 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json() as PackCheckoutBody;
-        const { slotsToReserve, userId, userEmail, eventId, packId, packName, totalAmount, lang } = body;
+        const { slotsToReserve, userId, userEmail, eventId, packId, lang } = body;
+        const quantity = clampPackQuantity(body.quantity ?? 1);
 
         // ✅ Validation complète des données
         if (!slotsToReserve || slotsToReserve.length === 0) {
@@ -48,10 +55,7 @@ export async function POST(req: NextRequest) {
         if (!userId || !userEmail) {
             return NextResponse.json({ error: "Données utilisateur manquantes." }, { status: 400 });
         }
-        if (!totalAmount || totalAmount <= 0) {
-            return NextResponse.json({ error: "Montant invalide." }, { status: 400 });
-        }
-        if (!packId || !packName) {
+        if (!packId) {
             return NextResponse.json({ error: "Données du pack manquantes." }, { status: 400 });
         }
         if (!lang) {
@@ -63,7 +67,25 @@ export async function POST(req: NextRequest) {
         }
 
 
-        console.log(`🔵 [Pack Checkout] Starting pack checkout for user ${userId}, pack ${packId}, slots: ${slotsToReserve.length}, total: ${totalAmount}€`);
+        // 🔒 Le produit fait foi : jamais le prix ni le contenu envoyés par le navigateur
+        const productDoc = await adminDB.collection("products").doc(packId).get();
+        const product = productDoc.exists ? ({ id: productDoc.id, ...productDoc.data() } as Product) : null;
+        if (!product || !product.isActive || (eventId && product.eventId && product.eventId !== eventId)) {
+            return NextResponse.json({ error: "Ce pack n'est plus disponible." }, { status: 400 });
+        }
+        const packName = product.name;
+        const expectedSlots = (Number(product.slotsRequired) || 0) * quantity;
+        if (slotsToReserve.length !== expectedSlots) {
+            return NextResponse.json({
+                error: `Ce pack demande ${expectedSlots} créneau(x) (${quantity} × ${product.slotsRequired}), ${slotsToReserve.length} sélectionné(s).`,
+            }, { status: 400 });
+        }
+        const totalAmount = Math.round(Number(product.unitAmount) * quantity * 100) / 100;
+        if (!totalAmount || totalAmount <= 0) {
+            return NextResponse.json({ error: "Prix du pack invalide." }, { status: 400 });
+        }
+
+        console.log(`🔵 [Pack Checkout] Starting pack checkout for user ${userId}, pack ${packId} x${quantity}, slots: ${slotsToReserve.length}, total: ${totalAmount}€`);
 
         const availableSlots = [];
         const now = new Date();
@@ -99,6 +121,12 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        // 🚫 Catégories exclues de ce pack
+        const excluded = availableSlots.filter(slot => !packAllowsCategory(product, slot.categoryId));
+        if (excluded.length > 0) {
+            return NextResponse.json({ error: "Une des catégories choisies n'est pas incluse dans ce pack." }, { status: 400 });
+        }
+
         // 1️⃣bis Participants requis par catégorie (duo) — le minimum de créneaux
         // ne s'applique pas aux packs, qui imposent déjà leur nombre de créneaux.
         const categoryIds = Array.from(new Set(availableSlots.map(slot => slot.categoryId).filter(Boolean)));
@@ -132,17 +160,16 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: ruleErrors.join(" ") }, { status: 400 });
         }
 
-        console.log(`📊 [Pack Checkout] Total amount: ${totalAmount}€ (type: ${typeof totalAmount})`);
-        
-        // 🔧 VALIDATION: Ensure totalAmount is valid
-        if (typeof totalAmount !== 'number' || isNaN(totalAmount) || totalAmount <= 0) {
-            console.error(`❌ [Pack Checkout] Invalid totalAmount: ${totalAmount} (type: ${typeof totalAmount})`);
-            return NextResponse.json({ 
-                error: `Montant invalide: ${totalAmount}. Le montant doit être > 0.` 
-            }, { status: 400 });
-        }
-
-        console.log(`✅ [Pack Checkout] Amount validation passed`);
+        // 🍽️ Repas inclus : nommés si possible, sinon comptés « à préciser »
+        const mealQuantity = packMealsIncluded(product) * quantity;
+        const namedMeals = (body.mealGuests ?? [])
+            .map(guest => ({ firstName: guest.firstName?.trim() || "", lastName: guest.lastName?.trim() || "" }))
+            .filter(guest => guest.firstName && guest.lastName)
+            .slice(0, mealQuantity);
+        const mealGuests = [
+            ...namedMeals,
+            ...Array.from({ length: mealQuantity - namedMeals.length }, () => ({ ...UNNAMED_PACK_MEAL })),
+        ];
         console.log(`📊 Creating Stripe session for pack with total amount: ${totalAmount}€`);
 
         const origin = req.headers.get('origin') || 'http://localhost:3000';
@@ -156,6 +183,9 @@ export async function POST(req: NextRequest) {
             packId,
             packName,
             totalAmount,
+            includeMeal: mealQuantity > 0,
+            mealPrice: 0, // repas compris dans le prix du pack
+            mealQuantity,
             slots: slotsToReserve.map(slot => {
                 const participants = participantsOfPayload(slot);
                 return {
@@ -165,7 +195,7 @@ export async function POST(req: NextRequest) {
                     participants,
                 };
             }),
-            mealGuests: [],
+            mealGuests,
         };
         pendingBookingRef = await createPendingBooking(payload);
 
@@ -178,11 +208,13 @@ export async function POST(req: NextRequest) {
                         currency: 'eur',
                         product_data: {
                             name: `Pack - ${packName}`,
-                            description: `Pack de ${slotsToReserve.length} créneau(x) de compétition`,
+                            description:
+                                `${product.slotsRequired} créneau(x) de compétition` +
+                                (packMealsIncluded(product) ? ` + ${packMealsIncluded(product)} repas` : ""),
                         },
-                        unit_amount: Math.round(totalAmount * 100), // ✅ Montant calculé dynamiquement
+                        unit_amount: Math.round(Number(product.unitAmount) * 100), // prix du produit en base
                     },
-                    quantity: 1,
+                    quantity,
                 },
             ],
             mode: 'payment',

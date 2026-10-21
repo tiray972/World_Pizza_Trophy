@@ -179,12 +179,19 @@ export interface Product {
   eventId: string;
   name: string;
   description: string;
+  /** Ancien champ : le paiement calcule le prix lui-même (non utilisé). */
   stripePriceId: string;
   unitAmount: number;
   slotsRequired: number;
+  /** Ancien champ : tout produit est un pack, il n'est plus requis pour l'affichage. */
   isPack: boolean;
+  /** Ancien champ booléen, remplacé par `mealsIncluded`. */
   includesMeal: boolean;
   isActive: boolean;
+  /** 🍽️ Nombre de repas inclus dans UN pack (0 = aucun). */
+  mealsIncluded?: number;
+  /** 🚫 Catégories qui ne peuvent pas être choisies dans ce pack. */
+  excludedCategoryIds?: string[];
 }
 
 /* ---------------------------------
