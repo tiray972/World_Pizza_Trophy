@@ -93,6 +93,9 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
   const [events, setEvents] = useState<Record<string, EventData>>({});
   const [categories, setCategories] = useState<Record<string, CategoryData>>({});
   const [pageLoading, setPageLoading] = useState(true);
+  // 👁️ Un administrateur peut consulter l'espace d'un participant (lecture seule)
+  const [viewedAs, setViewedAs] = useState<{ uid: string; label: string } | null>(null);
+  const [viewAsError, setViewAsError] = useState<string | null>(null);
 
   const { lang } = use(params);
 
@@ -106,8 +109,20 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
 
     const fetchUserData = async () => {
       try {
+        // 0. ?viewAs=UID : réservé aux administrateurs, sinon on ignore
+        let targetUid = user.uid;
+        const requestedUid = new URLSearchParams(window.location.search).get('viewAs');
+        if (requestedUid && requestedUid !== user.uid) {
+          const viewerSnap = await getDoc(doc(db, 'users', user.uid));
+          if (viewerSnap.exists() && viewerSnap.data().role === 'admin') {
+            targetUid = requestedUid;
+          } else {
+            setViewAsError("Seuls les administrateurs peuvent consulter l'espace d'un autre compte.");
+          }
+        }
+
         // 1. Récupérer les données utilisateur
-        const userRef = doc(db, 'users', user.uid);
+        const userRef = doc(db, 'users', targetUid);
         const userSnap = await getDoc(userRef);
 
         if (!userSnap.exists()) {
@@ -117,13 +132,19 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
         }
 
         const data = userSnap.data() as UserData;
-        data.id = user.uid;
+        data.id = targetUid;
         setUserData(data);
+        if (targetUid !== user.uid) {
+          setViewedAs({
+            uid: targetUid,
+            label: `${data.firstName || ''} ${data.lastName || ''}`.trim() || data.email || targetUid,
+          });
+        }
 
         // 2. Récupérer tous les slots de l'utilisateur (par buyerId)
         const slotsQuery = query(
           collection(db, 'slots'),
-          where('buyerId', '==', user.uid)
+          where('buyerId', '==', targetUid)
         );
         const slotsSnap = await getDocs(slotsQuery);
         const slots: SlotData[] = slotsSnap.docs.map(doc => {
@@ -147,7 +168,7 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
         // 3. Récupérer tous les paiements de l'utilisateur
         const paymentsQuery = query(
           collection(db, 'payments'),
-          where('userId', '==', user.uid)
+          where('userId', '==', targetUid)
         );
         const paymentsSnap = await getDocs(paymentsQuery);
         const paymentsList: PaymentData[] = paymentsSnap.docs.map(doc => {
@@ -175,7 +196,7 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
         const missingInvoices = paymentsList.filter(
           payment => payment.status === 'paid' && !payment.stripeInvoicePdf && !payment.stripeInvoiceUrl
         );
-        if (missingInvoices.length > 0) {
+        if (missingInvoices.length > 0 && targetUid === user.uid) {
           const idToken = await user.getIdToken();
           for (const payment of missingInvoices) {
             try {
@@ -302,7 +323,9 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
   const formatHour = (date: Date) =>
     date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
-  const paidSlots = userSlots.filter(s => s.status === 'paid');
+  // ✅ Passages confirmés : payés en ligne OU attribués / offerts depuis le dashboard.
+  // (Auparavant seuls les "payés" apparaissaient : un créneau offert était invisible.)
+  const paidSlots = userSlots.filter(s => s.status === 'paid' || s.status === 'offered');
   const lockedSlots = userSlots.filter(s => s.status === 'locked');
   const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
   const totalPaidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0);
@@ -348,6 +371,21 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4 max-w-5xl">
         
+        {/* 👁️ Consultation par un administrateur */}
+        {viewedAs && (
+          <div className="mb-6 rounded-lg border-2 border-blue-400 bg-blue-50 p-4 text-blue-900">
+            <p className="font-bold">👁️ Vous consultez l&apos;espace de {viewedAs.label}</p>
+            <p className="text-sm">
+              C&apos;est exactement ce que cette personne voit sur son compte. Lecture seule.
+            </p>
+          </div>
+        )}
+        {viewAsError && (
+          <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+            {viewAsError}
+          </div>
+        )}
+
         {/* Profil utilisateur */}
         <Card className="mb-8">
           <CardHeader>
@@ -397,7 +435,7 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold text-blue-700 flex items-center gap-2">
                 <Pizza className="h-4 w-4" />
-                Créneaux Payés
+                Créneaux confirmés
               </CardTitle>
             </CardHeader>
             <CardContent>

@@ -67,11 +67,16 @@ export default function InvoicePage({
         }
 
         const paymentData = paymentSnap.data();
-        // 🔒 On ne montre que ses propres factures
+        // 🔒 Le titulaire, ou un administrateur qui consulte un compte
+        let isAdminViewer = false;
         if (paymentData.userId !== user.uid) {
-          setError("Cette facture ne vous appartient pas.");
-          setPageLoading(false);
-          return;
+          const viewerSnap = await getDoc(doc(db, 'users', user.uid));
+          isAdminViewer = viewerSnap.exists() && viewerSnap.data().role === 'admin';
+          if (!isAdminViewer) {
+            setError("Cette facture ne vous appartient pas.");
+            setPageLoading(false);
+            return;
+          }
         }
 
         const payment = {
@@ -143,7 +148,7 @@ export default function InvoicePage({
           }
         }
 
-        const userSnap = await getDoc(doc(db, 'users', user.uid));
+        const userSnap = await getDoc(doc(db, 'users', paymentData.userId || user.uid));
         const userData = userSnap.exists() ? userSnap.data() : {};
 
         setInvoice({
@@ -155,7 +160,7 @@ export default function InvoicePage({
           buyer: {
             firstName: userData.firstName || '',
             lastName: userData.lastName || '',
-            email: userData.email || user.email || '',
+            email: userData.email || (isAdminViewer ? '' : user.email) || '',
             country: userData.country || '',
           },
         });

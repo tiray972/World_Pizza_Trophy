@@ -5,7 +5,7 @@ import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
 import { Slot, User, Category, WPTEvent, Participant } from "@/types/firestore"; // Import WPTEvent to check status
 import { ManualSlotAssignModal } from "./ManualSlotAssignModal";
-import { Plus, Search, Calendar, CheckCircle2, XCircle, Loader2, FileSpreadsheet, Globe, AlertTriangle, UserMinus, Lock } from "lucide-react";
+import { Plus, Search, Calendar, CheckCircle2, XCircle, Loader2, FileSpreadsheet, Globe, AlertTriangle, UserMinus, Lock, Eye, Gift } from "lucide-react";
 import { formatUser } from "../lib/utils";
 
 interface UsersPageProps {
@@ -66,7 +66,7 @@ export function UsersPage({ users, slots, categories, selectedEventId, onUpdateS
   };
 
   const getAssignedSlotCount = (userId: string) => {
-    return slots.filter(s => s.buyerId === userId).length;
+    return slots.filter(s => s.buyerId === userId && s.status !== 'available').length;
   };
 
   const filteredUsers = users.filter(user => {
@@ -160,7 +160,9 @@ export function UsersPage({ users, slots, categories, selectedEventId, onUpdateS
                   filteredUsers.map((user) => {
                     const slotCount = getAssignedSlotCount(user.id);
                     const registration = user.registrations[selectedEventId];
-                    const isRegistered = !!registration;
+                    // Inscrit = paiement enregistré OU créneau attribué à la main depuis le
+                    // dashboard (ces attributions ne créent pas de fiche d'inscription).
+                    const isRegistered = !!registration || slotCount > 0;
                     const isPaid = registration?.paid;
 
                     return (
@@ -187,6 +189,10 @@ export function UsersPage({ users, slots, categories, selectedEventId, onUpdateS
                                <Badge variant="success" className="gap-1">
                                  <CheckCircle2 className="h-3 w-3" /> Paid
                                </Badge>
+                             ) : !registration ? (
+                               <Badge variant="secondary" className="gap-1">
+                                 <Gift className="h-3 w-3" /> Manual
+                               </Badge>
                              ) : (
                                <Badge variant="destructive" className="gap-1">
                                  <XCircle className="h-3 w-3" /> Unpaid
@@ -201,6 +207,19 @@ export function UsersPage({ users, slots, categories, selectedEventId, onUpdateS
                           </Badge>
                         </td>
                         <td className="p-4 align-middle text-right">
+                          <div className="flex justify-end gap-2">
+                          {/* 👁️ Ce que la personne voit dans son espace compte */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const lang = window.location.pathname.split('/')[1] || 'fr';
+                              window.open(`/${lang}/account?viewAs=${user.id}`, '_blank', 'noopener');
+                            }}
+                            title="Ouvrir l'espace compte de cette personne, tel qu'elle le voit (lecture seule)"
+                          >
+                            <Eye className="h-3 w-3 mr-1" /> Voir son espace
+                          </Button>
                           {isAssignmentLocked ? (
                             <Button variant="ghost" size="sm" disabled className="text-muted-foreground">
                                 <Lock className="h-3 w-3 mr-1" /> Locked
@@ -210,11 +229,12 @@ export function UsersPage({ users, slots, categories, selectedEventId, onUpdateS
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => handleAssignClick(user)}
-                                disabled={!isRegistered}
+                                title="Attribuer des créneaux à ce compte, même s'il n'a encore rien payé"
                             >
                                 Assign Slots
                             </Button>
                           )}
+                          </div>
                         </td>
                       </tr>
                     );
