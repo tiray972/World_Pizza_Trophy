@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDB } from '@/lib/firebase/admin';
 import * as admin from 'firebase-admin';
-import Stripe from 'stripe';
+import { finalizeAndNotify, stripeClient } from '@/lib/server/payments/stripe-adapter';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
-});
+/** Réservations en attente examinées par appel (limite les appels Stripe). */
+const PENDING_SCAN_LIMIT = 20;
+/** Une réservation en attente plus ancienne n'a plus de session payable. */
+const PENDING_EXPIRY_MS = 26 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   try {
+    const stripe = stripeClient();
     const now = new Date();
 
     console.log(`🔓 [unlock-expired-slots] Checking for expired locks at ${now.toISOString()}`);
@@ -27,47 +29,51 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    if (expired.length === 0) {
-      console.log(`ℹ️ [unlock-expired-slots] No expired locks found`);
-      return NextResponse.json({ message: '0 slots unlocked', unlockedCount: 0 }, { status: 200 });
-    }
-
     // 2️⃣ ⚠️ Ne JAMAIS libérer un créneau déjà payé : si la session Stripe est
     // payée mais que l'enregistrement n'a pas eu lieu (onglet fermé avant la
-    // page de succès, webhook absent), on répare au lieu de libérer la place.
-    const paidSessions = new Set<string>();
+    // page de succès, webhook absent), on finalise au lieu de libérer la place.
+    const keepLocked = new Set<string>();
+    const recovered: string[] = [];
     const sessionIds = Array.from(new Set(expired.map(slot => slot.sessionId).filter(Boolean) as string[]));
 
     for (const sessionId of sessionIds) {
       try {
         const session = await stripe.checkout.sessions.retrieve(sessionId);
         if (session.payment_status === 'paid') {
-          paidSessions.add(sessionId);
+          keepLocked.add(sessionId);
           console.warn(`💰 [unlock-expired-slots] Session ${sessionId} PAYÉE mais non enregistrée — récupération en cours`);
+          const result = await finalizeAndNotify(adminDB, session, 'recovery');
+          if (result.status === 'created') recovered.push(sessionId);
         }
       } catch (stripeError) {
-        // Session illisible : par prudence on ne libère pas le créneau.
-        console.error(`⚠️ [unlock-expired-slots] Session ${sessionId} illisible:`, stripeError);
-        paidSessions.add(sessionId);
+        // Session illisible ou finalisation en échec : par prudence on ne libère pas le créneau.
+        console.error(`⚠️ [unlock-expired-slots] Session ${sessionId} non traitée:`, stripeError);
+        keepLocked.add(sessionId);
       }
     }
 
-    // 3️⃣ Rattraper les paiements manquants
-    const origin = req.nextUrl.origin;
-    const recovered: string[] = [];
-    for (const sessionId of paidSessions) {
+    // 3️⃣ Achats sans créneau (repas seuls) : aucun verrou ne les signale, on
+    // examine donc aussi les réservations en attente.
+    const pendingSnapshot = await adminDB
+      .collection('pendingBookings')
+      .where('status', '==', 'pending')
+      .limit(PENDING_SCAN_LIMIT)
+      .get();
+    for (const pending of pendingSnapshot.docs) {
+      const data = pending.data();
+      const sessionId = data.stripeSessionId as string | undefined;
+      const createdAt: Date | null = data.createdAt?.toDate?.() ?? null;
+      if (!sessionId || sessionIds.includes(sessionId)) continue;
       try {
-        const response = await fetch(`${origin}/api/booking/record-payment`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId }),
-        });
-        if (response.ok) {
-          recovered.push(sessionId);
-          console.log(`✅ [unlock-expired-slots] Paiement récupéré pour la session ${sessionId}`);
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        if (session.payment_status === 'paid') {
+          const result = await finalizeAndNotify(adminDB, session, 'recovery');
+          if (result.status === 'created') recovered.push(sessionId);
+        } else if (session.status === 'expired' || (createdAt && now.getTime() - createdAt.getTime() > PENDING_EXPIRY_MS)) {
+          await pending.ref.update({ status: 'expired', updatedAt: admin.firestore.Timestamp.now() });
         }
-      } catch (recoveryError) {
-        console.error(`❌ [unlock-expired-slots] Récupération impossible pour ${sessionId}:`, recoveryError);
+      } catch (pendingError) {
+        console.error(`⚠️ [unlock-expired-slots] Réservation en attente ${pending.id} non traitée:`, pendingError);
       }
     }
 
@@ -76,7 +82,7 @@ export async function POST(req: NextRequest) {
     let unlockedCount = 0;
 
     for (const slot of expired) {
-      if (slot.sessionId && paidSessions.has(slot.sessionId)) continue;
+      if (slot.sessionId && keepLocked.has(slot.sessionId)) continue;
 
       console.log(`⏰ Slot ${slot.ref.id} lock expired, reverting to available`);
       batch.update(slot.ref, {

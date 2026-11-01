@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDB } from '@/lib/firebase/admin';
+import { adminAuth, adminDB } from '@/lib/firebase/admin';
 import * as admin from 'firebase-admin';
 
 export async function POST(req: NextRequest) {
@@ -7,6 +7,14 @@ export async function POST(req: NextRequest) {
     const { uid, email, firstName, lastName, phone, country } = await req.json();
 
     console.log(`📍 [create-profile] Received request:`, { uid, email, firstName, lastName });
+
+    // 🔒 Un compte ne crée que son propre profil (jeton Firebase obligatoire).
+    const authorization = req.headers.get('authorization') || '';
+    const idToken = authorization.startsWith('Bearer ') ? authorization.slice(7) : null;
+    const decoded = idToken ? await adminAuth.verifyIdToken(idToken).catch(() => null) : null;
+    if (!decoded || decoded.uid !== uid) {
+      return NextResponse.json({ error: 'Authentification requise.' }, { status: 401 });
+    }
 
     if (!uid || !email) {
       console.error('❌ Missing uid or email');
@@ -34,7 +42,8 @@ export async function POST(req: NextRequest) {
     // Créer le profil utilisateur avec le rôle 'user'
     const userProfile = {
       id: uid,
-      firstName: firstName || 'User',
+      // Prénom vide plutôt qu'un faux « User » : l'acheteur reste identifiable par son email.
+      firstName: firstName || '',
       lastName: lastName || '',
       email: email,
       phone: phone || '',

@@ -1,308 +1,45 @@
-import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
-import { adminDB } from '@/lib/firebase/admin';
-import * as admin from 'firebase-admin';
-import { Payment } from '@/types/firestore';
-import { sendPaymentNotifications } from '@/lib/email/payment-notifications';
-import { markPendingBookingPaid, resolveBookingPayload } from '@/lib/booking/pending-booking';
-import { getSessionInvoice } from '@/lib/booking/stripe-session';
+// app/api/booking/record-payment/route.ts
+// Appelée par la page de succès. Même finalisation idempotente que le webhook :
+// peu importe lequel arrive en premier, la session donne un seul paiement.
+// La session est relue chez Stripe : un appel direct ne peut rien enregistrer
+// qui n'ait pas été réellement payé.
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: '2023-10-16' as Stripe.LatestApiVersion,
-});
-
-interface PaymentParticipant {
-  firstName: string;
-  lastName: string;
-  email?: string;
-  phone?: string;
-  shirtSize?: string;
-}
-
-interface PaymentMealGuest {
-  firstName: string;
-  lastName: string;
-  email?: string;
-  phone?: string;
-  isParticipant?: boolean;
-}
+import { NextRequest, NextResponse } from "next/server";
+import { adminDB } from "@/lib/firebase/admin";
+import { finalizeAndNotify, stripeClient } from "@/lib/server/payments/stripe-adapter";
 
 export async function POST(req: NextRequest) {
   try {
     const { sessionId } = await req.json();
+    if (!sessionId || typeof sessionId !== "string") {
+      return NextResponse.json({ error: "Session ID is required" }, { status: 400 });
+    }
 
-    if (!sessionId) {
+    const session = await stripeClient().checkout.sessions.retrieve(sessionId);
+    if (session.payment_status !== "paid") {
+      return NextResponse.json({ error: "Payment not completed" }, { status: 400 });
+    }
+
+    const result = await finalizeAndNotify(adminDB, session, "success_page");
+
+    if (result.status === "payload_missing") {
+      // Payé mais réservation introuvable : incident visible dans le dashboard.
       return NextResponse.json(
-        { error: 'Session ID is required' },
-        { status: 400 }
+        { error: "Paiement reçu : l'organisation doit finaliser votre inscription. Vous serez contacté.", code: result.status },
+        { status: 409 }
       );
-    }
-
-    // 1️⃣ Récupérer la session Stripe
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-
-    if (session.payment_status !== 'paid') {
-      return NextResponse.json(
-        { error: 'Payment not completed' },
-        { status: 400 }
-      );
-    }
-
-    // 2️⃣ Extraire les métadonnées (valeurs courtes uniquement)
-    const {
-      userId,
-      userEmail,
-      eventId,
-      isPack: isPackString,
-      packName,
-      packId,
-      mealPrice: mealPriceString,
-      mealQuantity: mealQuantityString,
-      bookingRef,
-    } = session.metadata as {
-      userId: string;
-      userEmail: string;
-      eventId: string;
-      isPack: string;
-      packName?: string;
-      packId?: string;
-      mealPrice?: string;
-      mealQuantity?: string;
-      bookingRef?: string;
-    };
-
-    if (!userId) {
-      console.error('❌ Missing metadata in session:', session.metadata);
-      return NextResponse.json(
-        { error: 'Missing metadata in payment session' },
-        { status: 400 }
-      );
-    }
-
-    // 3️⃣ Récupérer la charge utile (document pendingBookings ou anciennes metadata)
-    const bookingPayload = await resolveBookingPayload(session);
-    if (!bookingPayload) {
-      console.error('❌ Booking payload not found for session:', session.id);
-      return NextResponse.json(
-        { error: 'Invalid slot data in metadata' },
-        { status: 400 }
-      );
-    }
-
-    const slotsData: Array<{
-      slotId: string;
-      participant?: PaymentParticipant;
-      participants?: PaymentParticipant[];
-    }> = bookingPayload.slots as Array<{
-      slotId: string;
-      participant?: PaymentParticipant;
-      participants?: PaymentParticipant[];
-    }>;
-
-    const isPack = isPackString === 'true';
-    const amountTotal = session.amount_total || 0;
-    const mealPrice = Number(mealPriceString || 0);
-    const mealQuantity = Number(mealQuantityString || 0);
-    const mealGuests: PaymentMealGuest[] = bookingPayload.mealGuests as PaymentMealGuest[];
-
-    if (slotsData.length === 0 && mealGuests.length === 0) {
-      return NextResponse.json(
-        { error: 'No slots or meals found in metadata' },
-        { status: 400 }
-      );
-    }
-
-    // 4️⃣ Vérifier si le paiement existe déjà
-    const existingPaymentQuery = await adminDB
-      .collection('payments')
-      .where('stripeSessionId', '==', sessionId)
-      .limit(1)
-      .get();
-
-    if (!existingPaymentQuery.empty) {
-      console.log(`⚠️ Payment already recorded for session ${sessionId}`);
-      return NextResponse.json({
-        success: true,
-        message: 'Payment already recorded',
-        paymentId: existingPaymentQuery.docs[0].id,
-      });
-    }
-
-    // 5️⃣ Commencer une transaction batch
-    const batch = adminDB.batch();
-
-    // 6️⃣ Créer l'enregistrement de paiement
-    const slotIds = slotsData.map((slot) => slot.slotId);
-    const paymentRecord: Payment = {
-      id: session.id,
-      eventId: eventId || '',
-      userId: userId,
-      stripeSessionId: session.id,
-      amount: amountTotal / 100,
-      status: 'paid',
-      source: 'stripe',
-      slotIds: slotIds,
-      isPack: isPack,
-      packName: isPack ? packName : undefined,
-      packId: isPack ? packId : undefined,
-      metadata: {
-        ...(session.metadata || {}),
-        slotsToReserve: JSON.stringify(slotsData),
-        mealGuests: JSON.stringify(mealGuests),
-      } as Payment['metadata'],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    // 🧾 Facture officielle Stripe (numérotée, PDF hébergé) si le compte l'émet
-    const stripeInvoice = await getSessionInvoice(session);
-    if (stripeInvoice) {
-      Object.assign(paymentRecord, {
-        stripeInvoiceNumber: stripeInvoice.number,
-        stripeInvoiceUrl: stripeInvoice.hostedUrl,
-        stripeInvoicePdf: stripeInvoice.pdfUrl,
-      });
-    }
-
-    const paymentRef = adminDB.collection('payments').doc();
-    // ✅ Filter out undefined values to avoid Firestore errors
-    const paymentToSave = Object.fromEntries(
-      Object.entries({
-        ...paymentRecord,
-        createdAt: admin.firestore.Timestamp.fromDate(paymentRecord.createdAt),
-        updatedAt: admin.firestore.Timestamp.fromDate(paymentRecord.updatedAt),
-      }).filter(([, value]) => value !== undefined)
-    );
-    batch.set(paymentRef, paymentToSave);
-
-    console.log(`✅ Payment record created: ${paymentRef.id} for user ${userId}`);
-
-    // 7️⃣ Mettre à jour les slots : locked -> paid
-    const categoryIds = new Set<string>();
-    const participantsForEmail: PaymentParticipant[] = [];
-    for (const slotInfo of slotsData) {
-      const slotId = slotInfo.slotId;
-      // 👥 Duo : plusieurs participants sur un même créneau
-      const slotParticipants =
-        Array.isArray(slotInfo.participants) && slotInfo.participants.length > 0
-          ? slotInfo.participants
-          : slotInfo.participant
-            ? [slotInfo.participant]
-            : [];
-      const participant = slotParticipants[0];
-      participantsForEmail.push(...slotParticipants);
-
-      const slotRef = adminDB.collection('slots').doc(slotId);
-      const slotDoc = await slotRef.get();
-
-      if (slotDoc.exists) {
-        const slotData = slotDoc.data();
-        categoryIds.add(slotData?.categoryId || '');
-
-        // Mettre à jour le slot : locked -> paid
-        batch.update(slotRef, {
-          buyerId: userId,
-          status: 'paid',
-          participant: participant || null,
-          participants: slotParticipants,
-          stripeSessionId: session.id,
-          assignmentType: 'payment',
-          paidAt: admin.firestore.Timestamp.fromDate(new Date()),
-        });
-      }
-    }
-
-    console.log(`✅ ${slotIds.length} slots updated to 'paid' status`);
-
-    // 8️⃣ Mettre à jour l'utilisateur avec la structure EventRegistration
-    const userRef = adminDB.collection('users').doc(userId);
-    const userDoc = await userRef.get();
-
-    if (slotIds.length > 0 && userDoc.exists) {
-      const userData = userDoc.data();
-      if (!userData) {
-        console.warn(`⚠️ User document data is empty: ${userId}`);
-      } else {
-        const registrations = userData.registrations || {};
-
-        // Créer ou mettre à jour l'enregistrement pour cet événement
-        if (!registrations[eventId]) {
-          const newRegistration = {
-            paid: true,
-            categoryIds: Array.from(categoryIds).filter((id) => id),
-            stripeCustomerId: session.customer,
-            paymentId: paymentRef.id,
-            registeredAt: admin.firestore.Timestamp.fromDate(new Date()),
-          };
-          // ✅ Filter out undefined values
-          registrations[eventId] = Object.fromEntries(
-            Object.entries(newRegistration).filter(([, value]) => value !== undefined)
-          );
-        } else {
-          // Merger avec les catégories existantes
-          const existingCategoryIds = registrations[eventId].categoryIds || [];
-          const allCategoryIds = Array.from(
-            new Set([...existingCategoryIds, ...Array.from(categoryIds).filter((id) => id)])
-          );
-
-          const updatedRegistration = {
-            ...registrations[eventId],
-            paid: true,
-            categoryIds: allCategoryIds,
-            stripeCustomerId: session.customer,
-            paymentId: paymentRef.id,
-            registeredAt: registrations[eventId].registeredAt || admin.firestore.Timestamp.fromDate(new Date()),
-          };
-          // ✅ Filter out undefined values
-          registrations[eventId] = Object.fromEntries(
-            Object.entries(updatedRegistration).filter(([, value]) => value !== undefined)
-          );
-        }
-
-        batch.update(userRef, { registrations });
-        console.log(`✅ User ${userId} registrations updated for event ${eventId}`);
-      }
-    } else if (slotIds.length > 0) {
-      console.warn(`⚠️ User document not found: ${userId}`);
-    }
-
-    // Exécuter le batch
-    await batch.commit();
-    await markPendingBookingPaid(bookingRef);
-    console.log(`✅ Payment processing COMPLETED for session ${session.id}`);
-
-    try {
-      const eventDoc = eventId ? await adminDB.collection('events').doc(eventId).get() : null;
-      const userData = userDoc.exists ? userDoc.data() : null;
-      await sendPaymentNotifications({
-        userEmail,
-        userName: userData ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() : undefined,
-        eventName: eventDoc?.exists ? eventDoc.data()?.name : undefined,
-        amount: amountTotal / 100,
-        sessionId: session.id,
-        isPack,
-        packName,
-        slotCount: slotIds.length,
-        participants: participantsForEmail,
-        mealGuests,
-        mealPrice,
-        mealQuantity,
-      });
-    } catch (emailError) {
-      console.error('❌ Payment emails failed:', emailError);
     }
 
     return NextResponse.json({
       success: true,
-      paymentId: paymentRef.id,
-      amount: amountTotal / 100,
-      slotsCount: slotIds.length,
+      message: result.status === "already_finalized" ? "Payment already recorded" : "Payment recorded",
+      paymentId: result.paymentId,
+      amount: (session.amount_total || 0) / 100,
+      slotsCount: result.slotIds.length,
+      needsReview: result.conflicts.length > 0,
     });
   } catch (error) {
-    console.error('❌ Error recording payment:', error);
-    return NextResponse.json(
-      { error: 'Error recording payment' },
-      { status: 500 }
-    );
+    console.error("❌ Error recording payment:", error);
+    return NextResponse.json({ error: "Error recording payment" }, { status: 500 });
   }
 }

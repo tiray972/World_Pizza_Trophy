@@ -1,7 +1,9 @@
 'use client';
 
 import { SlotBookingView } from "@/components/custom/SlotBookingCalendar";
-import type { SelectedPackSlot } from "@/components/custom/SlotBookingCalendar";
+import { localizedCategoryName, type CheckoutOutcome, type SelectedPackSlot } from "@/components/custom/SlotBookingCalendar";
+import type { ClientRuleAcceptance } from "@/lib/server/rules/acceptance";
+import { fill, rulesDialogTexts } from "@/lib/i18n/rules-dialog-texts";
 import { Slot, Category, WPTEvent, Product, MealGuest, Participant } from "@/types/firestore";
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
@@ -62,6 +64,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
             status: data.status,
             mealPrice: data.mealPrice || 0, // 🍽️ Ajouter le prix du repas
             minSlotsPerBooking: data.minSlotsPerBooking, // 🎟️ Minimum de catégories
+            rulesAcceptanceRequired: !!data.rulesAcceptanceRequired, // 📜 Règlement à accepter
           } as WPTEvent;
         });
 
@@ -227,6 +230,22 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
     loadEventData();
   }, [selectedEventId, openEvents]);
 
+  /**
+   * Réponse d'erreur du paiement. Un règlement refusé par le serveur (nouvelle
+   * version, catégorie non acceptée) est signalé sans vider le panier.
+   */
+  const outcomeOfError = (data: { error?: string; code?: string; details?: any }): CheckoutOutcome | null => {
+    if (data.code !== "rules_acceptance_required") return null;
+    const categoryIds: string[] = (data.details?.categories ?? []).map((entry: { categoryId: string }) => entry.categoryId);
+    const names = categoryIds
+      .map(id => localizedCategoryName(categories.find(category => category.id === id), currentLang))
+      .filter(Boolean)
+      .join(", ");
+    toast.warning(fill(rulesDialogTexts(currentLang).outdated, { categories: names }), { duration: 8000 });
+    setIsProcessing(false);
+    return { rulesToReaccept: categoryIds };
+  };
+
   const handleError = (msg: string) => {
     toast.error("Une erreur est survenue", {
       description: msg,
@@ -239,8 +258,9 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
     slotsToCheckout: { slotId: string; categoryId: string; participants?: (Participant | undefined)[] }[],
     includeMeal: boolean,
     mealPrice: number,
-    mealGuests: MealGuest[]
-  ): Promise<boolean> => {
+    mealGuests: MealGuest[],
+    ruleAcceptances: ClientRuleAcceptance[]
+  ): Promise<CheckoutOutcome> => {
     if (!user) {
       const loginUrl = `/${currentLang}/auth/login?redirect=/booking`;
       toast.info("Connexion requise", {
@@ -262,24 +282,28 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
     toast.loading("Préparation du paiement...", { id: "checkout-loading" });
 
     try {
+      // 🔒 L'acheteur est identifié par son jeton ; prix et règlement sont revérifiés par le serveur.
       const res = await fetch('/api/booking/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
         body: JSON.stringify({
           slotsToReserve: slotsToCheckout,
-          userId: user.uid,
-          userEmail: user.email,
           eventId: selectedEventId,
           totalAmount: totalAmount,
           includeMeal: includeMeal,
-          mealPrice: mealPrice,
           mealGuests: mealGuests,
+          ruleAcceptances,
           lang: currentLang,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) {
+        toast.dismiss("checkout-loading");
+        const outcome = outcomeOfError(data);
+        if (outcome) return outcome;
+        throw new Error(data.error);
+      }
 
       toast.dismiss("checkout-loading");
       if (!data.url) throw new Error("Impossible de créer la session de paiement");
@@ -294,8 +318,9 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
 
   const handlePackCheckout = async (
     product: Product,
-    slotsToCheckout: SelectedPackSlot[]
-  ): Promise<boolean> => {
+    slotsToCheckout: SelectedPackSlot[],
+    ruleAcceptances: ClientRuleAcceptance[]
+  ): Promise<CheckoutOutcome> => {
     if (!user) {
       const loginUrl = `/${currentLang}/auth/login?redirect=/booking`;
       toast.info("Connexion requise", {
@@ -327,15 +352,12 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
         slotsToReserve: slotsToCheckout.map(slot => ({
           slotId: slot.slotId,
           categoryId: slot.categoryId,
-          date: slot.date, // 🔧 ADD: Include date
-          participant: slot.participant,
+          // 👥 Tous les participants (duo) : seul le premier était transmis.
+          participants: slot.participants ?? (slot.participant ? [slot.participant] : []),
         })),
-        userId: user.uid,
-        userEmail: user.email,
         eventId: selectedEventId,
         packId: product.id,
-        packName: product.name,
-        totalAmount: totalAmount,
+        ruleAcceptances,
         lang: currentLang,
       };
 
@@ -343,7 +365,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
 
       const res = await fetch('/api/booking/checkout-pack', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
         body: JSON.stringify(requestBody),
       });
 
@@ -352,6 +374,9 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
       
       if (!res.ok) {
         console.error(`❌ [PackCheckout] API Error:`, data);
+        toast.dismiss("pack-loading");
+        const outcome = outcomeOfError(data);
+        if (outcome) return outcome;
         throw new Error(data.error || `Erreur serveur: ${res.status}`);
       }
 
@@ -481,6 +506,8 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
         settings={event}
         products={products.filter(p => p.isActive)}
         registrationClosed={registrationClosed}
+        lang={currentLang}
+        rulesRequired={!!event.rulesAcceptanceRequired}
         onCheckout={handleCheckout}
         onPackCheckout={handlePackCheckout}
       />

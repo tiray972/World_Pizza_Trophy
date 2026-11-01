@@ -10,6 +10,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose } from '@/components/ui/sheet';
 import { ParticipantModal } from './ParticipantModal';
 import { ParticipantSelector } from './ParticipantSelector';
+import { CategoryRulesDialog } from './CategoryRulesDialog';
+import { isAcceptanceValid, type PublishedRules } from '@/lib/domain/category-rules';
+import { rulesDialogTexts } from '@/lib/i18n/rules-dialog-texts';
+import type { ClientRuleAcceptance } from '@/lib/server/rules/acceptance';
 import {
   getMinSlotsPerBooking,
   getParticipantsPerSlot,
@@ -32,14 +36,45 @@ export interface SelectedPackSlot extends SelectedSlot {
   // Aucune propriété supplémentaire
 }
 
+/** Résultat d'un lancement de paiement : `false` = échec, panier conservé. */
+export type CheckoutOutcome = void | boolean | { rulesToReaccept: string[] };
+
 interface SlotBookingViewProps {
   availableSlots: Slot[];
   categories: Category[];
   settings: WPTEvent;
   products: Product[];
   registrationClosed: boolean;
-  onCheckout: (slots: SelectedSlot[], includeMeal: boolean, mealPrice: number, mealGuests: MealGuest[]) => void | boolean | Promise<void | boolean>;
-  onPackCheckout: (product: Product, slots: SelectedPackSlot[]) => void | boolean | Promise<void | boolean>;
+  /** Langue active du Booking (règlements et libellés de la fenêtre). */
+  lang?: string;
+  /** L'édition exige l'acceptation du règlement de chaque catégorie. */
+  rulesRequired?: boolean;
+  onCheckout: (slots: SelectedSlot[], includeMeal: boolean, mealPrice: number, mealGuests: MealGuest[], ruleAcceptances: ClientRuleAcceptance[]) => CheckoutOutcome | Promise<CheckoutOutcome>;
+  onPackCheckout: (product: Product, slots: SelectedPackSlot[], ruleAcceptances: ClientRuleAcceptance[]) => CheckoutOutcome | Promise<CheckoutOutcome>;
+}
+
+const publishedRulesOf = (category?: Category | null): PublishedRules | null =>
+  ((category as (Category & { rulesI18n?: { published?: PublishedRules | null } }) | null | undefined)?.rulesI18n?.published) ?? null;
+
+/** Nom de la catégorie dans la langue active (repli : nom saisi). */
+export const localizedCategoryName = (category: Category | undefined, lang: string): string =>
+  ((category as (Category & { nameI18n?: Record<string, string> }) | undefined)?.nameI18n?.[lang]?.trim()) || category?.name || '';
+
+function readSession<T>(key: string): T | null {
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeSession(key: string, value: unknown) {
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* navigation privée : le panier reste en mémoire */
+  }
 }
 
 const formatTime = (date: Date | string): string => {
@@ -91,9 +126,12 @@ export function SlotBookingView({
   settings,
   products,
   registrationClosed,
+  lang = 'fr',
+  rulesRequired = false,
   onCheckout,
   onPackCheckout,
 }: SlotBookingViewProps) {
+  const rulesTexts = rulesDialogTexts(lang);
   const [selectedSlots, setSelectedSlots] = useState<SelectedSlot[]>([]);
   const [isSlotSheetOpen, setIsSlotSheetOpen] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
@@ -119,6 +157,101 @@ export function SlotBookingView({
   // 🍽️ Meal state
   const [wantsMeal, setWantsMeal] = useState(false);
   const [additionalMealGuests, setAdditionalMealGuests] = useState<MealGuest[]>([]);
+
+  // 📜 Règlements acceptés (par catégorie) et fenêtre de règlement en cours
+  const [ruleAcceptances, setRuleAcceptances] = useState<Record<string, ClientRuleAcceptance>>({});
+  const [rulesDialog, setRulesDialog] = useState<{ categoryId: string; onAccepted: () => void } | null>(null);
+  const [restored, setRestored] = useState(false);
+  const acceptanceKey = `wpt-rule-acceptances:${settings.id}`;
+  const cartKey = `wpt-booking-cart:${settings.id}`;
+
+  // 🔁 Un changement de langue recharge la page : panier, participants et
+  // acceptations sont conservés le temps de la session du navigateur.
+  useEffect(() => {
+    const savedAcceptances = readSession<Record<string, ClientRuleAcceptance>>(acceptanceKey) ?? {};
+    // Une acceptation ne vaut que pour la version encore publiée.
+    setRuleAcceptances(
+      Object.fromEntries(
+        Object.entries(savedAcceptances).filter(([categoryId, acceptance]) =>
+          isAcceptanceValid(publishedRulesOf(categories.find(category => category.id === categoryId)), acceptance)
+        )
+      )
+    );
+    const savedCart = readSession<{
+      selectedSlots: (Omit<SelectedSlot, 'startTime' | 'endTime'> & { startTime: string; endTime?: string })[];
+      wantsMeal: boolean;
+      additionalMealGuests: MealGuest[];
+      savedParticipants: Participant[];
+    }>(cartKey);
+    if (savedCart) {
+      const stillAvailable = new Set(availableSlots.filter(slot => slot.status === 'available').map(slot => slot.id));
+      setSelectedSlots(
+        savedCart.selectedSlots
+          .filter(slot => stillAvailable.has(slot.slotId))
+          .map(slot => ({ ...slot, startTime: new Date(slot.startTime), endTime: slot.endTime ? new Date(slot.endTime) : undefined }))
+      );
+      setWantsMeal(!!savedCart.wantsMeal);
+      setAdditionalMealGuests(savedCart.additionalMealGuests ?? []);
+      setSavedParticipants(savedCart.savedParticipants ?? []);
+    }
+    setRestored(true);
+    // Restauration unique, à l'ouverture du Booking de cette édition.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.id]);
+
+  useEffect(() => {
+    if (restored) writeSession(acceptanceKey, ruleAcceptances);
+  }, [restored, acceptanceKey, ruleAcceptances]);
+
+  useEffect(() => {
+    if (!restored) return;
+    writeSession(cartKey, {
+      selectedSlots: selectedSlots.map(slot => ({
+        ...slot,
+        startTime: slot.startTime.toISOString(),
+        endTime: slot.endTime?.toISOString(),
+      })),
+      wantsMeal,
+      additionalMealGuests,
+      savedParticipants,
+    });
+  }, [restored, cartKey, selectedSlots, wantsMeal, additionalMealGuests, savedParticipants]);
+
+  const hasValidAcceptance = (categoryId: string) =>
+    isAcceptanceValid(publishedRulesOf(categories.find(category => category.id === categoryId)), ruleAcceptances[categoryId]);
+
+  /**
+   * 📜 Le règlement de la catégorie passe avant ses créneaux. Une acceptation
+   * déjà donnée pour la version en vigueur n'est pas redemandée.
+   */
+  const withRulesAccepted = (category: Category, onAccepted: () => void) => {
+    const published = publishedRulesOf(category);
+    if (!published && !rulesRequired) {
+      onAccepted();
+      return;
+    }
+    if (published && hasValidAcceptance(category.id)) {
+      onAccepted();
+      return;
+    }
+    setRulesDialog({ categoryId: category.id, onAccepted });
+  };
+
+  const acceptancesFor = (slotsToCheck: { categoryId: string }[]): ClientRuleAcceptance[] =>
+    Array.from(new Set(slotsToCheck.map(slot => slot.categoryId)))
+      .map(categoryId => ruleAcceptances[categoryId])
+      .filter((acceptance): acceptance is ClientRuleAcceptance => !!acceptance);
+
+  /** Le serveur a refusé une acceptation : on la retire, le panier reste intact. */
+  const handleRulesRefusal = (outcome: CheckoutOutcome) => {
+    if (!outcome || typeof outcome !== 'object') return false;
+    setRuleAcceptances(previous =>
+      Object.fromEntries(Object.entries(previous).filter(([categoryId]) => !outcome.rulesToReaccept.includes(categoryId)))
+    );
+    return true;
+  };
+
+  const rulesDialogCategory = rulesDialog ? categories.find(category => category.id === rulesDialog.categoryId) : undefined;
 
   // 🔧 DEBUG LOG: Track prop changes
   useEffect(() => {
@@ -268,6 +401,10 @@ export function SlotBookingView({
 
   // 🔧 FIX: When category is clicked, automatically set the first available date
   const handleCategoryClick = (category: Category) => {
+    withRulesAccepted(category, () => openCategorySlots(category));
+  };
+
+  const openCategorySlots = (category: Category) => {
     console.log(`📌 [handleCategoryClick] Category clicked: ${category.name} (${category.id})`);
     console.log(`   - activeDates: ${category.activeDates.join(', ')}`);
     
@@ -378,7 +515,7 @@ export function SlotBookingView({
             <CardHeader className="p-3">
               <CardTitle className="text-base truncate flex items-center">
                 <PizzaIcon className="w-4 h-4 mr-1 text-primary" />
-                {category.name}
+                {localizedCategoryName(category, lang)}
               </CardTitle>
               <CardDescription className="text-xs">
                 {category.description.substring(0, 30)}
@@ -394,6 +531,15 @@ export function SlotBookingView({
                 <CalendarIcon className="w-3 h-3 mr-1" />
                 {datesDisplay}
               </Badge>
+              {publishedRulesOf(category) && hasValidAcceptance(category.id) && (
+                <Badge variant="outline" className="text-xs border-green-600 text-green-700">
+                  <CheckCircleIcon className="w-3 h-3 mr-1" />
+                  {rulesTexts.acceptedBadge}
+                </Badge>
+              )}
+              {rulesRequired && !publishedRulesOf(category) && (
+                <Badge variant="outline" className="text-xs">{rulesTexts.unavailableBadge}</Badge>
+              )}
               {/* 👥 Catégorie en équipe : prévenir avant la sélection */}
               {getParticipantsPerSlot(category) > 1 && (
                 <Badge
@@ -529,11 +675,13 @@ export function SlotBookingView({
                           : 'border-gray-200 hover:shadow-md'
                       }`}
                       onClick={() => {
-                        setActivePackCategoryId(category.id);
-                        // ⭐ Set first date when entering pack category selection
-                        setActiveDate(
-                          category.activeDates.length > 0 ? category.activeDates[0] : null
-                        );
+                        withRulesAccepted(category, () => {
+                          setActivePackCategoryId(category.id);
+                          // ⭐ Set first date when entering pack category selection
+                          setActiveDate(
+                            category.activeDates.length > 0 ? category.activeDates[0] : null
+                          );
+                        });
                       }}
                     >
                       <CardTitle className="text-base truncate">{category.name}</CardTitle>
@@ -708,9 +856,9 @@ export function SlotBookingView({
             className="w-full h-12 text-lg"
             disabled={!selectionComplete || packSelectionErrors.length > 0}
             onClick={async () => {
-              const success = await onPackCheckout(packToPurchase, selectedPackSlots);
+              const success = await onPackCheckout(packToPurchase, selectedPackSlots, acceptancesFor(selectedPackSlots));
               // ⚠️ Conserver la sélection si le paiement n'a pas pu être lancé.
-              if (success === false) return;
+              if (success === false || handleRulesRefusal(success)) return;
               setIsPackSelectionSheetOpen(false);
               setPackToPurchase(null);
               setSelectedPackSlots([]);
@@ -1226,12 +1374,13 @@ export function SlotBookingView({
                 selectedSlots,
                 wantsMeal && cleanedMealGuests.length > 0,
                 mealPrice,
-                cleanedMealGuests
+                cleanedMealGuests,
+                acceptancesFor(selectedSlots)
               );
 
               // ⚠️ Ne jamais vider le panier si le paiement n'a pas pu être lancé :
               // l'utilisateur perdait sa sélection et ne pouvait plus s'inscrire.
-              if (success === false) return;
+              if (success === false || handleRulesRefusal(success)) return;
 
               setIsCartSheetOpen(false);
               setSelectedSlots([]);
@@ -1348,6 +1497,23 @@ export function SlotBookingView({
       <Sheet open={isSlotSheetOpen} onOpenChange={setIsSlotSheetOpen}>
         {renderSlotSheetContent()}
       </Sheet>
+
+      {/* 📜 Règlement de la catégorie, avant ses créneaux */}
+      <CategoryRulesDialog
+        open={!!rulesDialog}
+        lang={lang}
+        categoryId={rulesDialog?.categoryId ?? ''}
+        categoryName={localizedCategoryName(rulesDialogCategory, lang)}
+        isTeamCategory={!!rulesDialogCategory && getParticipantsPerSlot(rulesDialogCategory) > 1}
+        published={publishedRulesOf(rulesDialogCategory)}
+        onCancel={() => setRulesDialog(null)}
+        onAccept={acceptance => {
+          const next = rulesDialog;
+          setRuleAcceptances(previous => ({ ...previous, [acceptance.categoryId]: acceptance }));
+          setRulesDialog(null);
+          next?.onAccepted();
+        }}
+      />
 
       <Sheet
         open={isPackSelectionSheetOpen}

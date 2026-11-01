@@ -43,7 +43,7 @@ export default function RegisterForm() {
       try {
         const profileResponse = await fetch('/api/auth/create-profile', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
           body: JSON.stringify({
             uid: user.uid,
             email: user.email,
@@ -97,7 +97,7 @@ export default function RegisterForm() {
       try {
         const profileResponse = await fetch('/api/auth/create-profile', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
           body: JSON.stringify({
             uid: user.uid,
             email: user.email,

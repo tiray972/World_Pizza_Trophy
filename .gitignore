@@ -42,3 +42,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 world-pizza-trophy-firebase-adminsdk-fbsvc-31972547bc.json
+
+# émulateurs Firebase
+firestore-debug.log
+firebase-debug.log
