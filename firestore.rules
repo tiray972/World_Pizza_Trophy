@@ -34,7 +34,10 @@ service cloud.firestore {
     // Configuration publique des éditions (catalogue).
     match /events/{id} {
       allow read: if true;
-      allow write: if isAdmin();
+      // Une édition naît en brouillon ; son statut ne change que par la route serveur (prérequis, historique).
+      allow create: if isAdmin() && request.resource.data.status == 'draft';
+      allow update: if isAdmin() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']);
+      allow delete: if false;
     }
     match /categories/{id} {
       allow read: if true;

@@ -82,6 +82,13 @@ describe("règles Firestore", () => {
     await assertSucceeds(updateDoc(doc(as("admin1"), "slots/s1"), { status: "offered" }));
   });
 
+  it("statut d'édition : uniquement par le serveur ; création en brouillon seulement", async () => {
+    await assertFails(updateDoc(doc(as("admin1"), "events/evt"), { status: "archived" }));
+    await assertSucceeds(updateDoc(doc(as("admin1"), "events/evt"), { name: "WPT 2027 (renommée)", status: "open" }));
+    await assertFails(setDoc(doc(as("admin1"), "events/new"), { name: "X", status: "open" }));
+    await assertSucceeds(setDoc(doc(as("admin1"), "events/new"), { name: "X", status: "draft" }));
+  });
+
   it("mesure d'audience : écriture anonyme limitée, lecture admin", async () => {
     await assertSucceeds(addDoc(collection(anonymous(), "pageViews"), { path: "/fr", sessionId: "s", timestamp: serverTimestamp(), userId: null }));
     await assertFails(addDoc(collection(anonymous(), "pageViews"), { path: "/fr", role: "admin" }));
