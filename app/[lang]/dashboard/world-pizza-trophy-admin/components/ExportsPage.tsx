@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import {
@@ -11,6 +11,8 @@ import { cn, formatTime, formatUser } from "../lib/utils";
 import { Slot, Category, User, Payment, WPTEvent } from "@/types/firestore";
 import { getSlotParticipants } from "@/lib/booking/rules";
 import { ScheduleMailingCard } from "./ScheduleMailingCard";
+import { adminFetch } from "../lib/adminFetch";
+import { attendanceSheet, type MealOrder } from "@/lib/domain/meals";
 
 // ─────────────────────────────────────────────
 // CSV UTILITIES
@@ -444,60 +446,32 @@ function generateFinancialSummary(users: User[], payments: Payment[], slots: Slo
   return buildCsv(headers, rows);
 }
 
-type MealGuestPreview = {
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  phone?: string;
-  isParticipant?: boolean;
-};
+type MealOverview = { orders: (Omit<MealOrder, "createdAt"> & { createdAt: string | null })[] };
 
-function parseMealGuests(payment: Payment): MealGuestPreview[] {
-  const raw = payment.metadata?.mealGuests;
-  if (!raw || typeof raw !== "string") return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed as MealGuestPreview[] : [];
-  } catch {
-    return [];
-  }
+/**
+ * 6. MEALS — une ligne par place payée, depuis la même source que la page Repas :
+ * sessions Stripe en double comptées une fois, commandes remboursées, en
+ * attente ou échouées exclues, places sans nom gardées « à compléter ».
+ */
+async function loadMealRows(eventId: string) {
+  const data = await adminFetch<MealOverview>(`/api/admin/meals?eventId=${encodeURIComponent(eventId)}`);
+  const orders: MealOrder[] = data.orders.map(order => ({ ...order, createdAt: order.createdAt ? new Date(order.createdAt) : null }));
+  const byRef = new Map(orders.map(order => [order.stripeSessionId ?? order.paymentId, order]));
+  return attendanceSheet(orders).map(row => ({ row, order: byRef.get(row.orderRef) }));
 }
 
-function getPaymentMealRows(payments: Payment[], users: User[]) {
-  const userMap = Object.fromEntries(users.map(user => [user.id, user]));
-
-  return payments.flatMap(payment => {
-    const guests = parseMealGuests(payment);
-    if (guests.length === 0) return [];
-
-    const buyer = userMap[payment.userId];
-    const mealPrice = Number(payment.metadata?.mealPrice || 0);
-
-    return guests.map((guest, index) => ({
-      payment,
-      guest,
-      index,
-      buyer,
-      mealPrice,
-    }));
-  });
-}
-
-/** 6. MEALS — One row per meal guest */
-function generateMealsCsv(payments: Payment[], users: User[]): string {
-  const headers = ["Payment Date", "Guest First Name", "Guest Last Name", "Email", "Phone", "Buyer", "Buyer Email", "Meal Price (€)", "Stripe Session"];
-  const rows = getPaymentMealRows(payments, users).map(row => [
-    row.payment.createdAt ? row.payment.createdAt.toLocaleString("fr-FR") : "",
-    row.guest.firstName || "",
-    row.guest.lastName || "",
-    row.guest.email || "",
-    row.guest.phone || "",
-    row.buyer ? formatUser(row.buyer) : "",
-    row.buyer?.email || "",
-    row.mealPrice ? row.mealPrice.toFixed(2) : "",
-    row.payment.stripeSessionId || "",
+async function generateMealsCsv(eventId: string): Promise<string> {
+  const headers = ["Bénéficiaire", "Place", "Acheteur", "Date de commande", "Référence Stripe", "Facture", "Pack", "Présent"];
+  const rows = (await loadMealRows(eventId)).map(({ row, order }) => [
+    row.label,
+    row.seatNumber,
+    row.buyerLabel,
+    order?.createdAt ? order.createdAt.toLocaleString("fr-FR") : "",
+    row.orderRef,
+    order?.invoiceNumber ?? "",
+    order?.isPack ? order.packName ?? "oui" : "",
+    row.present ? "oui" : "",
   ]);
-
   return buildCsv(headers, rows);
 }
 
@@ -519,7 +493,7 @@ interface ExportCard {
   description: string;
   icon: React.ReactNode;
   color: string;
-  generate: () => string;
+  generate: () => string | Promise<string>;
   filename: string;
 }
 
@@ -606,9 +580,17 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
     return rows.filter(row => row.paymentSlots.some(slot => slot.categoryId === previewCategoryId));
   }, [payments, previewCategoryId, slots, userMap]);
 
-  const previewMealRows = useMemo(() => {
-    return getPaymentMealRows(payments, users);
-  }, [payments, users]);
+  const [previewMealRows, setPreviewMealRows] = useState<Awaited<ReturnType<typeof loadMealRows>>>([]);
+  useEffect(() => {
+    if (previewMode !== "meals" || !eventId) return;
+    let cancelled = false;
+    loadMealRows(eventId)
+      .then(rows => !cancelled && setPreviewMealRows(rows))
+      .catch(() => !cancelled && setPreviewMealRows([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [previewMode, eventId, payments]);
 
   // Stats
   const paidSlots = slots.filter(s => s.status === "paid" || s.status === "offered").length;
@@ -686,11 +668,11 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
     {
       id: "meals",
       title: "Repas",
-      description: "CSV dédié aux repas, avec une ligne par participant ou accompagnant inscrit au repas.",
+      description: "Une ligne par place payée (doublons de session, remboursés et non payés exclus ; places sans nom « à compléter »). Même source que la page Repas.",
       icon: <UtensilsCrossed className="h-5 w-5" />,
       color: "teal",
       filename: `WPT_${eventYear}_Repas.csv`,
-      generate: () => generateMealsCsv(payments, users),
+      generate: () => generateMealsCsv(eventId),
     },
   ];
 
@@ -708,7 +690,7 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
     setSuccessState(prev => ({ ...prev, [card.id]: false }));
     try {
       await new Promise(resolve => setTimeout(resolve, 300));
-      const csv = card.generate();
+      const csv = await card.generate();
       downloadCsv(csv, card.filename);
       setSuccessState(prev => ({ ...prev, [card.id]: true }));
       setTimeout(() => setSuccessState(prev => ({ ...prev, [card.id]: false })), 3000);
@@ -721,7 +703,7 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
 
   const handleExportAll = async () => {
     for (const card of EXPORT_CARDS) {
-      const csv = card.generate();
+      const csv = await card.generate();
       downloadCsv(csv, card.filename);
       await new Promise(r => setTimeout(r, 200));
     }
@@ -1080,7 +1062,7 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
                   <table className="w-full text-sm border-collapse">
                     <thead className="sticky top-0 z-10">
                       <tr>
-                        {["Personne", "Acheteur", "Prix repas", "Paiement"].map(h => (
+                        {["Bénéficiaire", "Place", "Acheteur", "Référence"].map(h => (
                           <th key={h} className="bg-gray-100 dark:bg-zinc-800 border px-2 py-1.5 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
@@ -1088,12 +1070,12 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
                     <tbody>
                       {previewMealRows.length === 0 ? (
                         <tr><td colSpan={4} className="text-center py-8 text-muted-foreground text-sm">Aucun repas enregistré.</td></tr>
-                      ) : previewMealRows.map((row) => (
-                        <tr key={`${row.payment.id}-${row.index}`} className="border-b hover:bg-muted/30">
-                          <td className="border-r px-2 py-1.5 text-xs font-medium">{row.guest.firstName} {row.guest.lastName}</td>
-                          <td className="border-r px-2 py-1.5 text-xs">{row.buyer ? formatUser(row.buyer) : row.payment.userId}</td>
-                          <td className="border-r px-2 py-1.5 text-xs">{row.mealPrice ? `${row.mealPrice.toFixed(2)} €` : "—"}</td>
-                          <td className="px-2 py-1.5 text-xs font-mono">{row.payment.stripeSessionId || "—"}</td>
+                      ) : previewMealRows.map(({ row }) => (
+                        <tr key={row.seatId} className="border-b hover:bg-muted/30">
+                          <td className={`border-r px-2 py-1.5 text-xs ${row.named ? "font-medium" : "italic text-muted-foreground"}`}>{row.label}</td>
+                          <td className="border-r px-2 py-1.5 text-xs">{row.seatNumber}</td>
+                          <td className="border-r px-2 py-1.5 text-xs">{row.buyerLabel}</td>
+                          <td className="px-2 py-1.5 text-xs font-mono">{row.orderRef}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1107,7 +1089,7 @@ export function ExportsPage({ slots, categories, users, payments, selectedEvent 
                 {previewMode === "planning" && `${filteredPreviewSlots.length} créneaux affichés`}
                 {previewMode === "participants" && `${previewParticipantRows.length} inscrit(s) affiché(s), du premier au dernier inscrit`}
                 {previewMode === "payments" && `${previewPaymentRows.length} paiements affichés`}
-                {previewMode === "meals" && `${previewMealRows.length} repas affichés`}
+                {previewMode === "meals" && `${previewMealRows.length} place(s) payée(s)`}
                 {lastSynced ? ` • Dernière sync: ${lastSynced}` : ""}
               </p>
               <div className="flex gap-2">
