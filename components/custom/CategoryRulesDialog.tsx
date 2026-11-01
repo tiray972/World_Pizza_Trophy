@@ -4,7 +4,7 @@
 // Fermer, cliquer à l'extérieur ou appuyer sur Échap n'accepte jamais : seule la
 // case cochée puis le bouton « Accepter » transmettent une acceptation.
 
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { parseRuleText, resolveRulesForLang, type PublishedRules } from '@/lib/domain/category-rules';
@@ -37,12 +37,8 @@ export function CategoryRulesDialog({
 }: CategoryRulesDialogProps) {
   const t = rulesDialogTexts(lang);
   const checkboxId = useId();
+  // Case jamais précochée : le parent remonte la fenêtre (clé) à chaque ouverture.
   const [checked, setChecked] = useState(false);
-
-  // Case jamais précochée, à chaque ouverture.
-  useEffect(() => {
-    if (open) setChecked(false);
-  }, [open, categoryId]);
 
   const resolution = resolveRulesForLang(published, lang);
   const publishedAt = toDateOrNull(published?.publishedAt);

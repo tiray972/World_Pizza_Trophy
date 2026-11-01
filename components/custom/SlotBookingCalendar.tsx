@@ -1500,6 +1500,7 @@ export function SlotBookingView({
 
       {/* 📜 Règlement de la catégorie, avant ses créneaux */}
       <CategoryRulesDialog
+        key={rulesDialog?.categoryId ?? 'closed'}
         open={!!rulesDialog}
         lang={lang}
         categoryId={rulesDialog?.categoryId ?? ''}

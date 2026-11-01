@@ -25,6 +25,8 @@ export type ViewType =
   | 'products'
   | 'vouchers'
   | 'users'
+  | 'participants'
+  | 'meals'
   | 'payments'
   | 'exports'
   | 'analytics';

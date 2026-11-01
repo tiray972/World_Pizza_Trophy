@@ -14,7 +14,8 @@ import {
   Settings as SettingsIcon,
   List,
   CreditCard,
-  BarChart3
+  BarChart3,
+  UtensilsCrossed
 } from "lucide-react";
 
 interface SidebarProps {
@@ -66,6 +67,16 @@ export const NAV_ITEMS: NavItem[] = [
     title: "Codes promo",
     href: "vouchers",
     icon: Ticket,
+  },
+  {
+    title: "Participants",
+    href: "participants",
+    icon: Trophy,
+  },
+  {
+    title: "Repas",
+    href: "meals",
+    icon: UtensilsCrossed,
   },
   {
     title: "Utilisateurs",

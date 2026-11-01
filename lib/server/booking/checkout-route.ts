@@ -20,13 +20,13 @@ const SUPPORTED_LANGS = ["fr", "en", "es", "it"];
 
 export async function handleCheckoutRequest(
   req: NextRequest,
-  build: (body: Record<string, any>) => Omit<CheckoutInput, "buyer">
+  build: (body: Record<string, unknown>) => Omit<CheckoutInput, "buyer">
 ): Promise<NextResponse> {
   let prepared: PreparedCheckout | null = null;
   try {
     const buyer = await requireUser(req.headers, { auth: adminAuth, db: adminDB });
-    const body = (await req.json()) as Record<string, any>;
-    const lang = SUPPORTED_LANGS.includes(body.lang) ? body.lang : "fr";
+    const body = (await req.json()) as Record<string, unknown>;
+    const lang = typeof body.lang === "string" && SUPPORTED_LANGS.includes(body.lang) ? body.lang : "fr";
 
     prepared = await prepareCheckout(adminDB, { ...build(body), buyer: { uid: buyer.uid, email: buyer.email } });
 

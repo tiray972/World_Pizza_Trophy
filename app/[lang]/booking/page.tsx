@@ -234,9 +234,9 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
    * Réponse d'erreur du paiement. Un règlement refusé par le serveur (nouvelle
    * version, catégorie non acceptée) est signalé sans vider le panier.
    */
-  const outcomeOfError = (data: { error?: string; code?: string; details?: any }): CheckoutOutcome | null => {
+  const outcomeOfError = (data: { error?: string; code?: string; details?: { categories?: { categoryId: string }[] } }): CheckoutOutcome | null => {
     if (data.code !== "rules_acceptance_required") return null;
-    const categoryIds: string[] = (data.details?.categories ?? []).map((entry: { categoryId: string }) => entry.categoryId);
+    const categoryIds = (data.details?.categories ?? []).map(entry => entry.categoryId);
     const names = categoryIds
       .map(id => localizedCategoryName(categories.find(category => category.id === id), currentLang))
       .filter(Boolean)

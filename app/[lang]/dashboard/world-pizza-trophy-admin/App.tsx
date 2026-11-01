@@ -10,6 +10,8 @@ import { ExportsPage } from './components/ExportsPage';
 import { SettingsPage } from './components/SettingsPage';
 import { CategoriesPage } from './components/CategoriesPage';
 import { PaymentsPage } from './components/PaymentsPage';
+import { ParticipantsPage } from './components/ParticipantsPage';
+import { MealsPage } from './components/MealsPage';
 import { CreateEventModal } from './components/CreateEventModal';
 import { ThemeProvider } from './components/ThemeProvider';
 import { formatCurrency } from './lib/utils';
@@ -438,6 +440,10 @@ export default function App() {
             isAssignmentLocked={selectedEvent?.status === 'closed' || selectedEvent?.status === 'archived'}
           />
         );
+      case 'participants':
+        return <ParticipantsPage selectedEvent={selectedEvent} />;
+      case 'meals':
+        return <MealsPage selectedEvent={selectedEvent} />;
       case 'payments':
         return (
           <PaymentsPage

@@ -4,13 +4,14 @@
 
 import { NextRequest } from "next/server";
 import { handleCheckoutRequest } from "@/lib/server/booking/checkout-route";
+import type { CheckoutInput } from "@/lib/server/booking/checkout-service";
 
 export async function POST(req: NextRequest) {
   return handleCheckoutRequest(req, body => ({
     eventId: String(body.eventId || ""),
-    slots: Array.isArray(body.slotsToReserve) ? body.slotsToReserve : [],
-    mealGuests: Array.isArray(body.mealGuests) ? body.mealGuests : [],
-    pack: { productId: String(body.packId || ""), quantity: body.quantity },
-    ruleAcceptances: Array.isArray(body.ruleAcceptances) ? body.ruleAcceptances : [],
+    slots: (Array.isArray(body.slotsToReserve) ? body.slotsToReserve : []) as CheckoutInput["slots"],
+    mealGuests: (Array.isArray(body.mealGuests) ? body.mealGuests : []) as CheckoutInput["mealGuests"],
+    pack: { productId: String(body.packId || ""), quantity: typeof body.quantity === "number" ? body.quantity : undefined },
+    ruleAcceptances: (Array.isArray(body.ruleAcceptances) ? body.ruleAcceptances : []) as CheckoutInput["ruleAcceptances"],
   }));
 }
