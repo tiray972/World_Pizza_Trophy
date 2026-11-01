@@ -1,7 +1,7 @@
 // lib/firebase/client.ts
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -17,4 +17,14 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Développement local uniquement : site branché sur l'émulateur Firestore.
+if (process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST && typeof window !== "undefined") {
+  const [host, port] = process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST.split(":");
+  try {
+    connectFirestoreEmulator(db, host, Number(port));
+  } catch {
+    /* déjà connecté (rechargement à chaud) */
+  }
+}
 export const storage = getStorage(app);
