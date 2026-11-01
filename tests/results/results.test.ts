@@ -132,5 +132,60 @@ describe("reprise de l'instantané publié 2026", () => {
     expect(saved.lines.find(entry => entry.bib === 10)).toMatchObject({ match: "bib", holderId: "bertea", rank: 36, points: 385 });
     expect(saved.blocking.length).toBeGreaterThan(0);
     expect(await publicResults(db, EVENT)).toEqual([]);
+    // Correction confirmée par l'organisateur : 4631 points, rang inchangé.
+    const superChampion = drafts.find(draft => draft.categoryKey === "super-champion")!;
+    expect(superChampion.lines[0]).toMatchObject({ rank: 1, bib: 61, name: "FARINA Gennaro", points: 4631 });
+  });
+});
+
+describe("décisions manuelles : aucun contournement des contrôles serveur", () => {
+  beforeEach(async () => {
+    await person("retire", "Richard", "ROCLE", 70);
+    await db.collection("participants").doc("retire").update({ withdrawn: true });
+    await db.collection("slots").doc("s9").set({ eventId: EVENT, categoryId: "classique", status: "paid", participantIds: ["retire"], startTime: Timestamp.now() });
+  });
+
+  const draftWith = (decisions: object, lines = [line(1, null, "INCONNU Jean", 600), line(2, 10, "BERTEA André", 385)]) =>
+    classique(lines, decisions);
+
+  it("choix manuel d'une équipe pour un classement individuel, ou type falsifié : refusé", async () => {
+    const team = await draftWith({ manualMatches: { 0: { holderKind: "team", holderId: "t18" } } });
+    expect(team.lines[0]).toMatchObject({ holderId: null, confirmed: false });
+    expect(team.lines[0].hardIssues.join(" ")).toContain("Choix manuel refusé");
+    const spoofed = await draftWith({ manualMatches: { 0: { holderKind: "team", holderId: "prosper" } } });
+    expect(spoofed.lines[0].hardIssues.join(" ")).toContain("type d'identité incohérent");
+    expect(spoofed.blocking.length).toBeGreaterThan(0);
+  });
+
+  it("choix manuel d'un participant retiré ou non inscrit dans la catégorie : refusé", async () => {
+    const withdrawn = await draftWith({ manualMatches: { 0: { holderKind: "participant", holderId: "retire" } } });
+    expect(withdrawn.lines[0].hardIssues.join(" ")).toContain("retiré du planning");
+    const otherCategory = await draftWith({ manualMatches: { 0: { holderKind: "participant", holderId: "marine" } } });
+    expect(otherCategory.lines[0].hardIssues.join(" ")).toContain("n'est pas inscrit dans cette catégorie");
+    expect(otherCategory.blocking.length).toBeGreaterThan(0);
+  });
+
+  it("choix manuel créant un doublon : bloqué par le contrôle de structure", async () => {
+    const duplicate = await draftWith({ manualMatches: { 0: { holderKind: "participant", holderId: "bertea" } } });
+    expect(duplicate.lines[0]).toMatchObject({ match: "manual", holderId: "bertea" });
+    expect(duplicate.blocking.some(message => message.includes("apparaît deux fois"))).toBe(true);
+    const set = (await db.collection("resultSets").doc(`${EVENT}_classique`).get()).data()!;
+    await expect(validateResultSet(db, { id: `${EVENT}_classique`, expectedDraftVersion: set.draftVersion }, admin)).rejects.toSatisfy(code("blocking_issues"));
+  });
+
+  it("une confirmation ne lève ni une ligne inconnue, ni un dossard hors catégorie, ni un dossard retiré", async () => {
+    const draft = await draftWith(
+      { confirmedLines: [0, 1, 2] },
+      [line(1, null, "INCONNU Jean", 600), line(2, 16, "BRIANÇON Marine", 500), line(3, 70, "ROCLE Richard", 400)]
+    );
+    expect(draft.lines.map(entry => entry.confirmed)).toEqual([false, false, false]);
+    expect(draft.blocking.length).toBe(3);
+  });
+
+  it("choix manuel valide : rapprochement retenu, validation possible", async () => {
+    const draft = await draftWith({ manualMatches: { 0: { holderKind: "participant", holderId: "prosper" } } });
+    expect(draft.lines[0]).toMatchObject({ match: "manual", holderId: "prosper", confirmed: true, hardIssues: [] });
+    expect(draft.blocking).toEqual([]);
+    await validateResultSet(db, { id: `${EVENT}_classique`, expectedDraftVersion: 1 }, admin);
   });
 });

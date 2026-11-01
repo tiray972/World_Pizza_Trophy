@@ -6,7 +6,7 @@
 
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import { displayName } from "@/lib/domain/names";
-import { lineBlocks, lineMessage, validateResults, type IdentityIndexEntry, type MatchedLine, type ResultLine } from "@/lib/domain/results";
+import { validateResults, type IdentityIndexEntry, type MatchedLine, type ResultLine } from "@/lib/domain/results";
 import { acceptsResults } from "@/lib/domain/event-lifecycle";
 import { ParticipantActionError, type ActionContext } from "@/lib/server/participants/service";
 
@@ -26,15 +26,14 @@ export async function buildIdentityIndex(db: Firestore, eventId: string): Promis
   });
   const people = new Map(participants.docs.map(doc => [doc.id, doc.data()]));
   return [
-    ...participants.docs
-      .filter(doc => !doc.data().withdrawn)
-      .map(doc => ({
-        kind: "participant" as const,
-        id: doc.id,
-        bib: typeof doc.data().bib === "number" ? doc.data().bib : null,
-        names: [{ firstName: doc.data().firstName, lastName: doc.data().lastName }],
-        categoryIds: [...(categoriesByParticipant.get(doc.id) ?? [])],
-      })),
+    ...participants.docs.map(doc => ({
+      kind: "participant" as const,
+      id: doc.id,
+      bib: typeof doc.data().bib === "number" ? doc.data().bib : null,
+      names: [{ firstName: doc.data().firstName, lastName: doc.data().lastName }],
+      categoryIds: [...(categoriesByParticipant.get(doc.id) ?? [])],
+      withdrawn: !!doc.data().withdrawn,
+    })),
     ...teams.docs.map(doc => {
       const data = doc.data();
       return {
@@ -70,16 +69,13 @@ export async function saveResultDraft(db: Firestore, input: DraftInput, context:
     throw new ParticipantActionError(409, "Les résultats se saisissent une fois les inscriptions closes.", "event_not_finished");
   }
   const index = await buildIdentityIndex(db, input.eventId);
-  const validation = validateResults({ categoryId: input.categoryId, kind: input.kind, lines: input.lines }, index);
-  const lines: (MatchedLine & { confirmed: boolean })[] = validation.lines.map((line, position) => {
-    const manual = input.manualMatches?.[position];
-    if (manual && index.some(entry => entry.id === manual.holderId && entry.kind === manual.holderKind)) {
-      const holder = index.find(entry => entry.id === manual.holderId)!;
-      return { ...line, match: "bib", holderKind: holder.kind, holderId: holder.id, holderLabel: holder.displayName || holder.names.map(displayName).join(" – "), issues: [...line.issues, "Rapprochement choisi manuellement."], confirmed: true };
-    }
-    return { ...line, confirmed: (input.confirmedLines ?? []).includes(position) && !!line.holderId };
-  });
-  const blocking = [...(validation.structural ?? []), ...lines.filter(line => lineBlocks(line, line.confirmed)).map(lineMessage)];
+  // Les décisions de l'administrateur sont revalidées comme un rapprochement automatique.
+  const validation = validateResults(
+    { categoryId: input.categoryId, kind: input.kind, lines: input.lines },
+    index,
+    { confirmedLines: input.confirmedLines, manualMatches: input.manualMatches }
+  );
+  const { lines, blocking } = validation;
 
   const at = Timestamp.fromDate(context.now ?? new Date());
   const ref = db.collection("resultSets").doc(resultSetId(input.eventId, input.categoryKey));

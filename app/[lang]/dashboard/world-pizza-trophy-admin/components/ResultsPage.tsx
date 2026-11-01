@@ -17,7 +17,8 @@ type SetView = {
 };
 
 const STATUS_LABEL: Record<string, string> = { draft: "brouillon", validated: "validé", published: "publié" };
-const MATCH_LABEL: Record<string, string> = { bib: "dossard", bib_name_mismatch: "dossard, nom différent", name_suggestion: "proposé sur le nom", none: "non rapproché" };
+const MATCH_LABEL: Record<string, string> = { bib: "dossard", manual: "choix manuel", bib_name_mismatch: "dossard, nom différent", name_suggestion: "proposé sur le nom", none: "non rapproché" };
+type Identity = { id: string; kind: "participant" | "team"; bib: number | null; categoryIds: string[]; label: string };
 
 function downloadCsv(filename: string, rows: (string | number | null)[][]) {
   const text = "﻿" + rows.map(row => row.map(cell => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(";")).join("\n");
@@ -28,6 +29,8 @@ function downloadCsv(filename: string, rows: (string | number | null)[][]) {
 
 export function ResultsPage({ selectedEvent, categories }: { selectedEvent?: WPTEvent; categories: Category[] }) {
   const [sets, setSets] = useState<SetView[]>([]);
+  const [identities, setIdentities] = useState<Identity[]>([]);
+  const [manual, setManual] = useState<Record<number, string>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState<number[]>([]);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -37,8 +40,9 @@ export function ResultsPage({ selectedEvent, categories }: { selectedEvent?: WPT
   const load = useCallback(async () => {
     if (!selectedEvent) return;
     try {
-      const data = await adminFetch<{ sets: SetView[] }>(`/api/admin/results?eventId=${encodeURIComponent(selectedEvent.id)}`);
+      const data = await adminFetch<{ sets: SetView[]; identities: Identity[] }>(`/api/admin/results?eventId=${encodeURIComponent(selectedEvent.id)}`);
       setSets(data.sets);
+      setIdentities(data.identities);
     } catch (error) {
       setMessage({ ok: false, text: error instanceof Error ? error.message : String(error) });
     }
@@ -50,7 +54,9 @@ export function ResultsPage({ selectedEvent, categories }: { selectedEvent?: WPT
 
   const selected = sets.find(set => set.id === selectedId) ?? null;
   useEffect(() => {
-    setConfirmed((selected?.draft?.lines ?? []).map((line, index) => (line.confirmed ? index : -1)).filter(index => index >= 0));
+    const lines = selected?.draft?.lines ?? [];
+    setConfirmed(lines.map((line, index) => (line.confirmed && line.match !== "manual" ? index : -1)).filter(index => index >= 0));
+    setManual(Object.fromEntries(lines.map((line, index) => [index, line.match === "manual" ? line.holderId ?? "" : ""]).filter(([, id]) => id)));
   }, [selected]);
 
   const act = async (action: () => Promise<unknown>, success: string) => {
@@ -141,8 +147,21 @@ export function ResultsPage({ selectedEvent, categories }: { selectedEvent?: WPT
                     <td className={line.match === "bib" ? "text-green-700" : "text-amber-700"}>{MATCH_LABEL[line.match]}{line.issues.length > 0 && <span className="block text-xs text-muted-foreground">{line.issues.join(" ")}</span>}</td>
                     <td>{line.holderLabel ?? "—"}</td>
                     <td>
-                      {line.match !== "bib" && line.holderId && (
+                      {line.confirmable && (
                         <input type="checkbox" aria-label={`Confirmer ${line.name}`} checked={confirmed.includes(index)} onChange={event => setConfirmed(previous => (event.target.checked ? [...previous, index] : previous.filter(value => value !== index)))} />
+                      )}
+                      {(line.match === "none" || line.match === "manual" || (line.hardIssues?.length ?? 0) > 0) && (
+                        <select
+                          className="mt-1 block h-8 max-w-48 rounded-md border bg-background px-1 text-xs"
+                          aria-label={`Choisir l'identité pour ${line.name}`}
+                          value={manual[index] ?? ""}
+                          onChange={event => setManual(previous => ({ ...previous, [index]: event.target.value }))}
+                        >
+                          <option value="">— choix manuel —</option>
+                          {identities
+                            .filter(identity => identity.kind === (selected.kind === "team" ? "team" : "participant"))
+                            .map(identity => <option key={identity.id} value={identity.id}>{identity.label}{identity.bib ? ` (n° ${identity.bib})` : ""}</option>)}
+                        </select>
                       )}
                     </td>
                   </tr>
@@ -156,12 +175,12 @@ export function ResultsPage({ selectedEvent, categories }: { selectedEvent?: WPT
               disabled={busy}
               onClick={() =>
                 act(
-                  () => adminFetch("/api/admin/results", { body: { action: "draft", eventId: selectedEvent.id, categoryKey: selected.categoryKey, categoryId: selected.categoryId, categoryName: selected.categoryName, kind: selected.kind, lines: selected.draft!.lines.map(({ rank, status, points, bib, name, distinction }) => ({ rank, status, points, bib, name, distinction })), confirmedLines: confirmed, source: selected.draft!.source } }),
-                  "Confirmations enregistrées."
+                  () => adminFetch("/api/admin/results", { body: { action: "draft", eventId: selectedEvent.id, categoryKey: selected.categoryKey, categoryId: selected.categoryId, categoryName: selected.categoryName, kind: selected.kind, lines: selected.draft!.lines.map(({ rank, status, points, bib, name, distinction }) => ({ rank, status, points, bib, name, distinction })), confirmedLines: confirmed, manualMatches: Object.fromEntries(Object.entries(manual).filter(([, id]) => id).map(([index, id]) => [index, { holderKind: identities.find(identity => identity.id === id)?.kind ?? "participant", holderId: id }])), source: selected.draft!.source } }),
+                  "Décisions enregistrées : le serveur les a revalidées."
                 )
               }
             >
-              Enregistrer les confirmations
+              Enregistrer les décisions
             </Button>
             <Button disabled={busy || selected.draft.blocking.length > 0 || selected.status !== "draft"} onClick={() => act(() => adminFetch("/api/admin/results", { body: { action: "validate", id: selected.id, expectedDraftVersion: selected.draftVersion } }), "Résultats validés : relisez l'aperçu puis publiez.")}>Valider</Button>
             <Button

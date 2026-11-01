@@ -34,16 +34,31 @@ export interface IdentityIndexEntry {
   displayName?: string | null;
   /** Catégories où cette identité est inscrite. */
   categoryIds: string[];
+  /** Participant retiré du planning : jamais rattachable à un résultat. */
+  withdrawn?: boolean;
 }
 
-export type MatchKind = "bib" | "bib_name_mismatch" | "name_suggestion" | "none";
+export type MatchKind = "bib" | "manual" | "bib_name_mismatch" | "name_suggestion" | "none";
 
 export interface MatchedLine extends ResultLine {
   match: MatchKind;
   holderKind: "participant" | "team" | null;
   holderId: string | null;
   holderLabel: string | null;
+  /** Tous les constats de la ligne (affichage). */
   issues: string[];
+  /** Constats qu'aucune confirmation ne peut lever (catégorie, type, retrait, inconnu…). */
+  hardIssues: string[];
+  /** Rapprochement proposé que l'administrateur peut confirmer. */
+  confirmable: boolean;
+  confirmed: boolean;
+}
+
+export interface ResultDecisions {
+  /** Index des lignes dont le rapprochement proposé est confirmé. */
+  confirmedLines?: number[];
+  /** Rapprochements choisis à la main (index de ligne → identité). */
+  manualMatches?: Record<number, { holderKind: "participant" | "team"; holderId: string }>;
 }
 
 export interface ResultValidation {
@@ -121,76 +136,112 @@ function looseOfPerson(person: { firstName: string; lastName: string }): string 
   return looseOfDisplay(`${person.lastName} ${person.firstName}`);
 }
 
+const labelOf = (holder: IdentityIndexEntry) => holder.displayName || holder.names.map(displayName).join(" – ");
+
+/** Contrôles qu'aucune confirmation ne lève : type, catégorie disputée, retrait. */
+function holderHardIssues(holder: IdentityIndexEntry, expectedKind: "participant" | "team", categoryId: string | null): string[] {
+  const issues: string[] = [];
+  if (holder.kind !== expectedKind) {
+    issues.push(`${labelOf(holder)} est ${holder.kind === "team" ? "une équipe" : "un participant individuel"} : incompatible avec un classement ${expectedKind === "team" ? "par équipes" : "individuel"}.`);
+  }
+  if (holder.withdrawn) issues.push(`${labelOf(holder)} est retiré du planning.`);
+  if (categoryId && !holder.categoryIds.includes(categoryId)) issues.push(`${labelOf(holder)} n'est pas inscrit dans cette catégorie.`);
+  return issues;
+}
+
 /**
- * Rapproche les lignes d'une catégorie avec les identités de l'édition et
- * signale tout ce qui empêche une validation sûre.
+ * Rapproche les lignes d'une catégorie avec les identités de l'édition,
+ * applique les décisions de l'administrateur (confirmations, choix manuels)
+ * en les revalidant, puis contrôle la structure du classement.
  */
 export function validateResults(
   input: { categoryId: string | null; kind: "individual" | "team"; lines: ResultLine[] },
-  index: IdentityIndexEntry[]
+  index: IdentityIndexEntry[],
+  decisions: ResultDecisions = {}
 ): ResultValidation {
   const blocking: string[] = [];
   const warnings: string[] = [];
   const byBib = new Map<number, IdentityIndexEntry>();
   index.forEach(entry => entry.bib !== null && byBib.set(entry.bib, entry));
+  const byId = new Map(index.map(entry => [entry.id, entry]));
   const expectedKind = input.kind === "team" ? "team" : "participant";
+  const confirmedLines = new Set(decisions.confirmedLines ?? []);
 
-  const lines: MatchedLine[] = input.lines.map(line => {
+  const lines: MatchedLine[] = input.lines.map((line, position) => {
     const issues: string[] = [];
+    const hardIssues: string[] = [];
     const lineNames = namesOf(line.name);
-    let holder: IdentityIndexEntry | undefined = line.bib !== null ? byBib.get(line.bib) : undefined;
+    let holder: IdentityIndexEntry | undefined;
     let match: MatchKind = "none";
 
-    if (holder) {
-      if (holder.kind !== expectedKind) {
-        issues.push(`Dossard ${line.bib} porté par ${holder.kind === "team" ? "une équipe" : "un participant individuel"} : mauvaise catégorie ou mauvais dossard.`);
-        holder = undefined;
+    const manual = decisions.manualMatches?.[position];
+    if (manual) {
+      // Choix manuel : mêmes contrôles qu'un rapprochement automatique.
+      const chosen = byId.get(manual.holderId);
+      const refused = !chosen
+        ? ["identité inconnue dans cette édition"]
+        : chosen.kind !== manual.holderKind
+          ? ["type d'identité incohérent"]
+          : holderHardIssues(chosen, expectedKind, input.categoryId);
+      if (chosen && refused.length === 0) {
+        holder = chosen;
+        match = "manual";
+        issues.push(`Rapprochement choisi manuellement : ${labelOf(chosen)}.`);
       } else {
-        const holderKeys = new Set(holder.names.map(looseOfPerson));
+        hardIssues.push(`Choix manuel refusé : ${refused.join(" ")}`);
+      }
+    }
+
+    if (!holder && match === "none" && hardIssues.length === 0) {
+      const byNumber = line.bib !== null ? byBib.get(line.bib) : undefined;
+      if (byNumber) {
+        const holderKeys = new Set(byNumber.names.map(looseOfPerson));
         const lineKeys = lineNames.map(looseOfDisplay);
         // Un nom d'équipe publié avec des prénoms incomplets (« FARINA / POULARD ») reste rattaché par son dossard.
         const sameNames = lineKeys.every(key => holderKeys.has(key) || [...holderKeys].some(holderKey => holderKey.split(" ").includes(key)));
+        holder = byNumber;
         match = sameNames ? "bib" : "bib_name_mismatch";
-        if (!sameNames) issues.push(`Dossard ${line.bib} : la feuille indique « ${line.name} », la fiche indique « ${holder.displayName || holder.names.map(displayName).join(" – ")} ». À confirmer.`);
-        if (input.categoryId && !holder.categoryIds.includes(input.categoryId)) {
-          issues.push(`${holder.displayName || holder.names.map(displayName).join(" – ")} n'est pas inscrit dans cette catégorie.`);
+        if (!sameNames) issues.push(`Dossard ${line.bib} : la feuille indique « ${line.name} », la fiche indique « ${labelOf(byNumber)} ». À confirmer.`);
+        hardIssues.push(...holderHardIssues(byNumber, expectedKind, input.categoryId));
+      } else {
+        if (line.bib !== null) issues.push(`Dossard ${line.bib} inconnu dans cette édition.`);
+        const candidates = index.filter(entry => entry.kind === expectedKind && !entry.withdrawn && entry.names.some(person => lineNames.map(looseOfDisplay).includes(looseOfPerson(person))));
+        if (candidates.length === 1) {
+          holder = candidates[0];
+          match = "name_suggestion";
+          issues.push(`Rapprochement proposé sur le nom (${labelOf(holder)}) : à valider, jamais automatique.`);
+          hardIssues.push(...holderHardIssues(holder, expectedKind, input.categoryId));
+        } else if (candidates.length > 1) {
+          hardIssues.push(`Nom ambigu : ${candidates.length} identités possibles. Choix manuel requis.`);
+        } else {
+          hardIssues.push("Participant ou équipe inconnu dans cette édition.");
         }
       }
-    } else if (line.bib !== null) {
-      issues.push(`Dossard ${line.bib} inconnu dans cette édition.`);
     }
 
-    if (!holder && match === "none") {
-      const candidates = index.filter(entry => entry.kind === expectedKind && entry.names.some(person => lineNames.map(looseOfDisplay).includes(looseOfPerson(person))));
-      if (candidates.length === 1) {
-        match = "name_suggestion";
-        holder = candidates[0];
-        issues.push(`Rapprochement proposé sur le nom (${holder.names.map(displayName).join(" – ")}) : à valider, jamais automatique.`);
-      } else if (candidates.length > 1) {
-        issues.push(`Nom ambigu : ${candidates.length} identités possibles. Choix manuel requis.`);
-      } else {
-        issues.push("Participant ou équipe inconnu dans cette édition.");
-      }
-    }
-
-    if (expectedKind === "team" && holder && match !== "name_suggestion" && holder.names.length < 2) {
+    if (expectedKind === "team" && holder && holder.kind === "team" && holder.names.length < 2) {
       warnings.push(`${line.name} : équipe incomplète dans la base.`);
     }
+    const confirmable = (match === "bib_name_mismatch" || match === "name_suggestion") && hardIssues.length === 0;
+    const confirmed = match === "manual" || (confirmable && confirmedLines.has(position));
 
     return {
       ...line,
       match,
       holderKind: holder ? holder.kind : null,
-      holderId: holder && match !== "none" ? holder.id : null,
-      holderLabel: holder ? holder.displayName || holder.names.map(displayName).join(" – ") : null,
-      issues,
+      holderId: holder ? holder.id : null,
+      holderLabel: holder ? labelOf(holder) : null,
+      issues: [...issues, ...hardIssues],
+      hardIssues,
+      confirmable,
+      confirmed,
     };
   });
 
-  // Doublons de résultat et cohérence du classement (sans le recalculer).
+  // Contrôles de structure APRÈS les décisions : un choix manuel ne crée pas de doublon.
   const seen = new Map<string, number>();
   lines.forEach((line, position) => {
-    if (!line.holderId) return;
+    if (!line.holderId || line.hardIssues.length > 0) return;
     if (seen.has(line.holderId)) blocking.push(`${line.holderLabel} apparaît deux fois (lignes ${seen.get(line.holderId)! + 1} et ${position + 1}).`);
     seen.set(line.holderId, position);
   });
@@ -209,22 +260,23 @@ export function validateResults(
     }
   });
   lines.forEach(line => {
-    if (line.issues.length && line.match === "bib") warnings.push(`${line.name} : ${line.issues.join(" ")}`);
+    if (line.status === "ranked" && line.rank === null) blocking.push(`${line.name} : rang manquant.`);
+    if (line.points !== null && !Number.isFinite(line.points)) blocking.push(`${line.name} : score invalide.`);
   });
 
-  // `blocking` = erreurs de structure ; les lignes non rapprochées sûrement
-  // s'ajoutent tant qu'elles ne sont pas confirmées (voir lineBlocks).
   return {
     lines,
     structural: Array.from(new Set(blocking)),
-    blocking: Array.from(new Set([...blocking, ...lines.filter(line => lineBlocks(line, false)).map(lineMessage)])),
+    blocking: Array.from(new Set([...blocking, ...lines.filter(lineBlocks).map(lineMessage)])),
     warnings: Array.from(new Set(warnings)),
   };
 }
 
-/** Une ligne bloque la validation tant que son rapprochement n'est pas sûr ou confirmé. */
-export function lineBlocks(line: Pick<MatchedLine, "match" | "issues">, confirmed: boolean): boolean {
-  return line.match !== "bib" && line.issues.length > 0 && !confirmed;
+/** Une ligne bloque tant qu'elle a un constat non contournable ou un rapprochement non confirmé. */
+export function lineBlocks(line: Pick<MatchedLine, "match" | "hardIssues" | "confirmed">): boolean {
+  if (line.hardIssues.length > 0) return true;
+  if (line.match === "bib" || line.match === "manual") return false;
+  return !line.confirmed;
 }
 
 export function lineMessage(line: Pick<MatchedLine, "name" | "issues">): string {

@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDB } from "@/lib/firebase/admin";
 import { HttpError, requireAdmin } from "@/lib/server/auth";
 import { adminErrorResponse } from "@/lib/server/participants/routes";
-import { publishResultSet, saveResultDraft, validateResultSet } from "@/lib/server/results/service";
+import { buildIdentityIndex, publishResultSet, saveResultDraft, validateResultSet } from "@/lib/server/results/service";
+import { displayName } from "@/lib/domain/names";
 import { draftsFromSnapshot2026 } from "@/lib/server/results/import-snapshot";
 import { parseResultsCsv } from "@/lib/domain/results";
 
@@ -12,8 +13,13 @@ export async function GET(req: NextRequest) {
     await requireAdmin(req.headers, { auth: adminAuth, db: adminDB });
     const eventId = req.nextUrl.searchParams.get("eventId");
     if (!eventId) throw new HttpError(400, "Édition manquante.");
-    const sets = await adminDB.collection("resultSets").where("eventId", "==", eventId).get();
+    const [sets, index] = await Promise.all([adminDB.collection("resultSets").where("eventId", "==", eventId).get(), buildIdentityIndex(adminDB, eventId)]);
     return NextResponse.json({
+      // Identités proposées pour un choix manuel (revalidé par le serveur à l'enregistrement).
+      identities: index
+        .filter(entry => !entry.withdrawn)
+        .map(entry => ({ id: entry.id, kind: entry.kind, bib: entry.bib, categoryIds: entry.categoryIds, label: entry.displayName || entry.names.map(displayName).join(" – ") }))
+        .sort((a, b) => a.label.localeCompare(b.label, "fr")),
       sets: sets.docs.map(doc => {
         const data = doc.data();
         return {
