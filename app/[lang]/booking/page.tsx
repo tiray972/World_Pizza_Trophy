@@ -135,30 +135,24 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
           });
         });
 
-        // Load slots for this event
-        const slotsQuery = query(
-          collection(db, 'slots'),
-          where('eventId', '==', selectedEventId)
-        );
-        const slotsSnapshot = await getDocs(slotsQuery);
-        const slotsData = slotsSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            eventId: data.eventId,
-            categoryId: data.categoryId,
-            date: data.date,
-            startTime: (data.startTime as Timestamp).toDate(),
-            endTime: (data.endTime as Timestamp).toDate(),
-            status: data.status,
-            buyerId: data.buyerId || '', // Add missing buyerId field
-            userId: data.userId,
-            stripeSessionId: data.stripeSessionId,
-            assignedByAdminId: data.assignedByAdminId,
-            assignedAt: data.assignedAt ? (data.assignedAt as Timestamp).toDate() : undefined,
-            assignmentType: data.assignmentType,
-          } as Slot;
-        });
+        // Load slots for this event — via le serveur : disponibilité seule,
+        // jamais les noms ni coordonnées des autres candidats.
+        const availabilityResponse = await fetch(`/api/booking/availability?eventId=${encodeURIComponent(selectedEventId)}`, { cache: 'no-store' });
+        if (!availabilityResponse.ok) throw new Error('Disponibilités indisponibles');
+        const availability = (await availabilityResponse.json()) as {
+          slots: { id: string; eventId: string; categoryId: string; date: string; startTime: string; endTime: string; status: string }[];
+        };
+        const slotsData = availability.slots.map(slot => ({
+          id: slot.id,
+          eventId: slot.eventId,
+          categoryId: slot.categoryId,
+          date: slot.date,
+          startTime: new Date(slot.startTime),
+          endTime: new Date(slot.endTime),
+          status: slot.status === 'available' ? 'available' : 'paid',
+          buyerId: '',
+          stripeSessionId: null,
+        }) as Slot);
 
         console.log(`✅ [BookingPage] Slots loaded: ${slotsData.length} total slots`);
         const slotsByCategory: Record<string, Slot[]> = {};

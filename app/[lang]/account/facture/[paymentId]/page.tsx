@@ -102,8 +102,9 @@ export default function InvoicePage({
         const categoryNames: Record<string, string> = {};
 
         for (const slotId of payment.slotIds) {
-          const slotSnap = await getDoc(doc(db, 'slots', slotId));
-          if (!slotSnap.exists()) continue;
+          // Créneau libéré ou transféré depuis : plus lisible par l'acheteur, la facture reste affichée.
+          const slotSnap = await getDoc(doc(db, 'slots', slotId)).catch(() => null);
+          if (!slotSnap || !slotSnap.exists()) continue;
           const slotData = slotSnap.data();
 
           if (!categoryNames[slotData.categoryId]) {

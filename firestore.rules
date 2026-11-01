@@ -1,0 +1,113 @@
+rules_version = '2';
+
+// Règles Firestore — World Pizza Trophy.
+//
+// Principes :
+//  - toute écriture sensible (paiements, identités, équipes, dossards, repas,
+//    règlements, journaux) passe par les routes serveur (Admin SDK, hors règles) ;
+//  - le dashboard écrit encore directement certaines configurations : réservé
+//    aux administrateurs ;
+//  - aucune donnée personnelle lisible publiquement : la disponibilité des
+//    créneaux passe par /api/booking/availability.
+//
+// ⚠️ Déploiement : uniquement après le déploiement du code qui lit les
+// créneaux via l'API (sinon le Booking public ne verrait plus les créneaux).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && (
+        request.auth.token.role == 'admin' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Configuration publique des éditions (catalogue).
+    match /events/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /categories/{id} {
+      allow read: if true;
+      // Le règlement publié et les noms traduits ne s'écrivent que par le serveur.
+      allow create: if isAdmin() && !('rulesI18n' in request.resource.data);
+      allow update: if isAdmin() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rulesI18n', 'nameI18n']);
+      allow delete: if isAdmin();
+    }
+    match /products/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Créneaux : contiennent les participants (données personnelles).
+    match /slots/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.buyerId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    // Comptes : chacun lit son profil ; rôle et inscriptions jamais modifiables par l'intéressé.
+    match /users/{uid} {
+      allow read: if isSelf(uid) || isAdmin();
+      allow update: if isAdmin();
+      allow create, delete: if false;
+    }
+
+    // Paiements : lecture de ses propres paiements ; modifications admin (historique).
+    match /payments/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow update: if isAdmin()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['amount', 'stripeSessionId', 'userId', 'stripeInvoiceNumber', 'stripeInvoiceUrl', 'stripeInvoicePdf']);
+      allow create, delete: if false;
+    }
+
+    match /vouchers/{id} {
+      allow read, write: if isAdmin();
+    }
+
+    // Mesure d'audience : écriture anonyme limitée, lecture admin.
+    match /pageViews/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['path', 'title', 'referrer', 'userAgent', 'userId', 'sessionId', 'timestamp', 'loadTime', 'domContentLoaded', 'expiresAt'])
+        && request.resource.data.path is string && request.resource.data.path.size() < 500;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+    match /trackingEvents/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['eventType', 'timestamp', 'userId', 'sessionId', 'path', 'metadata', 'expiresAt'])
+        && request.resource.data.eventType is string && request.resource.data.eventType.size() < 64;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // Données gérées exclusivement par le serveur : lecture admin, aucune écriture client.
+    match /participants/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /teams/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /bibs/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /mealSeats/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /auditLogs/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /ruleVersions/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /ruleAcceptances/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /paymentIncidents/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /pendingBookings/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /migrations/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /scheduleMailings/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /duplicationRequests/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /results/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /resultSets/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /categoryTemplates/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /productTemplates/{id} { allow read: if isAdmin(); allow write: if false; }
+
+    // Tout le reste est fermé.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -44,16 +44,17 @@ export default function RulesPage({ params }: Props) {
         const categoriesSnapshot = await getDocs(
           query(collection(db, "categories"), where("eventId", "==", events[0].id))
         );
-        const slotsSnapshot = await getDocs(
-          query(collection(db, "slots"), where("eventId", "==", events[0].id))
-        );
+        // Dates des créneaux via le serveur (aucune donnée personnelle exposée).
+        const availabilityResponse = await fetch(`/api/booking/availability?eventId=${encodeURIComponent(events[0].id)}`);
+        const availability = availabilityResponse.ok
+          ? ((await availabilityResponse.json()) as { slots: { categoryId: string; date: string }[] })
+          : { slots: [] };
 
         const datesByCategory = new Map<string, Set<string>>();
-        slotsSnapshot.docs.forEach(doc => {
-          const data = doc.data();
-          const dates = datesByCategory.get(data.categoryId) ?? new Set<string>();
-          if (data.date) dates.add(data.date);
-          datesByCategory.set(data.categoryId, dates);
+        availability.slots.forEach(slot => {
+          const dates = datesByCategory.get(slot.categoryId) ?? new Set<string>();
+          if (slot.date) dates.add(slot.date);
+          datesByCategory.set(slot.categoryId, dates);
         });
 
         setLiveCategories(
