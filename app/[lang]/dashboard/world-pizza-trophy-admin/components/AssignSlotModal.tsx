@@ -1,406 +1,142 @@
-import React, { useState, useEffect } from "react";
+"use client";
+
+// Attribution manuelle d'un créneau libre. Pizza Due : les deux équipiers sont
+// saisis ici, dès l'attribution. « Payé » n'existe qu'en rattachant le créneau
+// à un paiement réel de l'acheteur ; sinon le créneau est offert.
+
+import React, { useMemo, useState } from "react";
+import { X, Gift, CreditCard } from "lucide-react";
 import { Button } from "./ui/Button";
-import { Slot, User, Category, Participant, SlotStatus } from "@/types/firestore";
-import { X, UserPlus, Gift, CreditCard, Zap } from "lucide-react";
+import { MemberFields, membersComplete } from "./MemberFields";
+import { assignSlots, emptyMember, membersPayload, useEventIdentities, type MemberDraft } from "../lib/assignSlots";
+import { newRequestId } from "../lib/adminFetch";
 import { formatTime, formatUser } from "../lib/utils";
-import { getSlotParticipants } from "@/lib/booking/rules";
+import { getParticipantsPerSlot } from "@/lib/booking/rules";
+import type { Category, Payment, Slot, User } from "@/types/firestore";
 
 interface AssignSlotModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (userId: string, participant?: Participant, forcedStatus?: SlotStatus) => Promise<void>;
+  onDone: (message: string) => void;
   slot: Slot | null;
   users: User[];
   categories: Category[];
-  /** Participants déjà saisis sur l'événement, pour les réutiliser sans tout retaper. */
-  knownParticipants?: { participant: Participant; buyerIds: Set<string> }[];
-  defaultMode?: 'assign' | 'offer';
+  payments: Payment[];
+  eventId: string;
+  defaultMode?: "assign" | "offer";
 }
 
-export function AssignSlotModal({
-  isOpen,
-  onClose,
-  onConfirm,
-  slot,
-  users,
-  categories,
-  knownParticipants = [],
-  defaultMode = 'assign',
-}: AssignSlotModalProps) {
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showParticipantForm, setShowParticipantForm] = useState(false);
-  const [participantData, setParticipantData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    shirtSize: ""
-  });
-  // 'auto' = computed from user payment status, 'offered' = force offered, 'paid' = force paid
-  const [selectedParticipantKey, setSelectedParticipantKey] = useState<string>("");
-  const [statusMode, setStatusMode] = useState<'auto' | 'offered' | 'paid'>(
-    defaultMode === 'offer' ? 'offered' : 'auto'
+export function AssignSlotModal(props: AssignSlotModalProps) {
+  if (!props.isOpen || !props.slot) return null;
+  // Remonté à chaque ouverture : formulaire vierge, nouvelle requête idempotente.
+  return <AssignSlotForm key={props.slot.id} {...props} slot={props.slot} />;
+}
+
+function AssignSlotForm({ onClose, onDone, slot, users, categories, payments, eventId, defaultMode = "assign" }: AssignSlotModalProps & { slot: Slot }) {
+  const category = categories.find(item => item.id === slot.categoryId);
+  const required = getParticipantsPerSlot(category);
+  const [buyerId, setBuyerId] = useState(slot.buyerId || "");
+  const [status, setStatus] = useState<"offered" | "paid">("offered");
+  const [paymentId, setPaymentId] = useState("");
+  const [members, setMembers] = useState<MemberDraft[]>(() => Array.from({ length: required }, emptyMember));
+  const [allowIncomplete, setAllowIncomplete] = useState(false);
+  const [reason, setReason] = useState("");
+  const [requestId] = useState(newRequestId);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { identities } = useEventIdentities(eventId);
+
+  const buyerPayments = useMemo(
+    () => payments.filter(payment => payment.userId === buyerId && payment.status === "paid"),
+    [payments, buyerId]
   );
+  const complete = membersComplete(members, required);
+  const canSubmit = !busy && (complete || (required > 1 && allowIncomplete && membersPayload(members).length > 0)) && (status === "offered" || !!paymentId);
 
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedUserId(slot?.buyerId || "");
-      setIsSubmitting(false);
-      setShowParticipantForm(false);
-      setParticipantData({ firstName: "", lastName: "", email: "", phone: "", shirtSize: "" });
-      setSelectedParticipantKey("");
-      setStatusMode(defaultMode === 'offer' ? 'offered' : 'auto');
-    }
-  }, [isOpen, slot, defaultMode]);
-
-  if (!isOpen || !slot) return null;
-
-  const categoryName = categories.find(c => c.id === slot.categoryId)?.name || slot.categoryId;
-  const selectedUser = users.find(u => u.id === selectedUserId);
-  const isOffer = statusMode === 'offered';
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUserId) return;
-
-    setIsSubmitting(true);
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
     try {
-      // ⚠️ Aucun champ `undefined` : Firestore refuse l'écriture entière.
-      const participant: Participant | undefined =
-        showParticipantForm && (participantData.firstName || participantData.lastName)
-          ? {
-              firstName: participantData.firstName.trim(),
-              lastName: participantData.lastName.trim(),
-              ...(participantData.email.trim() ? { email: participantData.email.trim() } : {}),
-              ...(participantData.phone.trim() ? { phone: participantData.phone.trim() } : {}),
-              ...(participantData.shirtSize ? { shirtSize: participantData.shirtSize as Participant["shirtSize"] } : {}),
-            }
-          : undefined;
-
-      const forcedStatus: SlotStatus | undefined = statusMode !== 'auto'
-        ? (statusMode as SlotStatus)
-        : undefined;
-
-      await onConfirm(selectedUserId, participant, forcedStatus);
+      await assignSlots({
+        eventId,
+        requestId,
+        buyerId: buyerId || null,
+        status,
+        paymentId: status === "paid" ? paymentId : null,
+        assignments: [{ slotId: slot.id, participants: membersPayload(members), allowIncomplete: required > 1 && allowIncomplete }],
+        reason,
+      });
+      onDone(status === "paid" ? "Créneau rattaché au paiement de l'acheteur." : "Créneau attribué (offert).");
       onClose();
-    } catch (error) {
-      console.error("Failed to assign slot", error);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : String(submitError));
     } finally {
-      setIsSubmitting(false);
+      setBusy(false);
     }
   };
-
-  const handleParticipantChange = (field: string, value: string) => {
-    setParticipantData(prev => ({ ...prev, [field]: value }));
-    // Saisie manuelle : on quitte la sélection d'un participant existant
-    setSelectedParticipantKey("");
-  };
-
-  const participantKeyOf = (participant: Participant) =>
-    [
-      participant.firstName.trim().toLowerCase(),
-      participant.lastName.trim().toLowerCase(),
-      participant.email?.trim().toLowerCase() || "",
-    ].join("|");
-
-  /** Remplit le formulaire avec un participant déjà enregistré. */
-  const handleSelectKnownParticipant = (key: string) => {
-    setSelectedParticipantKey(key);
-    if (!key) return;
-
-    const match = knownParticipants.find(entry => participantKeyOf(entry.participant) === key);
-    if (!match) return;
-
-    setParticipantData({
-      firstName: match.participant.firstName || "",
-      lastName: match.participant.lastName || "",
-      email: match.participant.email || "",
-      phone: match.participant.phone || "",
-      shirtSize: match.participant.shirtSize || "",
-    });
-  };
-
-  // Les participants déjà liés à l'acheteur sélectionné remontent en premier
-  const participantsOfSelectedUser = knownParticipants.filter(entry =>
-    selectedUserId ? entry.buyerIds.has(selectedUserId) : false
-  );
-  const otherParticipants = knownParticipants.filter(
-    entry => !participantsOfSelectedUser.includes(entry)
-  );
-
-  const participantLabel = (participant: Participant) =>
-    `${participant.firstName} ${participant.lastName}` +
-    (participant.shirtSize ? ` — ${participant.shirtSize}` : "") +
-    (participant.email ? ` (${participant.email})` : "");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-      />
-      <div className="fixed z-50 grid w-full max-w-lg scale-100 gap-4 border bg-card text-card-foreground p-6 shadow-lg duration-200 sm:rounded-lg md:w-full overflow-y-auto max-h-[90vh]">
-        <div className="flex flex-col space-y-1.5 text-center sm:text-left">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {isOffer
-                ? <Gift className="h-5 w-5 text-purple-500" />
-                : <UserPlus className="h-5 w-5" />
-              }
-              <h2 className="text-lg font-semibold leading-none tracking-tight text-foreground">
-                {isOffer ? "Offer Slot" : "Assign Competitor to Slot"}
-              </h2>
-            </div>
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-foreground" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Attribuer le créneau">
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
+      <form onSubmit={submit} className="relative z-10 grid max-h-[92vh] w-full max-w-lg gap-4 overflow-y-auto rounded-lg border bg-card p-6 shadow-lg">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold">Attribuer le créneau</h2>
+            <p className="text-sm text-muted-foreground">
+              {category?.name ?? slot.categoryId} · {slot.date} · {formatTime(slot.startTime)}
+              {required > 1 ? ` · équipe de ${required}` : ""}
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {categoryName} at {formatTime(slot.startTime)} on {slot.date}
-          </p>
+          <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Fermer"><X className="h-4 w-4" /></Button>
         </div>
 
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+        <label className="grid gap-1 text-sm font-medium">
+          Compte responsable (acheteur)
+          <select className="h-9 rounded-md border border-input bg-background px-2 text-sm" value={buyerId} onChange={event => { setBuyerId(event.target.value); setPaymentId(""); }}>
+            <option value="">— Aucun compte —</option>
+            {users.map(user => <option key={user.id} value={user.id}>{formatUser(user)} ({user.email})</option>)}
+          </select>
+        </label>
 
-          {/* ──────────── STATUS MODE SELECTOR ──────────── */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Slot Action</label>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setStatusMode('auto')}
-                className={`flex flex-col items-center gap-1 p-3 rounded-lg border text-xs transition-all ${statusMode === 'auto'
-                    ? 'border-primary bg-primary/10 text-primary font-semibold'
-                    : 'border-input bg-background text-muted-foreground hover:border-primary/50'
-                  }`}
-              >
-                <Zap className="h-4 w-4" />
-                Auto
-                <span className="text-[10px] font-normal opacity-70">Based on payment</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusMode('offered')}
-                className={`flex flex-col items-center gap-1 p-3 rounded-lg border text-xs transition-all ${statusMode === 'offered'
-                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-300 font-semibold'
-                    : 'border-input bg-background text-muted-foreground hover:border-purple-300'
-                  }`}
-              >
-                <Gift className="h-4 w-4" />
-                Offer
-                <span className="text-[10px] font-normal opacity-70">Gift / Free slot</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusMode('paid')}
-                className={`flex flex-col items-center gap-1 p-3 rounded-lg border text-xs transition-all ${statusMode === 'paid'
-                    ? 'border-green-500 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-300 font-semibold'
-                    : 'border-input bg-background text-muted-foreground hover:border-green-300'
-                  }`}
-              >
-                <CreditCard className="h-4 w-4" />
-                Mark Paid
-                <span className="text-[10px] font-normal opacity-70">Force paid status</span>
-              </button>
-            </div>
-            {statusMode === 'offered' && (
-              <p className="text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/20 px-3 py-2 rounded border border-purple-200 dark:border-purple-800">
-                🎁 This slot will be marked as <strong>Offered</strong> — the competitor gets the slot without requiring payment.
-              </p>
-            )}
-            {statusMode === 'paid' && (
-              <p className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/20 px-3 py-2 rounded border border-green-200 dark:border-green-800">
-                ✅ This slot will be marked as <strong>Paid</strong> — use this if payment was collected outside the platform.
-              </p>
-            )}
-          </div>
-
-          {/* ──────────── BUYER SELECTION ──────────── */}
-          <div className="space-y-2">
-            <label htmlFor="user" className="text-sm font-medium text-foreground">
-              {statusMode === 'offered' ? 'Offer To (User Account)' : 'Buyer / Registration Owner'}
-            </label>
-            <select
-              id="user"
-              className="flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background"
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              required
-            >
-              <option value="" disabled className="bg-background text-foreground">Select a user...</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id} className="bg-background text-foreground">
-                  {formatUser(user)} ({user.email})
+        <fieldset className="grid gap-2 text-sm">
+          <legend className="font-medium">Statut</legend>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="status" checked={status === "offered"} onChange={() => setStatus("offered")} />
+            <Gift className="h-4 w-4 text-purple-600" /> Offert (aucun paiement)
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="status" checked={status === "paid"} disabled={!buyerId} onChange={() => setStatus("paid")} />
+            <CreditCard className="h-4 w-4 text-green-600" /> Rattaché à un paiement réel de l&apos;acheteur
+          </label>
+          {status === "paid" && (
+            <select className="h-9 rounded-md border border-input bg-background px-2 text-sm" aria-label="Paiement de l'acheteur" value={paymentId} onChange={event => setPaymentId(event.target.value)}>
+              <option value="">— Choisir le paiement —</option>
+              {buyerPayments.map(payment => (
+                <option key={payment.id} value={payment.id}>
+                  {payment.createdAt ? new Date(payment.createdAt).toLocaleDateString("fr-FR") : ""} · {payment.amount} € · {payment.stripeSessionId?.slice(0, 18) ?? payment.id}
                 </option>
               ))}
             </select>
-          </div>
-
-          {/* ──────────── CURRENT PARTICIPANT INFO ──────────── */}
-          {getSlotParticipants(slot).length > 0 && (
-            <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded">
-              <p className="text-xs font-semibold text-green-700 dark:text-green-300 mb-1">Current Participant:</p>
-              {getSlotParticipants(slot).map((participant, index) => (
-                <p key={index} className="text-sm text-green-800 dark:text-green-200">
-                  {participant.firstName} {participant.lastName}
-                  {participant.email && ` (${participant.email})`}
-                </p>
-              ))}
-            </div>
           )}
+          {status === "paid" && buyerPayments.length === 0 && <p className="text-xs text-amber-700">Aucun paiement réel pour ce compte dans cette édition : choisissez « Offert ».</p>}
+        </fieldset>
 
-          {/* ──────────── PARTICIPANT FORM TOGGLE ──────────── */}
-          <div className="pt-2 border-t">
-            <Button
-              type="button"
-              variant={showParticipantForm ? "default" : "outline"}
-              size="sm"
-              className="w-full"
-              onClick={() => setShowParticipantForm(!showParticipantForm)}
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              {showParticipantForm ? "Hide Participant Info" : "Add/Edit Participant Info"}
-            </Button>
-          </div>
+        <MemberFields count={required} members={members} onChange={setMembers} identities={identities} preferredBuyerId={buyerId} />
+        {required > 1 && (
+          <label className="flex items-start gap-2 text-xs text-muted-foreground">
+            <input type="checkbox" checked={allowIncomplete} onChange={event => setAllowIncomplete(event.target.checked)} />
+            Équipier inconnu pour l&apos;instant : enregistrer une équipe incomplète (signalée, à compléter dans Participants).
+          </label>
+        )}
+        <input className="h-9 rounded-md border border-input bg-background px-2 text-sm" placeholder="Motif (facultatif, conservé dans l'historique)" aria-label="Motif" value={reason} onChange={event => setReason(event.target.value)} />
 
-          {/* ──────────── PARTICIPANT INFO FORM ──────────── */}
-          {showParticipantForm && (
-            <div className="space-y-3 p-3 bg-muted/30 rounded-lg border border-dashed">
-              <p className="text-xs font-semibold text-muted-foreground">
-                👤 Participant Details (can be different from buyer)
-              </p>
-
-              {/* ♻️ Réutiliser un participant déjà saisi plutôt que tout retaper */}
-              {knownParticipants.length > 0 && (
-                <div className="grid gap-2">
-                  <label htmlFor="knownParticipant" className="text-xs font-medium">
-                    Existing participant
-                  </label>
-                  <select
-                    id="knownParticipant"
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={selectedParticipantKey}
-                    onChange={(e) => handleSelectKnownParticipant(e.target.value)}
-                  >
-                    <option value="">— New participant (type below) —</option>
-
-                    {participantsOfSelectedUser.length > 0 && (
-                      <optgroup label="Participants of this buyer">
-                        {participantsOfSelectedUser.map(entry => (
-                          <option
-                            key={participantKeyOf(entry.participant)}
-                            value={participantKeyOf(entry.participant)}
-                          >
-                            {participantLabel(entry.participant)}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-
-                    {otherParticipants.length > 0 && (
-                      <optgroup label="All participants">
-                        {otherParticipants.map(entry => (
-                          <option
-                            key={participantKeyOf(entry.participant)}
-                            value={participantKeyOf(entry.participant)}
-                          >
-                            {participantLabel(entry.participant)}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </select>
-                  <p className="text-[11px] text-muted-foreground">
-                    Selecting someone fills the fields below — you can still edit them.
-                  </p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-2">
-                  <label htmlFor="firstName" className="text-xs font-medium">First Name *</label>
-                  <input
-                    id="firstName"
-                    type="text"
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={participantData.firstName}
-                    onChange={(e) => handleParticipantChange("firstName", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <label htmlFor="lastName" className="text-xs font-medium">Last Name *</label>
-                  <input
-                    id="lastName"
-                    type="text"
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={participantData.lastName}
-                    onChange={(e) => handleParticipantChange("lastName", e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <label htmlFor="email" className="text-xs font-medium">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={participantData.email}
-                  onChange={(e) => handleParticipantChange("email", e.target.value)}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <label htmlFor="phone" className="text-xs font-medium">Phone</label>
-                <input
-                  id="phone"
-                  type="tel"
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={participantData.phone}
-                  onChange={(e) => handleParticipantChange("phone", e.target.value)}
-                />
-              </div>
-
-              {/* 👕 Taille de t-shirt : reprise dans les exports et la liste des inscrits */}
-              <div className="grid gap-2">
-                <label htmlFor="shirtSize" className="text-xs font-medium">T-Shirt Size</label>
-                <select
-                  id="shirtSize"
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={participantData.shirtSize}
-                  onChange={(e) => handleParticipantChange("shirtSize", e.target.value)}
-                >
-                  <option value="">—</option>
-                  {["XS", "S", "M", "L", "XL", "XXL", "XXXL"].map(size => (
-                    <option key={size} value={size}>{size}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting || !selectedUserId}
-              className={isOffer ? "bg-purple-600 hover:bg-purple-700 text-white" : ""}
-            >
-              {isSubmitting
-                ? "Saving..."
-                : isOffer
-                  ? "🎁 Offer Slot"
-                  : "Assign Slot"
-              }
-            </Button>
-          </div>
-        </form>
-      </div>
+        {error && <p className="text-sm text-red-700" role="alert">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onClose}>Annuler</Button>
+          <Button type="submit" disabled={!canSubmit}>{busy ? "Enregistrement…" : "Attribuer"}</Button>
+        </div>
+      </form>
     </div>
   );
 }

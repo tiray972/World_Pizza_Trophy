@@ -100,6 +100,8 @@ service cloud.firestore {
     match /migrations/{id} { allow read: if isAdmin(); allow write: if false; }
     match /scheduleMailings/{id} { allow read: if isAdmin(); allow write: if false; }
     match /duplicationRequests/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /manualAssignments/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /resultRevisions/{id} { allow read: if isAdmin(); allow write: if false; }
     match /results/{id} { allow read: if isAdmin(); allow write: if false; }
     match /resultSets/{id} { allow read: if isAdmin(); allow write: if false; }
     match /categoryTemplates/{id} { allow read: if isAdmin(); allow write: if false; }

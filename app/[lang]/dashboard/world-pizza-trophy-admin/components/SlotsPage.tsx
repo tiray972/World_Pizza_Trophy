@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
-import { Slot, User, SlotStatus, Category, WPTEvent, Participant } from "@/types/firestore";
+import { Slot, User, SlotStatus, Category, WPTEvent, Payment } from "@/types/firestore";
 import { AssignSlotModal } from "./AssignSlotModal";
 import { TransferSlotModal } from "./TransferSlotModal";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -19,7 +19,10 @@ interface SlotsPageProps {
   users: User[];
   categories: Category[];
   selectedEvent: WPTEvent | undefined; // Pass current event
-  onUpdateSlot: (slot: Slot) => void | Promise<void>;
+  /** Paiements de l'édition : « payé » n'existe qu'en rattachant un paiement réel. */
+  payments?: Payment[];
+  /** Ancienne écriture directe : l'attribution passe désormais par /api/admin/slots/assign. */
+  onUpdateSlot?: (slot: Slot) => void | Promise<void>;
   /** 🔁 Déplace une réservation (acheteur, participant, paiement) vers un autre créneau. */
   onTransferSlot?: (slot: Slot, targetSlotId: string) => Promise<void>;
   /** 🔓 Remet un créneau en vente (efface participant, acheteur et verrou). */
@@ -36,7 +39,7 @@ export function SlotsPage({
   users,
   categories,
   selectedEvent,
-  onUpdateSlot,
+  payments = [],
   onTransferSlot,
   onReleaseSlot,
   onOfferSlots,
@@ -78,7 +81,6 @@ export function SlotsPage({
   const [isDeletingDate, setIsDeletingDate] = useState(false);
 
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
   // 🧹 Nettoyage des données de participant restées sur des créneaux libérés
   const [isCleaning, setIsCleaning] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
@@ -86,7 +88,6 @@ export function SlotsPage({
   const [slotToRelease, setSlotToRelease] = useState<Slot | null>(null);
   // Vue : liste des créneaux par jour, ou tableau participants × catégories
   const [viewMode, setViewMode] = useState<'list' | 'matrix'>('list');
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   // Filter slots for current date view
   const currentSlots = eventSlots
@@ -126,61 +127,7 @@ export function SlotsPage({
     }
   };
 
-  const handleAssignConfirm = async (userId: string, participant?: Participant, forcedStatus?: SlotStatus) => {
-    setIsSyncing(true);
-    setSyncMessage(isOfferModalOpen ? "Offering slot..." : "Logging action...");
-
-    await new Promise(resolve => setTimeout(resolve, 600));
-
-    let newStatus: SlotStatus;
-    if (forcedStatus) {
-      // Admin explicitly chose a status (Offer / Mark Paid)
-      newStatus = forcedStatus;
-    } else {
-      // Auto: derive from user's payment status
-      const user = users.find(u => u.id === userId);
-      const isPaid = (selectedEvent && user?.registrations[selectedEvent.id]?.paid) || false;
-      newStatus = isPaid ? 'paid' : 'offered';
-    }
-
-    setSyncMessage("Syncing to Database...");
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    if (selectedSlot) {
-      const updatedSlot: Slot = {
-        ...selectedSlot,
-        buyerId: userId,
-        participant,
-        status: newStatus,
-        // Traceability Fields
-        assignedByAdminId: 'admin_current',
-        assignedAt: new Date(),
-        assignmentType: newStatus === 'offered' ? 'manual' : 'manual',
-      };
-
-      try {
-        // ⚠️ Sans await, un échec d'écriture passait inaperçu : l'interface
-        // se fermait comme si l'attribution avait fonctionné.
-        await onUpdateSlot(updatedSlot);
-        const action = newStatus === 'offered' ? 'OFFERED' : 'ASSIGNED';
-        console.log(`[AUDIT] Slot ${selectedSlot.id} ${action} to User ${userId} (participant: ${participant?.firstName} ${participant?.lastName}) by admin.`);
-      } catch (error) {
-        console.error('❌ Attribution impossible:', error);
-        alert(
-          "L'attribution n'a pas pu être enregistrée. Le créneau n'a pas été modifié.\n\n" +
-          (error instanceof Error ? error.message : String(error))
-        );
-        setIsOfferModalOpen(false);
-        setIsSyncing(false);
-        setSyncMessage(null);
-        return;
-      }
-    }
-
-    setIsOfferModalOpen(false);
-    setIsSyncing(false);
-    setSyncMessage(null);
-  };
+  const [assignNotice, setAssignNotice] = useState<string | null>(null);
 
   // --- Deletion Handlers ---
 
@@ -241,40 +188,6 @@ export function SlotsPage({
     }).format(date);
   };
 
-  // 👥 Participants déjà saisis sur l'événement, pour ne pas les retaper
-  const knownParticipants = useMemo(() => {
-    const byKey = new Map<string, { participant: Participant; buyerIds: Set<string> }>();
-
-    for (const slot of slots) {
-      for (const participant of getSlotParticipants(slot)) {
-        const key = [
-          participant.firstName.trim().toLowerCase(),
-          participant.lastName.trim().toLowerCase(),
-          participant.email?.trim().toLowerCase() || "",
-        ].join("|");
-
-        const existing = byKey.get(key);
-        if (existing) {
-          // On garde la fiche la plus complète
-          existing.participant = {
-            ...existing.participant,
-            ...Object.fromEntries(Object.entries(participant).filter(([, value]) => !!value)),
-          } as Participant;
-          if (slot.buyerId) existing.buyerIds.add(slot.buyerId);
-        } else {
-          byKey.set(key, {
-            participant,
-            buyerIds: new Set(slot.buyerId ? [slot.buyerId] : []),
-          });
-        }
-      }
-    }
-
-    return Array.from(byKey.values()).sort((a, b) =>
-      a.participant.lastName.localeCompare(b.participant.lastName) ||
-      a.participant.firstName.localeCompare(b.participant.firstName)
-    );
-  }, [slots]);
 
   /**
    * 🔒 Un créneau réellement payé (session Stripe) ne peut pas être libéré :
@@ -343,14 +256,6 @@ export function SlotsPage({
 
   return (
     <div className="space-y-6 relative">
-      {/* Toast Notification for Sync */}
-      {isSyncing && (
-        <div className="fixed bottom-4 right-4 z-50 bg-foreground text-background px-4 py-2 rounded-md shadow-lg flex items-center gap-3 animate-in slide-in-from-bottom-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span className="text-sm font-medium">{syncMessage}</span>
-        </div>
-      )}
-
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-foreground">Slots Management</h2>
@@ -418,6 +323,7 @@ export function SlotsPage({
       {viewMode === 'matrix' ? (
         onOfferSlots ? (
           <ParticipantMatrix
+            eventId={selectedEvent?.id}
             slots={slots}
             categories={categories}
             users={users}
@@ -570,13 +476,13 @@ export function SlotsPage({
                               Offer
                             </Button>
                           )}
-                          <Button
-                            size="sm"
-                            variant={assignedUser ? "outline" : "default"}
-                            onClick={() => handleAssignClick(slot)}
-                          >
-                            {assignedUser ? "Reassign" : "Assign"}
-                          </Button>
+                          {/* Attribution sur créneau libre uniquement : un créneau occupé se corrige
+                              dans Participants (noms, équipiers) ou se libère / transfère. */}
+                          {slot.status === 'available' && (
+                            <Button size="sm" variant="default" onClick={() => handleAssignClick(slot)}>
+                              Assign
+                            </Button>
+                          )}
 
                           {/* 🔓 Remettre le créneau en vente */}
                           {onReleaseSlot && slot.status !== 'available' && (
@@ -653,13 +559,20 @@ export function SlotsPage({
       <AssignSlotModal
         isOpen={isAssignModalOpen}
         onClose={() => { setIsAssignModalOpen(false); setIsOfferModalOpen(false); }}
-        onConfirm={handleAssignConfirm}
+        onDone={setAssignNotice}
         slot={selectedSlot}
         users={users}
         categories={categories}
-        knownParticipants={knownParticipants}
+        payments={payments}
+        eventId={selectedEvent?.id ?? ""}
         defaultMode={isOfferModalOpen ? 'offer' : 'assign'}
       />
+      {assignNotice && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-md border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-800 shadow" role="status">
+          {assignNotice}{" "}
+          <button type="button" className="ml-2 underline" onClick={() => setAssignNotice(null)}>OK</button>
+        </div>
+      )}
 
       <ConfirmDialog
         isOpen={!!slotToRelease}

@@ -12,6 +12,9 @@ import { CategoriesPage } from './components/CategoriesPage';
 import { PaymentsPage } from './components/PaymentsPage';
 import { ParticipantsPage } from './components/ParticipantsPage';
 import { MealsPage } from './components/MealsPage';
+import type { SlotOffer } from './components/ParticipantMatrix';
+import { assignSlots } from './lib/assignSlots';
+import { newRequestId } from './lib/adminFetch';
 import { ResultsPage } from './components/ResultsPage';
 import { CreateEventModal } from './components/CreateEventModal';
 import { ThemeProvider } from './components/ThemeProvider';
@@ -95,7 +98,7 @@ export default function App() {
   // Firebase hooks - loads data in real-time
   const { events, createEvent, updateEvent } = useEvents();
   const { users, updateUser } = useUsers();
-  const { slots, createSlots, updateSlot, transferSlot, releaseSlot, offerSlots, deleteSlot, deleteSlotsByDate } = useSlots(selectedEventId);
+  const { slots, createSlots, transferSlot, releaseSlot, deleteSlot, deleteSlotsByDate } = useSlots(selectedEventId);
   const { categories, createCategory, updateCategory, deleteCategory } = useCategories(selectedEventId);
   const { products, createProduct, updateProduct, deleteProduct } = useProducts(selectedEventId);
   const { vouchers, createVoucher, deleteVoucher } = useVouchers(selectedEventId);
@@ -231,10 +234,6 @@ export default function App() {
     }
   };
 
-  const handleUpdateSlot = async (updatedSlot: Slot) => {
-    await updateSlot(updatedSlot.id, updatedSlot);
-  };
-
   /**
    * 🔁 Transfère une réservation vers un autre créneau et fait suivre la
    * référence dans les paiements : le montant reste rattaché au créneau
@@ -252,10 +251,19 @@ export default function App() {
     }
   };
 
-  const handleUpdateSlotsBulk = async (updatedSlots: Slot[]) => {
-    for (const slot of updatedSlots) {
-      await updateSlot(slot.id, slot);
-    }
+  /**
+   * 🎁 Matrice : proposition validée → une seule transaction serveur
+   * (créneaux libres, équipiers complets, identités, aucun « payé » inventé).
+   */
+  const handleOfferSlots = async (offers: SlotOffer[]) => {
+    await assignSlots({
+      eventId: selectedEventId,
+      requestId: newRequestId(),
+      buyerId: null,
+      status: 'offered',
+      assignments: offers.map(offer => ({ slotId: offer.slotId, participants: offer.participants, buyerId: offer.buyerId })),
+      reason: "Proposition de la matrice des participants",
+    });
   };
 
   const handleCreateSlots = async (slotsData: Omit<Slot, "id" | "status" | "userId" | "stripeSessionId" | "eventId">[]) => {
@@ -371,10 +379,10 @@ export default function App() {
             users={users}
             categories={eventCategories}
             selectedEvent={selectedEvent}
-            onUpdateSlot={handleUpdateSlot}
+            payments={payments}
             onTransferSlot={handleTransferSlot}
             onReleaseSlot={async (slot) => { await releaseSlot(slot.id); }}
-            onOfferSlots={offerSlots}
+            onOfferSlots={handleOfferSlots}
             onCreateSlot={handleCreateSlots}
             onDeleteSlot={handleDeleteSlot}
             onDeleteDate={handleDeleteDate}
@@ -406,8 +414,8 @@ export default function App() {
             slots={eventSlots}
             categories={eventCategories}
             selectedEventId={selectedEventId}
-            onUpdateSlots={handleUpdateSlotsBulk}
-            isAssignmentLocked={selectedEvent?.status === 'closed' || selectedEvent?.status === 'archived'}
+            payments={payments}
+            isAssignmentLocked={selectedEvent?.status === 'completed' || selectedEvent?.status === 'archived'}
           />
         );
       case 'participants':

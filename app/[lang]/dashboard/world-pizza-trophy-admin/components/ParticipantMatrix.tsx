@@ -5,6 +5,8 @@ import { Slot, Category, User, Participant } from "@/types/firestore";
 import { Gift, Loader2, Search, Sparkles, X, Wand2 } from "lucide-react";
 import { formatTime, formatUser } from "../lib/utils";
 import { getParticipantsPerSlot, getSlotParticipants } from "@/lib/booking/rules";
+import { MemberFields, membersComplete } from "./MemberFields";
+import { membersPayload, useEventIdentities, type AssignedPerson, type MemberDraft } from "../lib/assignSlots";
 import {
   CandidateSlot,
   conflictsWithBreak,
@@ -18,11 +20,13 @@ import {
 export interface SlotOffer {
   slotId: string;
   buyerId: string;
-  participant: Participant;
+  /** Tous les participants du créneau : identité existante ou nom saisi (coéquipier d'un duo). */
+  participants: AssignedPerson[];
   label?: string;
 }
 
 interface ParticipantMatrixProps {
+  eventId?: string;
   slots: Slot[];
   categories: Category[];
   users: User[];
@@ -32,6 +36,8 @@ interface ParticipantMatrixProps {
 interface MatrixRow {
   key: string;
   participant: Participant;
+  /** Identité stable quand elle existe (créneaux réservés ou migrés). */
+  participantId: string | null;
   buyerId: string | null;
   slotsByCategory: Map<string, Slot[]>;
   busy: TimeInterval[];
@@ -61,7 +67,10 @@ const STATUS_STYLES: Record<string, string> = {
   locked: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-700",
 };
 
-export function ParticipantMatrix({ slots, categories, users, onOfferSlots }: ParticipantMatrixProps) {
+export function ParticipantMatrix({ eventId, slots, categories, users, onOfferSlots }: ParticipantMatrixProps) {
+  // 👥 Coéquipier saisi pour chaque créneau de duo proposé (clé : ligne::catégorie)
+  const [teammates, setTeammates] = useState<Record<string, MemberDraft[]>>({});
+  const { identities } = useEventIdentities(eventId ?? slots[0]?.eventId);
   const [search, setSearch] = useState("");
   const [breakMinutes, setBreakMinutes] = useState(30);
   const [selected, setSelected] = useState<Record<string, string[]>>({});
@@ -91,19 +100,21 @@ export function ParticipantMatrix({ slots, categories, users, onOfferSlots }: Pa
   const rows: MatrixRow[] = useMemo(() => {
     const byKey = new Map<string, MatrixRow>();
     for (const slot of slots) {
-      for (const participant of getSlotParticipants(slot)) {
+      getSlotParticipants(slot).forEach((participant, index) => {
         const key = participantKey(participant);
         const row =
           byKey.get(key) ??
           ({
             key,
             participant,
+            participantId: null,
             buyerId: null,
             slotsByCategory: new Map<string, Slot[]>(),
             busy: [],
           } as MatrixRow);
 
         if (!row.buyerId && slot.buyerId) row.buyerId = slot.buyerId;
+        if (!row.participantId && slot.participantIds?.[index]) row.participantId = slot.participantIds[index];
         const list = row.slotsByCategory.get(slot.categoryId) ?? [];
         list.push(slot);
         row.slotsByCategory.set(slot.categoryId, list);
@@ -113,7 +124,7 @@ export function ParticipantMatrix({ slots, categories, users, onOfferSlots }: Pa
           label: `${categoryName(slot.categoryId)} ${formatTime(slot.startTime)}`,
         });
         byKey.set(key, row);
-      }
+      });
     }
     return Array.from(byKey.values()).sort(
       (a, b) =>
@@ -229,21 +240,32 @@ export function ParticipantMatrix({ slots, categories, users, onOfferSlots }: Pa
           .filter(([, slotId]) => !!slotId)
           .map(([categoryId, slotId]) => {
             const slot = slotById.get(slotId!);
+            const self: AssignedPerson = row.participantId
+              ? { participantId: row.participantId }
+              : { firstName: row.participant.firstName, lastName: row.participant.lastName, shirtSize: row.participant.shirtSize };
+            const teamSize = getParticipantsPerSlot(categories.find(category => category.id === categoryId));
+            const mates = teamSize > 1 ? membersPayload(teammates[`${rowKey}::${categoryId}`] ?? []) : [];
             return {
               slotId: slotId!,
               buyerId: row.buyerId!,
-              participant: row.participant,
+              participants: [self, ...mates],
               label: `${row.participant.firstName} ${row.participant.lastName} — ${categoryName(categoryId)} ${slot ? `${shortDate(slot.date)} ${formatTime(slot.startTime)}` : ""}`,
             };
           });
       })
     : [];
 
+  /** Duo proposé sans coéquipier saisi : bloquant (pas d'équipe involontairement incomplète). */
+  const missingTeammate = (rowKey: string, categoryId: string) => {
+    const teamSize = getParticipantsPerSlot(categories.find(category => category.id === categoryId));
+    return teamSize > 1 && !membersComplete(teammates[`${rowKey}::${categoryId}`] ?? [], teamSize - 1);
+  };
+
   const proposalHasBlockers = proposal
     ? Object.entries(proposal).some(([rowKey, entry]) =>
         Object.entries(entry.choices).some(([categoryId, slotId]) => {
           const slot = slotId ? slotById.get(slotId) : null;
-          return slot ? !!optionBlocker(rowKey, categoryId, slot) : false;
+          return slot ? !!optionBlocker(rowKey, categoryId, slot) || missingTeammate(rowKey, categoryId) : false;
         })
       )
     : false;
@@ -543,9 +565,16 @@ export function ParticipantMatrix({ slots, categories, users, onOfferSlots }: Pa
                               </span>
                             )}
                             {category && getParticipantsPerSlot(category) > 1 && slotId && (
-                              <span className="text-xs text-blue-600">
-                                👥 catégorie en équipe : complétez le coéquipier via « Reassign »
-                              </span>
+                              <div className="w-full">
+                                <MemberFields
+                                  count={getParticipantsPerSlot(category) - 1}
+                                  singleLabel="Coéquipier (obligatoire)"
+                                  members={teammates[`${rowKey}::${categoryId}`] ?? []}
+                                  onChange={next => setTeammates(previous => ({ ...previous, [`${rowKey}::${categoryId}`]: next }))}
+                                  identities={identities}
+                                  preferredBuyerId={rows.find(candidate => candidate.key === rowKey)?.buyerId}
+                                />
+                              </div>
                             )}
                           </div>
                         );

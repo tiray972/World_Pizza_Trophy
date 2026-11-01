@@ -3,9 +3,9 @@ import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Badge } from "./ui/Badge";
-import { Slot, User, Category, WPTEvent, Participant } from "@/types/firestore"; // Import WPTEvent to check status
+import { Slot, User, Category, Payment } from "@/types/firestore";
 import { ManualSlotAssignModal } from "./ManualSlotAssignModal";
-import { Plus, Search, Calendar, CheckCircle2, XCircle, Loader2, FileSpreadsheet, Globe, AlertTriangle, UserMinus, Lock, Eye, Gift } from "lucide-react";
+import { Plus, Search, Calendar, CheckCircle2, XCircle, FileSpreadsheet, Globe, AlertTriangle, UserMinus, Lock, Eye, Gift } from "lucide-react";
 import { formatUser } from "../lib/utils";
 
 interface UsersPageProps {
@@ -13,57 +13,23 @@ interface UsersPageProps {
   slots: Slot[];
   categories: Category[];
   selectedEventId: string;
-  onUpdateSlots: (slots: Slot[]) => void;
+  /** Ancienne écriture directe ; l'attribution passe par /api/admin/slots/assign. */
+  onUpdateSlots?: (slots: Slot[]) => void;
+  payments?: Payment[];
   isAssignmentLocked?: boolean; 
 }
 
-export function UsersPage({ users, slots, categories, selectedEventId, onUpdateSlots, isAssignmentLocked = false }: UsersPageProps) {
+export function UsersPage({ users, slots, categories, selectedEventId, payments = [], isAssignmentLocked = false }: UsersPageProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSyncing, setIsSyncing] = useState(false);
 
   const handleAssignClick = (user: User) => {
     setSelectedUser(user);
     setIsModalOpen(true);
   };
 
-  const handleAssignConfirm = async (userId: string, slotIds: string[], participants?: Record<string, Participant>) => {
-    setIsSyncing(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    const user = users.find(u => u.id === userId);
-    if (!user) {
-      console.error("User not found");
-      setIsSyncing(false);
-      return;
-    }
-
-    const isPaid = user.registrations[selectedEventId]?.paid || false;
-
-    const updatedSlots: Slot[] = [];
-    
-    slots.forEach(slot => {
-      if (slotIds.includes(slot.id)) {
-        console.log(`[AUDIT] Slot ${slot.id} batch assigned to ${userId} by admin.`);
-        
-        const participant = participants?.[slot.id];
-        
-        updatedSlots.push({
-          ...slot,
-          buyerId: userId, // ✅ Use userId directly since we already verified user exists
-          participant,
-          status: isPaid ? 'paid' : 'offered',
-          assignedByAdminId: 'admin_current',
-          assignedAt: new Date(),
-          assignmentType: 'manual'
-        });
-      }
-    });
-
-    onUpdateSlots(updatedSlots);
-    setIsSyncing(false);
-  };
+  const [assignNotice, setAssignNotice] = useState<string | null>(null);
 
   const getAssignedSlotCount = (userId: string) => {
     return slots.filter(s => s.buyerId === userId && s.status !== 'available').length;
@@ -94,13 +60,6 @@ export function UsersPage({ users, slots, categories, selectedEventId, onUpdateS
 
   return (
     <div className="space-y-6 relative">
-      {isSyncing && (
-        <div className="fixed bottom-4 right-4 z-50 bg-green-600 text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-3 animate-in slide-in-from-bottom-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span className="text-sm font-medium">Syncing assignments...</span>
-        </div>
-      )}
-
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-foreground">Competitors</h2>
@@ -249,11 +208,18 @@ export function UsersPage({ users, slots, categories, selectedEventId, onUpdateS
       <ManualSlotAssignModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onConfirm={handleAssignConfirm}
+        onDone={setAssignNotice}
         user={selectedUser}
         slots={slots}
         categories={categories}
+        payments={payments}
+        eventId={selectedEventId}
       />
+      {assignNotice && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-md border border-green-300 bg-green-50 px-4 py-2 text-sm text-green-800 shadow" role="status">
+          {assignNotice} <button type="button" className="ml-2 underline" onClick={() => setAssignNotice(null)}>OK</button>
+        </div>
+      )}
     </div>
   );
 }
