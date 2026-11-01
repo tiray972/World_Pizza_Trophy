@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, use } from 'react';
+import { AccountHistory } from '@/components/custom/AccountHistory';
 import Link from 'next/link';
 import { useAuth } from '@/providers/AuthProvider';
 import { useRouter } from 'next/navigation';
@@ -751,6 +752,9 @@ export default function AccountPage({ params }: { params: Promise<{ lang: string
             </CardContent>
           </Card>
         )}
+
+        {/* 🏆 Historique sportif : éditions, équipes et résultats publiés */}
+        {user && <AccountHistory user={user} lang={lang} viewedUid={viewedAs?.uid ?? null} />}
 
         {/* Actions */}
         <div className="flex gap-3 justify-center">

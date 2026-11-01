@@ -189,3 +189,35 @@ describe("décisions manuelles : aucun contournement des contrôles serveur", ()
     await validateResultSet(db, { id: `${EVENT}_classique`, expectedDraftVersion: 1 }, admin);
   });
 });
+
+describe("page publique : publié en base, repli catégorie par catégorie", () => {
+  it("une catégorie publiée remplace son instantané ; les autres restent visibles", async () => {
+    const { mergePublishedWithSnapshot } = await import("@/lib/domain/results-public");
+    const snapshot = (await import("@/lib/results/2026.json")).default;
+    await saveResultDraft(db, { eventId: EVENT, categoryKey: "classique", categoryId: "classique", categoryName: "Classique", kind: "individual", lines: [line(1, 10, "BERTEA André", 610), line(null, 11, "PROSPÉRITÉ Kevin", null, "dsq")], source: "test" }, admin);
+    await validateResultSet(db, { id: `${EVENT}_classique`, expectedDraftVersion: 1 }, admin);
+    await publishResultSet(db, { id: `${EVENT}_classique` }, admin);
+
+    const merged = mergePublishedWithSnapshot(snapshot.categories, await publicResults(db, EVENT));
+    expect(merged).toHaveLength(10);
+    const classique = merged.find(category => category.id === "classique")!;
+    expect(classique).toMatchObject({ source: "published" });
+    expect(classique.entries).toEqual([
+      expect.objectContaining({ rank: 1, name: "BERTEA André", points: 610 }),
+      expect.objectContaining({ rank: null, status: "dsq", points: null }),
+    ]);
+    const superChampion = merged.find(category => category.id === "super-champion")!;
+    expect(superChampion).toMatchObject({ source: "snapshot" });
+    expect(superChampion.entries[0]).toMatchObject({ rank: 1, name: "FARINA Gennaro", bib: 61, points: 4631 });
+  });
+
+  it("sans base disponible : instantané complet", async () => {
+    const { resultsForEdition } = await import("@/lib/server/results/public-page");
+    const previous = process.env.FIREBASE_PROJECT_ID;
+    delete process.env.FIREBASE_PROJECT_ID;
+    const categories = await resultsForEdition(2026);
+    if (previous) process.env.FIREBASE_PROJECT_ID = previous;
+    expect(categories).toHaveLength(10);
+    expect(categories.every(category => category.source === "snapshot")).toBe(true);
+  });
+});
