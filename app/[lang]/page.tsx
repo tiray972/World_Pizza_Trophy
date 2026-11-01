@@ -1,3 +1,4 @@
+import { resultsCopy } from "@/lib/results/copy";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -63,17 +64,11 @@ export default async function Home({ params }: Props) {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  href={`/${lang}/auth/register`}
+                  href={`/${lang}/results`}
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[#8B0000] px-6 py-3 font-bold text-white transition-colors hover:bg-[#700000]"
                 >
-                  {content.register}
+                  {resultsCopy[lang].title}
                   <ArrowRight aria-hidden="true" className="h-5 w-5" />
-                </Link>
-                <Link
-                  href={`/${lang}/rules`}
-                  className="inline-flex min-h-12 items-center justify-center rounded-md border border-white/60 bg-black/15 px-6 py-3 font-bold text-white backdrop-blur-sm transition-colors hover:bg-white hover:text-gray-950"
-                >
-                  {content.categories}
                 </Link>
               </div>
             </div>
