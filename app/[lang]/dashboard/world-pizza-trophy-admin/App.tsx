@@ -215,42 +215,9 @@ export default function App() {
           await createProduct(newProdData);
         }
       } else if (copyFromEventId) {
-        // --- DUPLICATE FROM EXISTING EVENT ---
-        // All categories and products from the source event are copied with new IDs
-
-        // Categories: filter by source eventId, duplicate with new IDs
-        const sourceCategories = categories.filter(c => c.eventId === copyFromEventId);
-        for (const sourceCat of sourceCategories) {
-          const newCatData: Omit<Category, 'id'> = {
-            name: sourceCat.name,
-            description: sourceCat.description,
-            rules: sourceCat.rules,
-            unitPrice: sourceCat.unitPrice,
-            maxSlots: sourceCat.maxSlots,
-            durationMinutes: sourceCat.durationMinutes,
-            activeDates: [], // Reset dates for new event
-            isActive: sourceCat.isActive,
-            eventId: newEventId, // Link to NEW event (not source)
-          };
-          await createCategory(newCatData);
-        }
-
-        // Products: filter by source eventId, duplicate with new IDs
-        const sourceProducts = products.filter(p => p.eventId === copyFromEventId);
-        for (const sourceProd of sourceProducts) {
-          const newProdData: Omit<Product, 'id'> = {
-            name: sourceProd.name,
-            description: sourceProd.description,
-            stripePriceId: sourceProd.stripePriceId,
-            unitAmount: sourceProd.unitAmount,
-            slotsRequired: sourceProd.slotsRequired,
-            isPack: sourceProd.isPack,
-            includesMeal: sourceProd.includesMeal,
-            isActive: sourceProd.isActive,
-            eventId: newEventId, // Link to NEW event (not source)
-          };
-          await createProduct(newProdData);
-        }
+        // La reprise d'une édition passe par la duplication serveur (assistant
+        // « Préparer une nouvelle édition ») : copie complète et remappée.
+        throw new Error("Utilisez « Préparer une nouvelle édition à partir de… » pour reprendre une édition existante.");
       }
       // If copyFromEventId is null/empty, skip duplication → empty event
 
@@ -379,6 +346,8 @@ export default function App() {
         return (
           <SettingsPage
             event={selectedEvent}
+            events={events}
+            onSelectEvent={setSelectedEventId}
             onUpdateEvent={handleUpdateEvent}
             onCreateEvent={() => setIsCreateEventModalOpen(true)}
           />

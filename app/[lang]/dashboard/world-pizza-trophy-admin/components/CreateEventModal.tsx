@@ -114,17 +114,12 @@ export function CreateEventModal({
                         </option>
                       </optgroup>
                       
-                      {existingEvents.length > 0 && (
-                        <optgroup label="📋 Duplicate From History">
-                          {existingEvents.map(evt => (
-                              <option key={evt.id} value={evt.id}>
-                                  {evt.name} ({evt.eventYear})
-                              </option>
-                          ))}
-                        </optgroup>
-                      )}
                   </select>
                   
+                  <p className="text-xs text-muted-foreground px-1 mt-2">
+                    Pour reprendre une édition existante (catégories, tarifs, packs, règlements, créneaux aux nouvelles dates),
+                    utilisez « Préparer une nouvelle édition à partir de… » dans les paramètres de cette édition.
+                  </p>
                   {/* Dynamic Help Text based on selection */}
                   <div className="text-xs text-muted-foreground px-1 mt-2 space-y-2">
                     {copyFromId === 'default_template' && (

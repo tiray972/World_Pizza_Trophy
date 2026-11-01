@@ -6,14 +6,17 @@ import { getMinSlotsPerBooking } from "@/lib/booking/rules";
 import { allowedTransitions, EVENT_STATUS_LABELS } from "@/lib/domain/event-lifecycle";
 import { Calendar, Save, AlertCircle, Plus, Activity } from "lucide-react";
 import { cn } from "../lib/utils";
+import { EditionTools } from "./EditionTools";
 
 interface SettingsPageProps {
   event: WPTEvent | undefined;
+  events?: WPTEvent[];
+  onSelectEvent?: (eventId: string) => void;
   onUpdateEvent: (updatedEvent: WPTEvent) => void;
   onCreateEvent: () => void;
 }
 
-export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPageProps) {
+export function SettingsPage({ event, events = [], onSelectEvent = () => {}, onUpdateEvent, onCreateEvent }: SettingsPageProps) {
   const [formData, setFormData] = useState({
     name: "",
     eventYear: new Date().getFullYear(),
@@ -344,6 +347,9 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
           </div>
         </Card>
       </form>
+
+      {/* 🔁 Nouvelle édition, diagnostic et réparation d'une édition existante */}
+      <EditionTools event={event} events={events} onSelectEvent={onSelectEvent} />
     </div>
   );
 }
