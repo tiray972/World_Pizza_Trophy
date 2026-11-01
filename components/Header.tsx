@@ -8,6 +8,7 @@ import { auth, db } from "@/lib/firebase/client";
 import { signOut, onAuthStateChanged, User as FBUser } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { Button } from "./ui/button";
+import { resultsCopy, resultLocale } from "@/lib/results/copy";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 import {
   DropdownMenu,
@@ -143,6 +144,7 @@ export default function Header({
             { name: t.navigation.home, href: `/${lang}` },
             { name: t.navigation.rules, href: `/${lang}/rules` },
             { name: t.navigation.editions, href: `/${lang}/editions` },
+            { name: resultsCopy[resultLocale(lang)].title, href: `/${lang}/results` },
             { name: t.navigation.gallery, href: `/${lang}/gallery` },
             { name: t.navigation.contact, href: `/${lang}/contact` },
           ].map((item) => (
@@ -317,6 +319,7 @@ function MobileMenu({
             <Link href={`/${lang}#trophy`} onClick={() => setOpen(false)}>{t.navigation.trophy}</Link>
             <Link href={`/${lang}/rules`} onClick={() => setOpen(false)}>{t.navigation.rules}</Link>
             <Link href={`/${lang}/editions`} onClick={() => setOpen(false)}>{t.navigation.editions}</Link>
+            <Link href={`/${lang}/results`} onClick={() => setOpen(false)}>{resultsCopy[resultLocale(lang)].title}</Link>
             <Link href={`/${lang}/gallery`} onClick={() => setOpen(false)}>{t.navigation.gallery}</Link>
             {isLoggedIn && userRole === 'admin' && (
               <Link href={`/${lang}/dashboard`} className="text-[#006400]" onClick={() => setOpen(false)}>

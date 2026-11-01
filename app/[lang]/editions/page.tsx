@@ -1,3 +1,4 @@
+import { resultsCopy } from "@/lib/results/copy";
 import Image from "next/image";
 import Link from "next/link";
 import { CalendarDays, MapPin } from "lucide-react";
@@ -132,6 +133,14 @@ export default async function EditionsPage({ params }: Props) {
             <p className="mt-5 max-w-2xl text-base leading-7 text-white/85 sm:text-lg">
               {content.intro}
             </p>
+          </div>
+        </section>
+
+        <section className="border-b border-gray-200 bg-white">
+          <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 lg:px-12">
+            <h2 className="text-3xl font-black">{resultsCopy[lang].title}</h2>
+            <p className="mt-3 max-w-3xl leading-7 text-gray-600">{resultsCopy[lang].intro}</p>
+            <Link href={`/${lang}/results`} className="mt-5 inline-flex rounded-md bg-[#8B0000] px-6 py-3 font-bold text-white hover:bg-[#700000]">{resultsCopy[lang].title}</Link>
           </div>
         </section>
 

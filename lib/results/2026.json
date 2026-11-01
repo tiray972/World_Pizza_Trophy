@@ -1,0 +1,1018 @@
+{
+  "year": 2026,
+  "sourceUrl": "https://www.instagram.com/p/DfDaUK2jZA7/",
+  "categories": [
+    {
+      "id": "chef-ziolo",
+      "name": "Trophée Chef’Ziolo",
+      "kind": "team",
+      "entries": [
+        {
+          "rank": 1,
+          "name": "BRIANCON Marine - CHION Jeremy",
+          "bib": 18,
+          "points": 738
+        },
+        {
+          "rank": 2,
+          "name": "FARINA / POULARD",
+          "bib": 62,
+          "points": 664
+        },
+        {
+          "rank": 3,
+          "name": "FOURNIER Felix - BLACHÈRE Nicolas",
+          "bib": 25,
+          "points": 618
+        },
+        {
+          "rank": 4,
+          "name": "JEAN Cyril - REYNAUD Ghislain",
+          "bib": 31,
+          "points": 556
+        },
+        {
+          "rank": 5,
+          "name": "RIVIERE Rodolphe - FIGUS Fabien",
+          "bib": 8,
+          "points": 550
+        },
+        {
+          "rank": 6,
+          "name": "FARGUES Léo - COTTA Yvan",
+          "bib": 3,
+          "points": 472
+        },
+        {
+          "rank": 7,
+          "name": "POSSAMAI / OLIVIER",
+          "bib": 55,
+          "points": 427
+        },
+        {
+          "rank": 8,
+          "name": "ZEDDE Renato - LEYMARIE Cyril",
+          "bib": 45,
+          "points": 406
+        }
+      ]
+    },
+    {
+      "id": "pasta",
+      "name": "Pasta",
+      "kind": "individual",
+      "entries": [
+        {
+          "rank": 1,
+          "name": "CHENEVEZ Benoit",
+          "bib": 56,
+          "points": 757
+        },
+        {
+          "rank": 2,
+          "name": "BRIANCON Marine",
+          "bib": 16,
+          "points": 655
+        },
+        {
+          "rank": 3,
+          "name": "WILLEMEZ Jade",
+          "bib": 22,
+          "points": 577
+        },
+        {
+          "rank": 4,
+          "name": "JEAN Cyril",
+          "bib": 30,
+          "points": 569
+        },
+        {
+          "rank": 5,
+          "name": "REYNAUD Ghislain",
+          "bib": 38,
+          "points": 454
+        },
+        {
+          "rank": 6,
+          "name": "POSSAMAI Marco",
+          "bib": 54,
+          "points": 425
+        },
+        {
+          "rank": 7,
+          "name": "FARINA Gennaro",
+          "bib": 61,
+          "points": 308
+        }
+      ]
+    },
+    {
+      "id": "focaccia",
+      "name": "Focaccia",
+      "kind": "individual",
+      "entries": [
+        {
+          "rank": 1,
+          "name": "COTTA Yvan",
+          "bib": 29,
+          "points": 738
+        },
+        {
+          "rank": 2,
+          "name": "RIVIERE Rodolphe",
+          "bib": 9,
+          "points": 733
+        },
+        {
+          "rank": 3,
+          "name": "FIGUS Ingrid",
+          "bib": 33,
+          "points": 730
+        },
+        {
+          "rank": 4,
+          "name": "MALTESE Giovanni",
+          "bib": 53,
+          "points": 722
+        },
+        {
+          "rank": 5,
+          "name": "POSSAMAI Marco",
+          "bib": 54,
+          "points": 710
+        },
+        {
+          "rank": 6,
+          "name": "FARINA Gennaro",
+          "bib": 61,
+          "points": 686
+        },
+        {
+          "rank": 7,
+          "name": "RIOS Pascal",
+          "bib": 7,
+          "points": 683
+        },
+        {
+          "rank": 8,
+          "name": "FAGNANI Francesco",
+          "bib": 49,
+          "points": 639
+        },
+        {
+          "rank": 9,
+          "name": "SERRA Florent",
+          "bib": 28,
+          "points": 570
+        },
+        {
+          "rank": 10,
+          "name": "LECOUSTRE Kevin",
+          "bib": 5,
+          "points": 475
+        }
+      ]
+    },
+    {
+      "id": "napolitaine",
+      "name": "Napolitaine",
+      "kind": "individual",
+      "entries": [
+        {
+          "rank": 1,
+          "name": "FAGNANI Francesco",
+          "bib": 49,
+          "points": 722
+        },
+        {
+          "rank": 2,
+          "name": "MARTINNEZ Guillaume",
+          "bib": 52,
+          "points": 711
+        },
+        {
+          "rank": 3,
+          "name": "SANTIAGO Antoine",
+          "bib": 41,
+          "points": 651
+        },
+        {
+          "rank": 4,
+          "name": "CHION Jeremy",
+          "bib": 17,
+          "points": 621
+        },
+        {
+          "rank": 5,
+          "name": "PERALDI Hugo",
+          "bib": 40,
+          "points": 615
+        },
+        {
+          "rank": 6,
+          "name": "DE SA Hugo",
+          "bib": 2,
+          "points": 596
+        },
+        {
+          "rank": 7,
+          "name": "FIGUS Fabien",
+          "bib": 35,
+          "points": 594
+        },
+        {
+          "rank": 8,
+          "name": "SERRA Florent",
+          "bib": 28,
+          "points": 578
+        },
+        {
+          "rank": 9,
+          "name": "RIVIERE Rodolphe",
+          "bib": 9,
+          "points": 552
+        },
+        {
+          "rank": 10,
+          "name": "POSSAMAI Marco",
+          "bib": 54,
+          "points": 549
+        },
+        {
+          "rank": 11,
+          "name": "SABER Ayoub",
+          "bib": 47,
+          "points": 544
+        },
+        {
+          "rank": 12,
+          "name": "BIGONNET Benoit",
+          "bib": 1,
+          "points": 523
+        },
+        {
+          "rank": 13,
+          "name": "DORDET Théo",
+          "bib": 50,
+          "points": 493
+        },
+        {
+          "rank": 14,
+          "name": "NOTO Nicolas",
+          "bib": 39,
+          "points": 482
+        },
+        {
+          "rank": 15,
+          "name": "ROGER Mathieu",
+          "bib": 42,
+          "points": 467
+        },
+        {
+          "rank": 16,
+          "name": "FARINA Gennaro",
+          "bib": 61,
+          "points": 464
+        }
+      ]
+    },
+    {
+      "id": "dessert",
+      "name": "Dessert",
+      "kind": "individual",
+      "entries": [
+        {
+          "rank": 1,
+          "name": "MAZET Alexandre",
+          "bib": 14,
+          "points": 798
+        },
+        {
+          "rank": 2,
+          "name": "JACQUOT David",
+          "bib": 4,
+          "points": 780
+        },
+        {
+          "rank": 3,
+          "name": "SABER Ayoub",
+          "bib": 47,
+          "points": 764
+        },
+        {
+          "rank": 4,
+          "name": "JEAN Cyril",
+          "bib": 30,
+          "points": 703
+        },
+        {
+          "rank": 5,
+          "name": "FIGUS Ingrid",
+          "bib": 33,
+          "points": 689
+        },
+        {
+          "rank": 6,
+          "name": "ROGER Mathieu",
+          "bib": 42,
+          "points": 679
+        },
+        {
+          "rank": 7,
+          "name": "DE SA Hugo",
+          "bib": 2,
+          "points": 648
+        },
+        {
+          "rank": 8,
+          "name": "DE PEKOUR Nicolas",
+          "bib": 43,
+          "points": 628
+        },
+        {
+          "rank": 9,
+          "name": "ZEDDE Renato",
+          "bib": 44,
+          "points": 601
+        },
+        {
+          "rank": 10,
+          "name": "SERRA Florent",
+          "bib": 28,
+          "points": 599
+        },
+        {
+          "rank": 11,
+          "name": "GUSCIGLIO Lorenzo",
+          "bib": 20,
+          "points": 598
+        },
+        {
+          "rank": 12,
+          "name": "FARINA Gennaro",
+          "bib": 61,
+          "points": 598
+        },
+        {
+          "rank": 13,
+          "name": "NOTO Nicolas",
+          "bib": 39,
+          "points": 575
+        },
+        {
+          "rank": 14,
+          "name": "POSSAMAI Marco",
+          "bib": 54,
+          "points": 545
+        },
+        {
+          "rank": 15,
+          "name": "ZUMBO Maria",
+          "bib": 19,
+          "points": 527
+        },
+        {
+          "rank": 16,
+          "name": "BIGONNET Benoit",
+          "bib": 1,
+          "points": 511
+        },
+        {
+          "rank": 17,
+          "name": "ESPERANZA Loïta",
+          "bib": 51,
+          "points": 511
+        },
+        {
+          "rank": 18,
+          "name": "LECOUSTRE Kevin",
+          "bib": 5,
+          "points": 497
+        },
+        {
+          "rank": 19,
+          "name": "VAZ VIEIRA Chantal",
+          "bib": 58,
+          "points": 483
+        },
+        {
+          "rank": 20,
+          "name": "PROSPER Kévin",
+          "bib": 11,
+          "points": 470
+        },
+        {
+          "rank": 21,
+          "name": "VAROTTO Patrick",
+          "bib": 57,
+          "points": 463
+        },
+        {
+          "rank": 22,
+          "name": "MALTESE Giovanni",
+          "bib": 53,
+          "points": 456
+        },
+        {
+          "rank": 23,
+          "name": "FAGNANI Francesco",
+          "bib": 49,
+          "points": 447
+        },
+        {
+          "rank": 24,
+          "name": "RIVIERE Rodolphe",
+          "bib": 9,
+          "points": 437
+        },
+        {
+          "rank": 25,
+          "name": "FERRETTI David",
+          "bib": 48,
+          "points": 435
+        },
+        {
+          "rank": 26,
+          "name": "BERTEA André",
+          "bib": 10,
+          "points": 347
+        }
+      ]
+    },
+    {
+      "id": "teglia",
+      "name": "Teglia",
+      "kind": "individual",
+      "entries": [
+        {
+          "rank": 1,
+          "name": "FARINA Gennaro",
+          "bib": 61,
+          "points": 747
+        },
+        {
+          "rank": 2,
+          "name": "GUSCIGLIO Lorenzo",
+          "bib": 20,
+          "points": 723
+        },
+        {
+          "rank": 3,
+          "name": "SERRA Florent",
+          "bib": 28,
+          "points": 696
+        },
+        {
+          "rank": 4,
+          "name": "RIOS Pascal",
+          "bib": 7,
+          "points": 677
+        },
+        {
+          "rank": 5,
+          "name": "PROSPER Kévin",
+          "bib": 11,
+          "points": 668
+        },
+        {
+          "rank": 6,
+          "name": "NOTO Nicolas",
+          "bib": 39,
+          "points": 658
+        },
+        {
+          "rank": 7,
+          "name": "FIGUS Fabien",
+          "bib": 35,
+          "points": 634
+        },
+        {
+          "rank": 8,
+          "name": "FAGNANI Francesco",
+          "bib": 49,
+          "points": 616
+        },
+        {
+          "rank": 9,
+          "name": "RIVIERE Rodolphe",
+          "bib": 9,
+          "points": 599
+        },
+        {
+          "rank": 10,
+          "name": "PON LAYUS Alexandre",
+          "bib": 21,
+          "points": 596
+        },
+        {
+          "rank": 11,
+          "name": "POSSAMAI Marco",
+          "bib": 54,
+          "points": 555
+        }
+      ]
+    },
+    {
+      "id": "calzone",
+      "name": "Calzone",
+      "kind": "individual",
+      "entries": [
+        {
+          "rank": 1,
+          "name": "JACQUOT David",
+          "bib": 4,
+          "points": 742
+        },
+        {
+          "rank": 2,
+          "name": "SERRA Florent",
+          "bib": 28,
+          "points": 693
+        },
+        {
+          "rank": 3,
+          "name": "MAZET Alexandre",
+          "bib": 14,
+          "points": 687
+        },
+        {
+          "rank": 4,
+          "name": "LECOUSTRE Kevin",
+          "bib": 5,
+          "points": 679
+        },
+        {
+          "rank": 5,
+          "name": "MATHIOT Maxime",
+          "bib": 32,
+          "points": 674
+        },
+        {
+          "rank": 6,
+          "name": "RIOS Pascal",
+          "bib": 7,
+          "points": 668
+        },
+        {
+          "rank": 7,
+          "name": "MALTESE Giovanni",
+          "bib": 53,
+          "points": 664
+        },
+        {
+          "rank": 8,
+          "name": "VAZ VIEIRA Chantal",
+          "bib": 58,
+          "points": 658
+        },
+        {
+          "rank": 9,
+          "name": "GUSCIGLIO Lorenzo",
+          "bib": 20,
+          "points": 629
+        },
+        {
+          "rank": 10,
+          "name": "PON LAYUS Alexandre",
+          "bib": 21,
+          "points": 593
+        },
+        {
+          "rank": 11,
+          "name": "COLONNA Giulia",
+          "bib": 64,
+          "points": 591
+        },
+        {
+          "rank": 12,
+          "name": "FARINA Gennaro",
+          "bib": 61,
+          "points": 568
+        },
+        {
+          "rank": 13,
+          "name": "BERTEA André",
+          "bib": 10,
+          "points": 518
+        },
+        {
+          "rank": 14,
+          "name": "SANTIAGO Antoine",
+          "bib": 41,
+          "points": 515
+        },
+        {
+          "rank": 15,
+          "name": "BIGONNET Benoit",
+          "bib": 1,
+          "points": 494
+        },
+        {
+          "rank": 16,
+          "name": "RIVIERE Romain",
+          "bib": 12,
+          "points": 467
+        },
+        {
+          "rank": 17,
+          "name": "ROTOLO Bruno",
+          "bib": 23,
+          "points": 379
+        },
+        {
+          "rank": 18,
+          "name": "CASTEX Dylan",
+          "bib": 27,
+          "points": 371
+        },
+        {
+          "rank": 19,
+          "name": "FIGUS Ingrid",
+          "bib": 33,
+          "points": 330
+        },
+        {
+          "rank": 20,
+          "name": "PERALDI Hugo",
+          "bib": 40,
+          "points": 320
+        },
+        {
+          "rank": 21,
+          "name": "PROSPER Kévin",
+          "bib": 11,
+          "points": 319
+        },
+        {
+          "rank": 22,
+          "name": "JEAN Cyril",
+          "bib": 30,
+          "points": 306
+        },
+        {
+          "rank": 23,
+          "name": "POSSAMAI Marco",
+          "bib": 54,
+          "points": 289
+        },
+        {
+          "rank": 24,
+          "name": "FAGNANI Francesco",
+          "bib": 49,
+          "points": 285
+        }
+      ]
+    },
+    {
+      "id": "pala",
+      "name": "Pala",
+      "kind": "individual",
+      "entries": [
+        {
+          "rank": 1,
+          "name": "DILMI Benjamin",
+          "bib": 59,
+          "points": 736
+        },
+        {
+          "rank": 2,
+          "name": "FARINA Gennaro",
+          "bib": 61,
+          "points": 705
+        },
+        {
+          "rank": 3,
+          "name": "SERRA Florent",
+          "bib": 28,
+          "points": 667
+        },
+        {
+          "rank": 4,
+          "name": "FIGUS Fabien",
+          "bib": 35,
+          "points": 650
+        },
+        {
+          "rank": 5,
+          "name": "RIVIERE Rodolphe",
+          "bib": 9,
+          "points": 642
+        },
+        {
+          "rank": 6,
+          "name": "FAGNANI Francesco",
+          "bib": 49,
+          "points": 641
+        },
+        {
+          "rank": 7,
+          "name": "RIOS Pascal",
+          "bib": 7,
+          "points": 554
+        },
+        {
+          "rank": 8,
+          "name": "POSSAMAI Marco",
+          "bib": 54,
+          "points": 549
+        },
+        {
+          "rank": 9,
+          "name": "COTTA Yvan",
+          "bib": 29,
+          "points": 515
+        }
+      ]
+    },
+    {
+      "id": "classique",
+      "name": "Classique",
+      "kind": "individual",
+      "entries": [
+        {
+          "rank": 1,
+          "name": "SERRA Florent",
+          "bib": 28,
+          "points": 710
+        },
+        {
+          "rank": 2,
+          "name": "LEYMARIE Cyril",
+          "bib": 46,
+          "points": 685
+        },
+        {
+          "rank": 3,
+          "name": "GUSCIGLIO Lorenzo",
+          "bib": 20,
+          "points": 665
+        },
+        {
+          "rank": 4,
+          "name": "FOURNIER Felix",
+          "bib": 26,
+          "points": 655
+        },
+        {
+          "rank": 5,
+          "name": "DE SA Hugo",
+          "bib": 2,
+          "points": 651
+        },
+        {
+          "rank": 6,
+          "name": "MATHIOT Maxime",
+          "bib": 32,
+          "points": 643
+        },
+        {
+          "rank": 7,
+          "name": "POUVREAU Sébastien",
+          "bib": 63,
+          "points": 621
+        },
+        {
+          "rank": 8,
+          "name": "LECOUSTRE Kevin",
+          "bib": 5,
+          "points": 620
+        },
+        {
+          "rank": 9,
+          "name": "MARTINNEZ Guillaume",
+          "bib": 52,
+          "points": 613
+        },
+        {
+          "rank": 10,
+          "name": "MAZET Alexandre",
+          "bib": 14,
+          "points": 610
+        },
+        {
+          "rank": 11,
+          "name": "FIGUS Ingrid",
+          "bib": 33,
+          "points": 610
+        },
+        {
+          "rank": 12,
+          "name": "ZUMBO Maria",
+          "bib": 19,
+          "points": 598
+        },
+        {
+          "rank": 13,
+          "name": "JACQUOT David",
+          "bib": 4,
+          "points": 580
+        },
+        {
+          "rank": 14,
+          "name": "SANTIAGO Antoine",
+          "bib": 41,
+          "points": 568
+        },
+        {
+          "rank": 15,
+          "name": "RIOS Pascal",
+          "bib": 7,
+          "points": 565
+        },
+        {
+          "rank": 16,
+          "name": "JEAN Cyril",
+          "bib": 30,
+          "points": 560
+        },
+        {
+          "rank": 17,
+          "name": "RIVIERE Romain",
+          "bib": 12,
+          "points": 556
+        },
+        {
+          "rank": 18,
+          "name": "BIGONNET Benoit",
+          "bib": 1,
+          "points": 555
+        },
+        {
+          "rank": 19,
+          "name": "FARINA Gennaro",
+          "bib": 61,
+          "points": 555
+        },
+        {
+          "rank": 20,
+          "name": "PON LAYUS Alexandre",
+          "bib": 21,
+          "points": 545
+        },
+        {
+          "rank": 21,
+          "name": "MARCHESE Franck",
+          "bib": 6,
+          "points": 535
+        },
+        {
+          "rank": 22,
+          "name": "MALTESE Giovanni",
+          "bib": 53,
+          "points": 528
+        },
+        {
+          "rank": 23,
+          "name": "ROGER Mathieu",
+          "bib": 42,
+          "points": 525
+        },
+        {
+          "rank": 24,
+          "name": "SCARIATO Flavio",
+          "bib": 37,
+          "points": 521
+        },
+        {
+          "rank": 25,
+          "name": "DILMI Benjamin",
+          "bib": 59,
+          "points": 508
+        },
+        {
+          "rank": 26,
+          "name": "PIARULLI Michael",
+          "bib": 24,
+          "points": 495
+        },
+        {
+          "rank": 27,
+          "name": "PROSPER Kévin",
+          "bib": 11,
+          "points": 480
+        },
+        {
+          "rank": 28,
+          "name": "FAGNANI Francesco",
+          "bib": 49,
+          "points": 475
+        },
+        {
+          "rank": 29,
+          "name": "ROTOLO Bruno",
+          "bib": 23,
+          "points": 465
+        },
+        {
+          "rank": 30,
+          "name": "COTTA Yvan",
+          "bib": 29,
+          "points": 465
+        },
+        {
+          "rank": 31,
+          "name": "SABER Ayoub",
+          "bib": 47,
+          "points": 460
+        },
+        {
+          "rank": 32,
+          "name": "POSSAMAI Marco",
+          "bib": 54,
+          "points": 455
+        },
+        {
+          "rank": 33,
+          "name": "FERRETTI David",
+          "bib": 48,
+          "points": 445
+        },
+        {
+          "rank": 34,
+          "name": "CASTEX Dylan",
+          "bib": 27,
+          "points": 437
+        },
+        {
+          "rank": 35,
+          "name": "DE PEKOUR Nicolas",
+          "bib": 43,
+          "points": 434
+        },
+        {
+          "rank": 36,
+          "name": "BERTEA André",
+          "bib": 10,
+          "points": 385
+        }
+      ]
+    },
+    {
+      "id": "super-champion",
+      "name": "Super Champion",
+      "kind": "individual",
+      "entries": [
+        {
+          "rank": 1,
+          "name": "FARINA Gennaro",
+          "bib": 61,
+          "points": 4633
+        },
+        {
+          "rank": 2,
+          "name": "SERRA Florent",
+          "bib": 28,
+          "points": 4513
+        },
+        {
+          "rank": 3,
+          "name": "POSSAMAI Marco",
+          "bib": 54,
+          "points": 4077
+        },
+        {
+          "rank": 4,
+          "name": "FAGNANI Francesco",
+          "bib": 49,
+          "points": 3825
+        },
+        {
+          "rank": 5,
+          "name": "RIOS Pascal",
+          "bib": 7,
+          "points": 3147
+        },
+        {
+          "rank": 6,
+          "name": "RIVIERE Rodolphe",
+          "bib": 9,
+          "points": 2963
+        },
+        {
+          "rank": 7,
+          "name": "GUSCIGLIO Lorenzo",
+          "bib": 20,
+          "points": 2615
+        },
+        {
+          "rank": 8,
+          "name": "MALTESE Giovanni",
+          "bib": 53,
+          "points": 2370
+        },
+        {
+          "rank": 9,
+          "name": "FIGUS Ingrid",
+          "bib": 33,
+          "points": 2359
+        },
+        {
+          "rank": 10,
+          "name": "LECOUSTRE Kevin",
+          "bib": 5,
+          "points": 2271
+        }
+      ]
+    }
+  ]
+}
