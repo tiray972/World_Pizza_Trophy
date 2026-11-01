@@ -43,8 +43,8 @@ export async function POST(req: NextRequest) {
     const userProfile = {
       id: uid,
       // Prénom vide plutôt qu'un faux « User » : l'acheteur reste identifiable par son email.
-      firstName: firstName || '',
-      lastName: lastName || '',
+      firstName: typeof firstName === 'string' ? firstName.trim().slice(0, 100) : '',
+      lastName: typeof lastName === 'string' ? lastName.trim().slice(0, 100) : '',
       email: email,
       phone: phone || '',
       country: country || '',

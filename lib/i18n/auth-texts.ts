@@ -8,6 +8,9 @@ export type AuthLang = "fr" | "en" | "es" | "it";
 
 export const AUTH_TEXTS = {
   fr: {
+    lastName: "Nom",
+    firstName: "Prénom",
+    nameRequired: "Votre nom et prénom sont obligatoires.",
     loginTitle: "Connexion",
     loginSubtitle: "Connectez-vous pour accéder à votre espace",
     registerTitle: "Créer un compte",
@@ -49,6 +52,9 @@ export const AUTH_TEXTS = {
     forgotGoogleHint: "Vous vous êtes inscrit avec Google ? Votre compte n'a pas de mot de passe : revenez à la connexion et utilisez le bouton « Continuer avec Google ».",
   },
   en: {
+    lastName: "Last name",
+    firstName: "First name",
+    nameRequired: "Your first and last name are required.",
     loginTitle: "Sign in",
     loginSubtitle: "Sign in to access your account",
     registerTitle: "Create an account",
@@ -90,6 +96,9 @@ export const AUTH_TEXTS = {
     forgotGoogleHint: "Signed up with Google? Your account has no password: go back to sign in and use the \u201cContinue with Google\u201d button.",
   },
   es: {
+    lastName: "Apellido",
+    firstName: "Nombre",
+    nameRequired: "El nombre y el apellido son obligatorios.",
     loginTitle: "Iniciar sesión",
     loginSubtitle: "Inicia sesión para acceder a tu espacio",
     registerTitle: "Crear una cuenta",
@@ -131,6 +140,9 @@ export const AUTH_TEXTS = {
     forgotGoogleHint: "¿Te registraste con Google? Tu cuenta no tiene contraseña: vuelve al inicio de sesión y usa el botón «Continuar con Google».",
   },
   it: {
+    lastName: "Cognome",
+    firstName: "Nome",
+    nameRequired: "Nome e cognome sono obbligatori.",
     loginTitle: "Accedi",
     loginSubtitle: "Accedi per entrare nella tua area personale",
     registerTitle: "Crea un account",

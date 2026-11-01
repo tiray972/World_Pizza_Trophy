@@ -21,6 +21,8 @@ export default function RegisterForm() {
   const redirectPath = searchParams?.get("redirect") || "booking";
   const redirectUrl = `/${currentLang}/${redirectPath}`;
 
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -30,6 +32,11 @@ export default function RegisterForm() {
     e.preventDefault();
     if (password !== confirmPassword) {
       toast.error(t.passwordMismatch);
+      return;
+    }
+    // Nom et prénom obligatoires : un compte sans nom devenait « User » dans les exports.
+    if (!firstName.trim() || !lastName.trim()) {
+      toast.error(t.nameRequired);
       return;
     }
     setIsLoading(true);
@@ -47,8 +54,8 @@ export default function RegisterForm() {
           body: JSON.stringify({
             uid: user.uid,
             email: user.email,
-            firstName: '',
-            lastName: '',
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
             phone: '',
             country: '',
           }),
@@ -156,6 +163,16 @@ export default function RegisterForm() {
           </div>
         </div>
         <form onSubmit={handleRegister} className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="lastName">{t.lastName}</Label>
+              <Input id="lastName" autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} required disabled={isLoading} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="firstName">{t.firstName}</Label>
+              <Input id="firstName" autoComplete="given-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} required disabled={isLoading} />
+            </div>
+          </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="email">{t.email}</Label>
             <Input id="email" type="email" placeholder={t.emailPlaceholder} value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isLoading} />
