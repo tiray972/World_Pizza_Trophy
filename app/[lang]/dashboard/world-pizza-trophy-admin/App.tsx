@@ -12,6 +12,7 @@ import { CategoriesPage } from './components/CategoriesPage';
 import { PaymentsPage } from './components/PaymentsPage';
 import { ParticipantsPage } from './components/ParticipantsPage';
 import { MealsPage } from './components/MealsPage';
+import { ResultsPage } from './components/ResultsPage';
 import { CreateEventModal } from './components/CreateEventModal';
 import { ThemeProvider } from './components/ThemeProvider';
 import { formatCurrency } from './lib/utils';
@@ -413,6 +414,8 @@ export default function App() {
         return <ParticipantsPage selectedEvent={selectedEvent} />;
       case 'meals':
         return <MealsPage selectedEvent={selectedEvent} />;
+      case 'results':
+        return <ResultsPage selectedEvent={selectedEvent} categories={eventCategories} />;
       case 'payments':
         return (
           <PaymentsPage

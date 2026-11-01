@@ -27,6 +27,7 @@ export type ViewType =
   | 'users'
   | 'participants'
   | 'meals'
+  | 'results'
   | 'payments'
   | 'exports'
   | 'analytics';
