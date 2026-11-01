@@ -67,3 +67,32 @@ production non prouvée) · **I** = inconnu (nécessite la base ou la configurat
 | SCARIATO Flavio, SERRA Florent | Corrections de planning ; plusieurs versions des feuilles dans `tmp/` (`print-data`, `reprint-data`, `corrected-pages`, `tuesday/wednesday-current`, `calzone-28-update`). | La migration compare les versions et liste les différences ; aucune version choisie automatiquement. |
 | MALTESE Giovanni | Paiement enregistré deux fois (même session). | Isolé dans le rapport ; suppression du doublon uniquement après validation. |
 | FAGNANI Francesco | 3 places au même nom. | 3 places conservées, bénéficiaires à préciser. |
+
+## 4. Diagnostic des documents de référence 2026 (sans accès à la base)
+
+Exécuté le 1er novembre 2026 par `scripts/migrations/diagnose-references-2026.ts` sur les six
+instantanés de planning de `tmp/` et sur `lib/results/2026.json`. Lecture seule.
+
+- Plannings : un dossard par personne, aucun numéro porté par deux personnes, aucun chevauchement
+  entre numéros de duo et individuels (**V**). Neuf duos au planning, dont trois à un seul nom :
+  n° 3 FARGUES Léo, n° 36 MATHIOT Maxime, n° 62 FARINA Gennaro.
+- Exports du 28/10 : la base contient encore `Kevin Prospérité` (5 créneaux) et `Faysal Zari`
+  (1 créneau) ; Richard ROCLE est inscrit dans un créneau duo avec Alexandre MAZET, alors qu'aucun
+  duo MAZET n'existe au planning (**V**, à arbitrer : le n° 36 MATHIOT seul au planning est-il ce créneau ?).
+- **Résultats publiés et plannings n'écrivent pas certains noms de la même façon**, pour le même
+  numéro (**V**, à arbitrer par l'organisateur avant toute republication) :
+
+| Dossard | Planning (jour J) | Résultats publiés |
+|---|---|---|
+| 52 | MARTINEZ Guillaume | MARTINNEZ Guillaume |
+| 51 | ESPERANZA Lolita | ESPERANZA Loïta |
+| 58 | VAZ-VIEIRA Chantal | VAZ VIEIRA Chantal |
+| 19 | MARIA Zumbo | ZUMBO Maria (nom et prénom inversés) |
+| 12, 16, 26, 56 | RIVIÈRE Romain, BRIANÇON Marine, FOURNIER Félix, CHENEVEZ Benoît | sans accent |
+
+- Le résultat du duo n° 3 donne « FARGUES Léo – COTTA Yvan » : il complète le planning. La
+  migration le **propose** (rapport), la complétion se fait dans le dashboard après vérification.
+
+La migration retient le planning comme référence des dossards (document opérationnel issu de la
+base) ; les résultats servent de complément et de contrôle. Aucun nom publié n'est modifié
+automatiquement.

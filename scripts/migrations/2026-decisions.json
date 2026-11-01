@@ -1,0 +1,14 @@
+{
+  "_comment": "Décisions confirmées par l'organisateur (1er novembre 2026). Seuls ces cas sont corrigés automatiquement par la migration ; tout le reste est signalé dans le rapport.",
+  "renames": [
+    { "from": { "firstName": "Kevin", "lastName": "Prospérité" }, "to": { "firstName": "Kévin", "lastName": "PROSPER" }, "evidence": "Organisateur : identité correcte PROSPER Kévin, dossard 11" },
+    { "from": { "firstName": "Faysal", "lastName": "Zari" }, "to": { "firstName": "Fayzal", "lastName": "ZARI" }, "evidence": "Organisateur : identité correcte ZARI Fayzal, dossard 60" }
+  ],
+  "withdrawn": [
+    { "name": { "firstName": "Richard", "lastName": "Rocle" }, "evidence": "Organisateur : Richard ROCLE devait être retiré du planning, ne pas le recréer" }
+  ],
+  "teamDisplayNames": [
+    { "bib": 62, "displayName": "FARINA / POULARD", "evidence": "Résultats officiels publiés ; prénoms incomplets acceptés par l'organisateur" },
+    { "bib": 55, "displayName": "POSSAMAI / OLIVIER", "evidence": "Résultats officiels publiés ; prénoms incomplets acceptés par l'organisateur" }
+  ]
+}
