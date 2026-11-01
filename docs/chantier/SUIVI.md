@@ -50,28 +50,35 @@ Vérifié au navigateur (site local + émulateur) : fenêtre de règlement en fr
 case non précochée, parcours clavier complet, repli linguistique annoncé, catégorie sans règlement
 non réservable, panier et acceptation conservés au changement de langue, affichage mobile 375 px.
 
-## Restant à faire (prochaines sessions)
+## Lot 2 (reprise coordonnée, 1er novembre 2026) — terminé
 
-1. **Page publique des résultats** : lire les classements publiés en base (`publicResults`) avec repli
-   sur `lib/results/2026.json` tant que rien n'est publié ; historique dans le compte participant
-   (`resultsOfParticipant` prêt, interface à faire).
-2. **Attribution manuelle de créneaux** (SlotsPage, UsersPage, matrice) : passer par une route serveur
-   créant les identités, gérant les duos, sans statut « payé » sans paiement. En attendant, un créneau
-   attribué à la main apparaît dans « créneaux sans identité » et la migration peut être relancée.
-3. **Statut d'édition** par route serveur tracée (aujourd'hui écrit par le dashboard, transitions
-   encadrées dans l'interface).
-4. **Booking entièrement traduit** (T11) : seuls la fenêtre de règlement et les noms de catégories le
-   sont. Ajouter les traductions des pages Booking et Succès.
-5. Ancien export « Repas » de la page Exports : à remplacer par la page Repas (il compte encore les
-   doublons de session).
-6. Inscription par email : demander nom et prénom (aujourd'hui vides).
+| Lot | Commit |
+|---|---|
+| FARINA Gennaro Super Champion 4631 points (JSON, provenance, transcriptions locales) ; choix manuels de résultats revalidés côté serveur (type, catégorie, retrait, doublons, structure) | `4910a20` |
+| Attribution manuelle serveur (fiche créneau, Utilisateurs, matrice) : duo saisi en entier dès l'attribution, transaction, idempotence, « payé » seulement rattaché à un paiement réel | `fc35778` |
+| Statut d'édition par route serveur tracée, transitions et prérequis d'ouverture, règles Firestore (statut non modifiable par le navigateur) | `f0733a2` |
+| Page publique des résultats sur les classements publiés, repli 2026 par catégorie ; historique du compte | `346a1cb` |
+| Export Repas aligné sur la page Repas | `bf43835` |
+| Nom et prénom demandés à l'inscription par email (Google inchangé) | `31a3295` |
+| Booking et page de succès traduits fr/en/es/it, messages serveur localisés | `642dcfa` |
+
+109 tests verts (15 fichiers) dans l'émulateur ; `npm run typecheck` sans erreur.
+
+## Restant à faire
+
+1. **Vérification de build** du lot 2 dans un worktree propre (la dernière vérification date du lot 1,
+   commit `084f51c`) et contrôle visuel du Booking traduit et des fenêtres d'attribution au navigateur.
+2. Page Compte (hors historique) et page Règlement : textes encore en français.
+3. Diagnostic et migration 2026 sur la base réelle, arbitrages historiques (voir ci-dessous) : en
+   attente d'accès et de validation, sans bloquer le code.
 
 ## Actions de production à valider par l'organisateur (dans cet ordre)
 
 1. Relire et fusionner la branche, déployer le code (Vercel).
 2. Stripe : webhook vers `/api/stripe/webhook` avec `checkout.session.completed`,
    `checkout.session.async_payment_succeeded` et `charge.refunded` ; vérifier le secret.
-3. Déployer `firestore.rules` (**après** le code : le Booking lit désormais les créneaux par l'API).
+3. Déployer `firestore.rules` (**après** le code : le Booking lit désormais les créneaux par l'API,
+   le statut d'édition et les attributions passent par le serveur).
 4. Diagnostic 2026 sur la base réelle, en lecture seule :
    `GOOGLE_APPLICATION_CREDENTIALS=<clé> npx vite-node --config vitest.config.ts scripts/migrations/identities.ts -- --event <id 2026> --project world-pizza-trophy`
    → rapport dans `output/migrations/` ; arbitrer les points signalés ; appliquer avec `--apply
@@ -101,3 +108,5 @@ non réservable, panier et acceptation conservés au changement de langue, affic
   `~/Downloads`, **non utilisée sans accord explicite**.
 - Règles Firestore actuellement déployées : inconnues.
 - Une requête HTTP 400 vue une fois dans la console du site local (page d'accueil) : non reproduite.
+- Index composites Firestore possiblement demandés en production : `resultSets` (`eventId` + `isPublished`),
+  `categories`/`products` (`eventId` + `priceReview`).
