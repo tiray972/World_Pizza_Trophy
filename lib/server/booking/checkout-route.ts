@@ -28,7 +28,7 @@ export async function handleCheckoutRequest(
     const body = (await req.json()) as Record<string, unknown>;
     const lang = typeof body.lang === "string" && SUPPORTED_LANGS.includes(body.lang) ? body.lang : "fr";
 
-    prepared = await prepareCheckout(adminDB, { ...build(body), buyer: { uid: buyer.uid, email: buyer.email } });
+    prepared = await prepareCheckout(adminDB, { ...build(body), lang, buyer: { uid: buyer.uid, email: buyer.email } });
 
     const origin = req.headers.get("origin") || req.nextUrl.origin;
     const session = await createCheckoutSession({

@@ -41,6 +41,8 @@ export interface CheckoutInput {
   ruleAcceptances?: ClientRuleAcceptance[];
   /** Montant affiché au client : un écart signale un prix modifié entre-temps. */
   clientTotal?: number;
+  /** Langue du Booking : messages de validation renvoyés dans cette langue. */
+  lang?: string;
   now?: Date;
 }
 
@@ -179,6 +181,7 @@ export async function prepareCheckout(db: Firestore, input: CheckoutInput): Prom
       participantsPerCategory: Object.fromEntries(categoryIds.map(id => [id, getParticipantsPerSlot(categories.get(id))])),
       categoryNames: Object.fromEntries(categoryIds.map(id => [id, categories.get(id)?.name || "cette catégorie"])),
       minSlots: product ? 1 : getMinSlotsPerBooking(eventData),
+      lang: input.lang,
     });
     if (ruleErrors.length > 0) {
       throw new CheckoutError(400, ruleErrors.join(" "), "booking_rules", { errors: ruleErrors });

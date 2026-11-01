@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Participant, TShirtSize } from '@/types/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
 
+import { bookingTexts, tf } from '@/lib/i18n/booking-texts';
+
 const T_SHIRT_SIZES: TShirtSize[] = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 interface ParticipantModalProps {
@@ -21,6 +23,7 @@ interface ParticipantModalProps {
   /** Rang du participant pour les catégories en duo (1, 2...). Non défini = catégorie solo. */
   participantIndex?: number;
   onSaveParticipant?: (participant: Participant) => void; // Sauvegarde le participant dans la liste réutilisable
+  lang?: string;
 }
 
 export function ParticipantModal({ 
@@ -32,8 +35,10 @@ export function ParticipantModal({
   onApplyToAll,
   isPackModal = false,
   participantIndex,
-  onSaveParticipant
+  onSaveParticipant,
+  lang = 'fr',
 }: ParticipantModalProps) {
+  const tb = bookingTexts(lang);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -46,9 +51,9 @@ export function ParticipantModal({
     const newErrors: Record<string, string> = {};
 
     if (isRequired) {
-      if (!firstName.trim()) newErrors.firstName = 'Le prénom est requis';
-      if (!lastName.trim()) newErrors.lastName = 'Le nom est requis';
-      if (!shirtSize) newErrors.shirtSize = 'La taille du t-shirt est requise';
+      if (!firstName.trim()) newErrors.firstName = tb.firstNameRequired;
+      if (!lastName.trim()) newErrors.lastName = tb.lastNameRequired;
+      if (!shirtSize) newErrors.shirtSize = tb.shirtRequired;
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -101,13 +106,11 @@ export function ParticipantModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {participantIndex
-              ? `Informations du Participant ${participantIndex}`
-              : 'Informations du Participant'}
+            {participantIndex ? tf(tb.participantTitleN, { n: participantIndex }) : tb.participantTitle}
           </DialogTitle>
           {participantIndex && (
             <DialogDescription className="text-sm text-blue-700">
-              👥 Cette catégorie se dispute en équipe : renseignez chaque participant séparément.
+              {tb.participantTeamHint}
             </DialogDescription>
           )}
           {slotInfo && (
@@ -120,7 +123,7 @@ export function ParticipantModal({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="firstName">Prénom *</Label>
+              <Label htmlFor="firstName">{tb.firstNameLabel}</Label>
               <Input
                 id="firstName"
                 placeholder="Jean"
@@ -134,7 +137,7 @@ export function ParticipantModal({
               {errors.firstName && <p className="text-xs text-red-500 mt-1">{errors.firstName}</p>}
             </div>
             <div>
-              <Label htmlFor="lastName">Nom *</Label>
+              <Label htmlFor="lastName">{tb.lastNameLabel}</Label>
               <Input
                 id="lastName"
                 placeholder="Dupont"
@@ -150,7 +153,7 @@ export function ParticipantModal({
           </div>
 
           <div>
-            <Label htmlFor="email">Email (optionnel)</Label>
+            <Label htmlFor="email">{tb.emailLabel}</Label>
             <Input
               id="email"
               type="email"
@@ -161,7 +164,7 @@ export function ParticipantModal({
           </div>
 
           <div>
-            <Label htmlFor="phone">Téléphone (optionnel)</Label>
+            <Label htmlFor="phone">{tb.phoneLabel}</Label>
             <Input
               id="phone"
               placeholder="+33 6 12 34 56 78"
@@ -171,7 +174,7 @@ export function ParticipantModal({
           </div>
 
           <div>
-            <Label htmlFor="shirtSize">Taille du t-shirt *</Label>
+            <Label htmlFor="shirtSize">{tb.shirtLabel}</Label>
             <select
               id="shirtSize"
               value={shirtSize}
@@ -183,14 +186,14 @@ export function ParticipantModal({
                 errors.shirtSize ? 'border-red-500' : 'border-input'
               }`}
             >
-              <option value="">Sélectionner une taille</option>
+              <option value="">{tb.chooseSize}</option>
               {T_SHIRT_SIZES.map(size => (
                 <option key={size} value={size}>{size}</option>
               ))}
             </select>
             {errors.shirtSize && <p className="text-xs text-red-500 mt-1">{errors.shirtSize}</p>}
             <p className="text-xs text-gray-500 mt-1">
-              Un seul t-shirt est prévu par participant.
+              {tb.oneShirt}
             </p>
           </div>
 
@@ -204,24 +207,24 @@ export function ParticipantModal({
               />
               <div className="flex-1">
                 <Label htmlFor="applyToAll" className="text-sm font-semibold text-blue-900 cursor-pointer">
-                  ✨ Appliquer à tous les créneaux du pack
+                  {tb.applyToAll}
                 </Label>
                 <p className="text-xs text-blue-700 mt-1">
-                  Utilise les mêmes informations pour tous les créneaux restants du pack
+                  {tb.applyToAllHint}
                 </p>
               </div>
             </div>
           )}
 
-          <p className="text-xs text-gray-500">* Champs obligatoires</p>
+          <p className="text-xs text-gray-500">{tb.requiredFields}</p>
         </div>
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={handleClose}>
-            Annuler
+            {tb.cancel}
           </Button>
           <Button onClick={handleConfirm} className="bg-[#8B0000] hover:bg-[#A50000]">
-            {applyToAll && isPackModal ? '✨ Appliquer à tous' : 'Confirmer'}
+            {applyToAll && isPackModal ? tb.confirmAll : tb.confirm}
           </Button>
         </DialogFooter>
       </DialogContent>

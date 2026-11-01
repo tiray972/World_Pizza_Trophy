@@ -52,9 +52,56 @@ export function isParticipantComplete(participant?: Partial<Participant> | null)
   return !!participant?.firstName?.trim() && !!participant?.lastName?.trim() && !!participant?.shirtSize;
 }
 
+/** Messages de validation, dans la langue du Booking (le serveur répond dans la même langue). */
+const RULE_MESSAGES = {
+  fr: {
+    thisCategory: "cette catégorie",
+    minSlots: "Vous devez vous inscrire dans au moins {min} catégories différentes pour valider votre inscription (une catégorie = un créneau).",
+    teamRequired: "{category} se dispute à {count} : renseignez les {count} participants (nom, prénom et taille de t-shirt).",
+    participantRequired: "Renseignez le participant (nom, prénom et taille de t-shirt) pour {category}.",
+    sameSlotDuplicate: "{category} : les participants d'un même créneau doivent être différents.",
+    sameCategoryTwice: "{name} est déjà inscrit(e) dans {category} : une même personne ne peut pas concourir deux fois dans la même catégorie.",
+    overlap: "{name} est inscrit(e) sur deux créneaux à la même heure ({first} et {second}) : choisissez un autre horaire.",
+  },
+  en: {
+    thisCategory: "this category",
+    minSlots: "You must register in at least {min} different categories to complete your registration (one category = one slot).",
+    teamRequired: "{category} is contested by {count}: fill in all {count} participants (first name, last name and T-shirt size).",
+    participantRequired: "Fill in the participant (first name, last name and T-shirt size) for {category}.",
+    sameSlotDuplicate: "{category}: participants on the same slot must be different people.",
+    sameCategoryTwice: "{name} is already registered in {category}: the same person cannot compete twice in the same category.",
+    overlap: "{name} is booked on two slots at the same time ({first} and {second}): choose another time.",
+  },
+  es: {
+    thisCategory: "esta categoría",
+    minSlots: "Debes inscribirte en al menos {min} categorías diferentes para validar tu inscripción (una categoría = un horario).",
+    teamRequired: "{category} se disputa entre {count}: indica los {count} participantes (nombre, apellido y talla de camiseta).",
+    participantRequired: "Indica el participante (nombre, apellido y talla de camiseta) para {category}.",
+    sameSlotDuplicate: "{category}: los participantes de un mismo horario deben ser personas distintas.",
+    sameCategoryTwice: "{name} ya está inscrito/a en {category}: una misma persona no puede competir dos veces en la misma categoría.",
+    overlap: "{name} está inscrito/a en dos horarios a la misma hora ({first} y {second}): elige otro horario.",
+  },
+  it: {
+    thisCategory: "questa categoria",
+    minSlots: "Devi iscriverti ad almeno {min} categorie diverse per convalidare l'iscrizione (una categoria = un orario).",
+    teamRequired: "{category} si disputa in {count}: inserisci i {count} partecipanti (nome, cognome e taglia della maglietta).",
+    participantRequired: "Inserisci il partecipante (nome, cognome e taglia della maglietta) per {category}.",
+    sameSlotDuplicate: "{category}: i partecipanti di uno stesso orario devono essere persone diverse.",
+    sameCategoryTwice: "{name} è già iscritto/a in {category}: la stessa persona non può gareggiare due volte nella stessa categoria.",
+    overlap: "{name} è iscritto/a a due orari alla stessa ora ({first} e {second}): scegli un altro orario.",
+  },
+};
+
+function messagesFor(lang?: string) {
+  return RULE_MESSAGES[(lang === "en" || lang === "es" || lang === "it" ? lang : "fr") as keyof typeof RULE_MESSAGES];
+}
+
+const fillMessage = (template: string, values: Record<string, string | number>) =>
+  template.replace(/\{(\w+)\}/g, (match, key) => (key in values ? String(values[key]) : match));
+
 /** Message unique du minimum de catégories (réutilisé pour le filtrer côté panier). */
-export function minSlotsErrorMessage(minSlots: number): string {
-  return `Vous devez vous inscrire dans au moins ${minSlots} catégories différentes pour valider votre inscription (une catégorie = un créneau).`;
+export function minSlotsErrorMessage(minSlots: number, lang?: string): string {
+  return fillMessage(messagesFor(lang).minSlots, { min: minSlots });
 }
 
 export interface BookingSelectionSlot {
@@ -81,6 +128,8 @@ export interface BookingRulesInput {
   /** Nom lisible des catégories (id -> nom), pour les messages. */
   categoryNames?: Record<string, string>;
   minSlots: number;
+  /** Langue des messages (fr par défaut). */
+  lang?: string;
 }
 
 /**
@@ -88,14 +137,15 @@ export interface BookingRulesInput {
  * (vide = sélection valide).
  */
 export function validateBookingSelection(input: BookingRulesInput): string[] {
-  const { slots, participantsPerCategory, categoryNames = {}, minSlots } = input;
+  const { slots, participantsPerCategory, categoryNames = {}, minSlots, lang } = input;
   const errors: string[] = [];
+  const messages = messagesFor(lang);
 
-  const nameOf = (categoryId: string) => categoryNames[categoryId] || "cette catégorie";
+  const nameOf = (categoryId: string) => categoryNames[categoryId] || messages.thisCategory;
 
   // 1️⃣ Minimum de créneaux (ignoré si le panier ne contient que des repas)
   if (slots.length > 0 && slots.length < minSlots) {
-    errors.push(minSlotsErrorMessage(minSlots));
+    errors.push(minSlotsErrorMessage(minSlots, lang));
   }
 
   // 2️⃣ Participants complets et en nombre suffisant
@@ -106,15 +156,15 @@ export function validateBookingSelection(input: BookingRulesInput): string[] {
     if (filled.length < required) {
       errors.push(
         required > 1
-          ? `${nameOf(slot.categoryId)} se dispute à ${required} : renseignez les ${required} participants (nom, prénom et taille de t-shirt).`
-          : `Renseignez le participant (nom, prénom et taille de t-shirt) pour ${nameOf(slot.categoryId)}.`
+          ? fillMessage(messages.teamRequired, { category: nameOf(slot.categoryId), count: required })
+          : fillMessage(messages.participantRequired, { category: nameOf(slot.categoryId) })
       );
     }
 
     // Deux fois la même personne sur un créneau en duo
     const keys = filled.map(participant => participantKey(participant!));
     if (new Set(keys).size !== keys.length) {
-      errors.push(`${nameOf(slot.categoryId)} : les participants d'un même créneau doivent être différents.`);
+      errors.push(fillMessage(messages.sameSlotDuplicate, { category: nameOf(slot.categoryId) }));
     }
   }
 
@@ -127,7 +177,7 @@ export function validateBookingSelection(input: BookingRulesInput): string[] {
       const key = participantKey(participant!);
       if (seen.has(key)) {
         errors.push(
-          `${participant!.firstName} ${participant!.lastName} est déjà inscrit(e) dans ${nameOf(slot.categoryId)} : une même personne ne peut pas concourir deux fois dans la même catégorie.`
+          fillMessage(messages.sameCategoryTwice, { name: `${participant!.firstName} ${participant!.lastName}`, category: nameOf(slot.categoryId) })
         );
       }
       seen.add(key);
@@ -159,7 +209,7 @@ export function validateBookingSelection(input: BookingRulesInput): string[] {
 
       for (const participant of shared) {
         errors.push(
-          `${participant!.firstName} ${participant!.lastName} est inscrit(e) sur deux créneaux à la même heure (${nameOf(first.categoryId)} et ${nameOf(second.categoryId)}) : choisissez un autre horaire.`
+          fillMessage(messages.overlap, { name: `${participant!.firstName} ${participant!.lastName}`, first: nameOf(first.categoryId), second: nameOf(second.categoryId) })
         );
       }
     }

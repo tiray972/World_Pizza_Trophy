@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Participant } from '@/types/firestore';
 import { ChevronDown, Plus, UserPlus } from 'lucide-react';
+import { bookingTexts } from '@/lib/i18n/booking-texts';
 
 interface ParticipantSelectorProps {
   participants: Participant[];
@@ -12,6 +13,7 @@ interface ParticipantSelectorProps {
   onSelect: (participant: Participant) => void;
   onAddNew: () => void;
   compact?: boolean;
+  lang?: string;
 }
 
 export function ParticipantSelector({
@@ -20,8 +22,10 @@ export function ParticipantSelector({
   onSelect,
   onAddNew,
   compact = false,
+  lang = 'fr',
 }: ParticipantSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const tb = bookingTexts(lang);
 
   if (compact) {
     return (
@@ -38,7 +42,7 @@ export function ParticipantSelector({
           <span className="truncate">
             {selectedParticipant
               ? `${selectedParticipant.firstName} ${selectedParticipant.lastName}`
-              : 'Sélectionner participant'}
+              : tb.selectParticipant}
           </span>
           <ChevronDown className="w-3 h-3 ml-1" />
         </Button>
@@ -76,7 +80,7 @@ export function ParticipantSelector({
               }}
             >
               <Plus className="w-3 h-3" />
-              Ajouter un nouveau
+              {tb.addNewParticipant}
             </button>
           </div>
         )}
@@ -110,7 +114,7 @@ export function ParticipantSelector({
         onClick={onAddNew}
       >
         <Plus className="w-3 h-3 mr-1" />
-        Ajouter un participant
+        {tb.addParticipant}
       </Button>
     </div>
   );

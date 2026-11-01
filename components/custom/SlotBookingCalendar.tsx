@@ -13,6 +13,8 @@ import { ParticipantSelector } from './ParticipantSelector';
 import { CategoryRulesDialog } from './CategoryRulesDialog';
 import { isAcceptanceValid, type PublishedRules } from '@/lib/domain/category-rules';
 import { rulesDialogTexts } from '@/lib/i18n/rules-dialog-texts';
+import { BOOKING_LOCALES, bookingLang, bookingTexts, tf } from '@/lib/i18n/booking-texts';
+import { packMealsIncluded } from '@/lib/booking/packs';
 import type { ClientRuleAcceptance } from '@/lib/server/rules/acceptance';
 import {
   getMinSlotsPerBooking,
@@ -77,7 +79,7 @@ function writeSession(key: string, value: unknown) {
   }
 }
 
-const formatTime = (date: Date | string): string => {
+const formatTimeIn = (date: Date | string, locale: string): string => {
   let dateObj: Date;
   
   if (typeof date === 'string') {
@@ -92,11 +94,11 @@ const formatTime = (date: Date | string): string => {
     dateObj = new Date(date as any);
   }
   
-  return dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  return dateObj.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 };
 
-const formatDateDisplay = (date: Date): string =>
-  date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+const formatDateIn = (date: Date, locale: string): string =>
+  date.toLocaleDateString(locale, { day: 'numeric', month: 'long' });
 
 const formatDateISO = (date: Date): string => {
   const year = date.getFullYear();
@@ -114,11 +116,8 @@ const toDateValue = (value: unknown): Date => {
   return new Date(value as string);
 };
 
-const getCategoryName = (categoryId: string, categories: Category[]): string =>
-  categories.find(c => c.id === categoryId)?.name || 'Catégorie inconnue';
-
-const formatPrice = (amount: number): string =>
-  amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+const formatPriceIn = (amount: number, locale: string): string =>
+  amount.toLocaleString(locale, { style: 'currency', currency: 'EUR' });
 
 export function SlotBookingView({
   availableSlots,
@@ -132,6 +131,14 @@ export function SlotBookingView({
   onPackCheckout,
 }: SlotBookingViewProps) {
   const rulesTexts = rulesDialogTexts(lang);
+  const tb = bookingTexts(lang);
+  const locale = BOOKING_LOCALES[bookingLang(lang)];
+  const formatTime = (date: Date | string) => formatTimeIn(date, locale);
+  const formatDateDisplay = (date: Date) => formatDateIn(date, locale);
+  const formatPrice = (amount: number) => formatPriceIn(amount, locale);
+  /** Nom affiché dans la langue active, recalculé à chaque rendu (panier restauré compris). */
+  const categoryLabel = (categoryId: string) =>
+    localizedCategoryName(categories.find(category => category.id === categoryId), lang) || tb.unknownCategory;
   const [selectedSlots, setSelectedSlots] = useState<SelectedSlot[]>([]);
   const [isSlotSheetOpen, setIsSlotSheetOpen] = useState(false);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
@@ -306,8 +313,9 @@ export function SlotBookingView({
       participantsPerCategory: Object.fromEntries(
         categories.map(category => [category.id, getParticipantsPerSlot(category)])
       ),
-      categoryNames: Object.fromEntries(categories.map(category => [category.id, category.name])),
+      categoryNames: Object.fromEntries(categories.map(category => [category.id, localizedCategoryName(category, lang)])),
       minSlots: enforceMinimum ? getMinSlotsPerBooking(settings) : 1,
+      lang,
     });
 
   const updateAdditionalMealGuest = (index: number, field: keyof MealGuest, value: string) => {
@@ -445,7 +453,7 @@ export function SlotBookingView({
       const newSlot: SelectedSlot = {
         slotId: slot.id,
         categoryId: slot.categoryId,
-        categoryName: getCategoryName(slot.categoryId, categories),
+        categoryName: categoryLabel(slot.categoryId),
         startTime,
         endTime: toDateValue(slot.endTime),
         date: slot.date,
@@ -476,7 +484,7 @@ export function SlotBookingView({
         const newSlot: SelectedPackSlot = {
           slotId: slot.id,
           categoryId: slot.categoryId,
-          categoryName: getCategoryName(slot.categoryId, categories),
+          categoryName: categoryLabel(slot.categoryId),
           startTime,
           endTime: toDateValue(slot.endTime),
           date: slot.date,
@@ -544,10 +552,10 @@ export function SlotBookingView({
               {getParticipantsPerSlot(category) > 1 && (
                 <Badge
                   className="text-xs bg-blue-600 hover:bg-blue-700"
-                  title={`Catégorie en équipe : un seul créneau et un seul tarif pour ${getParticipantsPerSlot(category)} participants`}
+                  title={tf(tb.teamBadgeTitle, { count: getParticipantsPerSlot(category) })}
                 >
                   <UserIcon className="w-3 h-3 mr-1" />
-                  En équipe · {getParticipantsPerSlot(category)} participants
+                  {tf(tb.teamBadge, { count: getParticipantsPerSlot(category) })}
                 </Badge>
               )}
             </CardFooter>
@@ -566,7 +574,7 @@ export function SlotBookingView({
       <div className="mb-10 p-4 border-2 border-primary/50 bg-primary/5 rounded-lg shadow-inner">
         <h2 className="text-2xl font-bold mb-4 text-primary flex items-center">
           <PackageIcon className="w-6 h-6 mr-2" />
-          Offres Spéciales & Packs Compétition
+          {tb.packsTitle}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {activePacks.map(product => (
@@ -591,12 +599,12 @@ export function SlotBookingView({
                 <div className="space-y-1 text-sm">
                   <p className="flex items-center text-gray-700 font-bold">
                     <ClockIcon className="w-4 h-4 mr-2 text-primary/80" />
-                    Inclus: {product.slotsRequired} créneaux de compétition
+                    {tf(tb.packIncludes, { count: product.slotsRequired })}
                   </p>
-                  {product.includesMeal && (
+                  {packMealsIncluded(product) > 0 && (
                     <p className="flex items-center text-gray-700">
                       <UtensilsCrossedIcon className="w-4 h-4 mr-2 text-primary/80" />
-                      Comprend: Repas VIP
+                      {tf(tb.packMeals, { count: packMealsIncluded(product) })}
                     </p>
                   )}
                 </div>
@@ -607,7 +615,7 @@ export function SlotBookingView({
                   onClick={() => handlePackSelectionStart(product)}
                   disabled={registrationClosed}
                 >
-                  {registrationClosed ? 'Inscription Fermée' : 'Sélectionner les Créneaux'}
+                  {registrationClosed ? tb.registrationClosedButton : tb.selectSlots}
                 </Button>
               </CardFooter>
             </Card>
@@ -630,9 +638,9 @@ export function SlotBookingView({
     return (
       <SheetContent side="bottom" className="sm:max-w-xl h-screen flex flex-col">
         <SheetHeader className="shrink-0 pb-2">
-          <SheetTitle>Configuration du Pack : {packToPurchase.name}</SheetTitle>
+          <SheetTitle>{tf(tb.packTitle, { name: packToPurchase.name })}</SheetTitle>
           <SheetDescription>
-            Veuillez sélectionner {slotsNeeded} créneau(x) pour valider votre achat de pack.
+            {tf(tb.packDescription, { count: slotsNeeded })}
           </SheetDescription>
         </SheetHeader>
 
@@ -643,13 +651,13 @@ export function SlotBookingView({
         >
           <p className="font-semibold text-sm flex items-center justify-between">
             <span>
-              Statut : {slotsSelectedCount} / {slotsNeeded} créneau(x) sélectionné(s)
+              {tf(tb.packStatus, { selected: slotsSelectedCount, needed: slotsNeeded })}
             </span>
             <Badge
               variant={selectionComplete ? 'default' : 'secondary'}
               className={selectionComplete ? 'bg-green-600' : 'bg-yellow-600'}
             >
-              {selectionComplete ? 'Prêt au Paiement' : 'Sélection en cours'}
+              {selectionComplete ? tb.packReady : tb.packInProgress}
             </Badge>
           </p>
         </div>
@@ -658,7 +666,7 @@ export function SlotBookingView({
           {!activePackCategoryId ? (
             <div className="space-y-4">
               <h3 className="font-bold text-lg">
-                1. Choisissez vos Catégories ({slotsNeeded} maximum)
+                {tf(tb.packStep1, { count: slotsNeeded })}
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 {availablePackCategories.map(category => {
@@ -684,11 +692,11 @@ export function SlotBookingView({
                         });
                       }}
                     >
-                      <CardTitle className="text-base truncate">{category.name}</CardTitle>
+                      <CardTitle className="text-base truncate">{localizedCategoryName(category, lang)}</CardTitle>
                       <CardDescription className="text-xs mt-1">
                         {selectedInThisCategory > 0 && (
                           <span className="font-semibold text-primary">
-                            {selectedInThisCategory} sélectionné(s)
+                            {tf(tb.packSelectedInCategory, { count: selectedInThisCategory })}
                           </span>
                         )}
                       </CardDescription>
@@ -705,11 +713,11 @@ export function SlotBookingView({
                 onClick={() => setActivePackCategoryId(null)}
               >
                 <ArrowLeftIcon className="w-4 h-4 mr-2" />
-                Retour à la sélection des catégories
+                {tb.backToCategories}
               </Button>
 
               <h3 className="font-bold text-lg">
-                2. Choisissez les Créneaux pour {activeCategory?.name}
+                {tf(tb.packStep2, { category: activeCategory ? localizedCategoryName(activeCategory, lang) : '' })}
               </h3>
 
               {activeCategory && activeCategory.activeDates.length > 0 ? (
@@ -759,7 +767,7 @@ export function SlotBookingView({
                                       </span>
                                     </Button>
                                     <Badge className="ml-2 bg-white text-primary hover:bg-white/90">
-                                      Retirer
+                                      {tb.remove}
                                     </Badge>
                                   </div>
                                   {/* 👤 Sélecteur(s) de participant réutilisable(s) */}
@@ -768,10 +776,11 @@ export function SlotBookingView({
                                       <div key={index}>
                                         {participantsRequiredFor(slot.categoryId) > 1 && (
                                           <p className="text-[11px] font-semibold text-gray-600 mb-1">
-                                            Participant {index + 1}
+                                            {tf(tb.participantN, { n: index + 1 })}
                                           </p>
                                         )}
                                         <ParticipantSelector
+                                          lang={lang}
                                           participants={savedParticipants}
                                           selectedParticipant={participant}
                                           onSelect={(selected) => {
@@ -817,7 +826,7 @@ export function SlotBookingView({
                                   <ClockIcon className="w-4 h-4 mr-2" />
                                   <span className="font-semibold">{formatTime(time)}</span>
                                   <Badge className="ml-auto bg-primary/10 text-primary hover:bg-primary/20">
-                                    Ajouter
+                                    {tb.add}
                                   </Badge>
                                 </Button>
                               );
@@ -825,7 +834,7 @@ export function SlotBookingView({
                           </>
                         ) : (
                           <p className="text-center text-sm text-gray-500 p-8 border border-dashed rounded-lg">
-                            Aucun créneau libre pour ce jour et cette catégorie.
+                            {tb.noSlotsDay}
                           </p>
                         )}
                       </TabsContent>
@@ -834,7 +843,7 @@ export function SlotBookingView({
                 </Tabs>
               ) : (
                 <p className="text-center text-sm text-gray-500 p-8 border border-dashed rounded-lg">
-                  Aucune date disponible pour cette catégorie.
+                  {tb.noDates}
                 </p>
               )}
             </div>
@@ -866,7 +875,7 @@ export function SlotBookingView({
               setActiveDate(null);
             }}
           >
-            Payer le Pack {formatPrice(packToPurchase.unitAmount)}
+            {tf(tb.payPack, { price: formatPrice(packToPurchase.unitAmount) })}
           </Button>
         </SheetFooter>
       </SheetContent>
@@ -879,21 +888,18 @@ export function SlotBookingView({
     return (
       <SheetContent side="bottom" className="sm:max-w-xl h-screen flex flex-col">
         <SheetHeader className="shrink-0 pb-2">
-          <SheetTitle>{activeCategory.name}</SheetTitle>
+          <SheetTitle>{localizedCategoryName(activeCategory, lang)}</SheetTitle>
           <SheetDescription>
-            Sélectionnez vos créneaux horaires pour cette catégorie.
+            {tb.slotSheetDescription}
             {activeCategory && participantsRequiredFor(activeCategory.id) > 1 && (
               <span className="block mt-1 font-semibold text-blue-700">
-                👥 Catégorie en équipe : un seul créneau et un seul tarif pour{' '}
-                {participantsRequiredFor(activeCategory.id)} participants. Vous renseignerez leurs
-                noms dans le panier.
+                {tf(tb.slotSheetTeam, { count: participantsRequiredFor(activeCategory.id) })}
               </span>
             )}
             {minSlotsRequired > 1 && missingSlotsCount > 0 && (
               <span className="block mt-1 font-semibold text-yellow-700">
-                🎟️ {minSlotsRequired} catégories minimum : il vous en manque encore{' '}
-                {missingSlotsCount}
-                {selectedSlots.length > 0 ? ' — choisissez ensuite une autre catégorie' : ''}.
+                {tf(tb.slotSheetMin, { min: minSlotsRequired, missing: missingSlotsCount })}
+                {selectedSlots.length > 0 ? tb.slotSheetMinNext : ''}
               </span>
             )}
           </SheetDescription>
@@ -954,7 +960,7 @@ export function SlotBookingView({
                                   : 'bg-primary/10 text-primary hover:bg-primary/20'
                               }`}
                             >
-                              {isSelected ? 'Retirer' : 'Ajouter'}
+                              {isSelected ? tb.remove : tb.add}
                             </Badge>
                           </Button>
                         );
@@ -963,7 +969,7 @@ export function SlotBookingView({
                     </>
                   ) : (
                     <p className="text-center text-sm text-gray-500 p-8 border border-dashed rounded-lg">
-                      Aucun créneau libre pour ce jour et cette catégorie.
+                      {tb.noSlotsDay}
                     </p>
                   )}
                 </TabsContent>
@@ -972,14 +978,14 @@ export function SlotBookingView({
           </Tabs>
         ) : (
           <p className="text-center text-sm text-gray-500 p-8 border border-dashed rounded-lg">
-            Aucune date disponible pour cette catégorie.
+            {tb.noDates}
           </p>
         )}
 
         <SheetFooter className="shrink-0 mt-4 border-t pt-3">
           <SheetClose asChild>
             <Button type="button" className="w-full">
-              OK, Créneaux Ajoutés au Panier
+              {tb.slotsAdded}
             </Button>
           </SheetClose>
         </SheetFooter>
@@ -1007,27 +1013,25 @@ export function SlotBookingView({
     const cartErrors = selectionErrors(selectedSlots, true);
     // Le minimum a droit à son propre encart, avec le bouton pour y remédier.
     const otherCartErrors = cartErrors.filter(
-      message => message !== minSlotsErrorMessage(minSlotsRequired)
+      message => message !== minSlotsErrorMessage(minSlotsRequired, lang)
     );
     const missingCategories = selectedSlots.length > 0 ? missingSlotsCount : 0;
 
     return (
       <SheetContent side="right" className="sm:max-w-lg flex flex-col">
         <SheetHeader>
-          <SheetTitle>Votre Panier de Réservation</SheetTitle>
+          <SheetTitle>{tb.cartTitle}</SheetTitle>
           <SheetDescription>
-            Vérifiez et confirmez les créneaux sélectionnés avant le paiement.
+            {tb.cartDescription}
             {minSlotsRequired > 1 && (
               <span
                 className={`block mt-1 font-semibold ${
                   missingSlotsCount > 0 ? 'text-yellow-700' : 'text-green-700'
                 }`}
               >
-                🎟️ {minSlotsRequired} catégories minimum —{' '}
                 {missingSlotsCount > 0
-                  ? `il vous en manque ${missingSlotsCount}`
-                  : 'minimum atteint'}
-                .
+                  ? tf(tb.cartMinMissing, { min: minSlotsRequired, missing: missingSlotsCount })
+                  : tf(tb.cartMinReached, { min: minSlotsRequired })}
               </span>
             )}
           </SheetDescription>
@@ -1036,7 +1040,7 @@ export function SlotBookingView({
         <div className="py-4 space-y-3 grow overflow-y-auto pr-2">
           {selectedSlots.length === 0 ? (
             <div className="p-8 text-center text-gray-500 border border-dashed rounded-lg">
-              Aucun créneau sélectionné. Vous pouvez acheter uniquement des repas si besoin.
+              {tb.cartEmpty}
             </div>
           ) : (
             selectedSlots.map(slot => {
@@ -1052,7 +1056,7 @@ export function SlotBookingView({
                 <Card key={slot.slotId} className={`p-3 bg-gray-50 shadow-sm ${allParticipantsFilled ? 'border-green-200 border-2' : 'border-yellow-200 border-2'}`}>
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1">
-                      <p className="font-semibold">{slot.categoryName}</p>
+                      <p className="font-semibold">{categoryLabel(slot.categoryId)}</p>
                       <p className="text-sm text-gray-500 flex items-center">
                         <ClockIcon className="w-3 h-3 mr-1" />
                         {formatTime(slot.startTime)} - {displayDate}
@@ -1061,8 +1065,7 @@ export function SlotBookingView({
                       {/* 👥 Catégorie en duo : préciser le nombre de participants attendus */}
                       {requiredParticipants > 1 && (
                         <p className="text-xs text-blue-700 font-semibold mt-1">
-                          👥 Catégorie en équipe : {requiredParticipants} participants sur ce
-                          créneau, un seul tarif
+                          {tf(tb.cartTeam, { count: requiredParticipants })}
                         </p>
                       )}
 
@@ -1079,7 +1082,7 @@ export function SlotBookingView({
                               <p className="text-xs text-green-600">{participant.email}</p>
                             )}
                             {participant.shirtSize && (
-                              <p className="text-xs text-green-600">T-shirt: {participant.shirtSize}</p>
+                              <p className="text-xs text-green-600">{tf(tb.shirt, { size: participant.shirtSize })}</p>
                             )}
                           </div>
                         ) : null
@@ -1092,10 +1095,11 @@ export function SlotBookingView({
                         <div key={index}>
                           {requiredParticipants > 1 && (
                             <p className="text-[11px] font-semibold text-gray-600 mb-1">
-                              Participant {index + 1}
+                              {tf(tb.participantN, { n: index + 1 })}
                             </p>
                           )}
                           <ParticipantSelector
+                            lang={lang}
                             participants={savedParticipants}
                             selectedParticipant={participant}
                             onSelect={(selected) => {
@@ -1126,7 +1130,7 @@ export function SlotBookingView({
                           handleToggleSelect(availableSlots.find(s => s.id === slot.slotId)!)
                         }
                       >
-                        Supprimer le créneau
+                        {tb.removeSlot}
                       </Button>
                     </div>
                   </div>
@@ -1142,11 +1146,10 @@ export function SlotBookingView({
                 <div className="flex-1">
                   <p className="font-semibold text-blue-900 flex items-center">
                     <UtensilsCrossedIcon className="w-4 h-4 mr-2" />
-                    Ajouter des repas
+                    {tb.addMeals}
                   </p>
                   <p className="text-sm text-blue-700">
-                    {formatPrice(mealPrice)} par personne, indépendant des créneaux de compétition.
-                    {' '}Vous pouvez acheter des repas <strong>sans réserver de catégorie</strong>.
+                    {tf(tb.mealsInfo, { price: formatPrice(mealPrice) })}
                   </p>
                 </div>
                 <Button
@@ -1165,7 +1168,7 @@ export function SlotBookingView({
                     }
                   }}
                 >
-                  {wantsMeal ? "✓ Inclus" : "+ Ajouter"}
+                  {wantsMeal ? tb.mealsIncluded : tb.mealsAdd}
                 </Button>
               </div>
               {wantsMeal && (
@@ -1173,7 +1176,7 @@ export function SlotBookingView({
                   {/* 🍽️ Nombre de repas : compteur direct (− / +) */}
                   <div className="flex items-center justify-between rounded-md bg-white border border-blue-200 p-3">
                     <div>
-                      <p className="text-sm font-semibold text-blue-950">Nombre de repas</p>
+                      <p className="text-sm font-semibold text-blue-950">{tb.mealCount}</p>
                       <p className="text-xs text-blue-700">
                         {additionalMealGuests.length} × {formatPrice(mealPrice)} ={' '}
                         {formatPrice(additionalMealGuests.length * mealPrice)}
@@ -1186,6 +1189,7 @@ export function SlotBookingView({
                         size="sm"
                         className="h-9 w-9 p-0 text-lg"
                         disabled={additionalMealGuests.length <= 1}
+                        aria-label={tb.mealDecrease}
                         onClick={() => setMealGuestsCount(additionalMealGuests.length - 1)}
                       >
                         −
@@ -1197,6 +1201,7 @@ export function SlotBookingView({
                         type="button"
                         size="sm"
                         className="h-9 w-9 p-0 text-lg bg-blue-600 hover:bg-blue-700"
+                        aria-label={tb.mealIncrease}
                         onClick={() => setMealGuestsCount(additionalMealGuests.length + 1)}
                       >
                         +
@@ -1205,14 +1210,14 @@ export function SlotBookingView({
                   </div>
 
                   <div className="rounded-md bg-white/70 border border-blue-100 p-3">
-                    <p className="text-xs font-semibold text-blue-900 mb-2">Récapitulatif repas</p>
+                    <p className="text-xs font-semibold text-blue-900 mb-2">{tb.mealSummary}</p>
                     {mealGuests.length === 0 ? (
-                      <p className="text-xs text-blue-700">Ajoutez les personnes qui mangeront pour préparer le récapitulatif.</p>
+                      <p className="text-xs text-blue-700">{tb.mealSummaryEmpty}</p>
                     ) : (
                       <div className="space-y-1">
                         {mealGuests.map((guest, index) => (
                           <div key={`${guest.firstName}-${guest.lastName}-${index}`} className="flex justify-between gap-3 text-xs text-blue-800">
-                            <span>{guest.firstName || `Repas ${index + 1}`} {guest.lastName || ""}</span>
+                            <span>{guest.firstName || tf(tb.mealN, { n: index + 1 })} {guest.lastName || ""}</span>
                             <span>{formatPrice(mealPrice)}</span>
                           </div>
                         ))}
@@ -1224,8 +1229,8 @@ export function SlotBookingView({
                     <div key={index} className="rounded-md bg-white border border-blue-100 p-3 space-y-2">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-blue-950">Repas {index + 1}</p>
-                          <p className="text-xs text-blue-700">Nom de la personne qui mangera</p>
+                          <p className="text-sm font-semibold text-blue-950">{tf(tb.mealN, { n: index + 1 })}</p>
+                          <p className="text-xs text-blue-700">{tb.mealWho}</p>
                         </div>
                         {additionalMealGuests.length > 1 && (
                           <Button
@@ -1234,7 +1239,7 @@ export function SlotBookingView({
                             size="sm"
                             onClick={() => setAdditionalMealGuests(prev => prev.filter((_, currentIndex) => currentIndex !== index))}
                           >
-                            Retirer
+                            {tb.remove}
                           </Button>
                         )}
                       </div>
@@ -1242,13 +1247,15 @@ export function SlotBookingView({
                         <input
                           value={guest.firstName}
                           onChange={(e) => updateAdditionalMealGuest(index, 'firstName', e.target.value)}
-                          placeholder="Prénom"
+                          placeholder={tb.firstName}
+                          aria-label={`${tb.firstName} — ${tf(tb.mealN, { n: index + 1 })}`}
                           className="h-9 rounded-md border border-input bg-background px-3 text-sm"
                         />
                         <input
                           value={guest.lastName}
                           onChange={(e) => updateAdditionalMealGuest(index, 'lastName', e.target.value)}
-                          placeholder="Nom"
+                          placeholder={tb.lastName}
+                          aria-label={`${tb.lastName} — ${tf(tb.mealN, { n: index + 1 })}`}
                           className="h-9 rounded-md border border-input bg-background px-3 text-sm"
                         />
                       </div>
@@ -1256,13 +1263,15 @@ export function SlotBookingView({
                         <input
                           value={guest.email || ''}
                           onChange={(e) => updateAdditionalMealGuest(index, 'email', e.target.value)}
-                          placeholder="Email optionnel"
+                          placeholder={tb.emailOptional}
+                          aria-label={tb.emailOptional}
                           className="h-9 rounded-md border border-input bg-background px-3 text-sm"
                         />
                         <input
                           value={guest.phone || ''}
                           onChange={(e) => updateAdditionalMealGuest(index, 'phone', e.target.value)}
-                          placeholder="Téléphone optionnel"
+                          placeholder={tb.phoneOptional}
+                          aria-label={tb.phoneOptional}
                           className="h-9 rounded-md border border-input bg-background px-3 text-sm"
                         />
                       </div>
@@ -1270,7 +1279,7 @@ export function SlotBookingView({
                   ))}
 
                   <Button type="button" variant="outline" size="sm" className="w-full" onClick={addAdditionalMealGuest}>
-                    + Ajouter un autre repas
+                    {tb.addAnotherMeal}
                   </Button>
                 </div>
               )}
@@ -1282,12 +1291,12 @@ export function SlotBookingView({
           {/* Détail des coûts */}
           <div className="w-full space-y-2 mb-4 text-sm">
             <div className="flex justify-between">
-              <span>Créneaux ({selectedSlots.length}):</span>
+              <span>{tf(tb.slotsLine, { count: selectedSlots.length })}</span>
               <span>{formatPrice(slotTotal)}</span>
             </div>
             {wantsMeal && mealCost > 0 && (
               <div className="flex justify-between text-blue-600 font-semibold">
-                <span>Repas ({validMealGuestsCount}):</span>
+                <span>{tf(tb.mealsLine, { count: validMealGuestsCount })}</span>
                 <span>{formatPrice(mealCost)}</span>
               </div>
             )}
@@ -1295,7 +1304,7 @@ export function SlotBookingView({
 
           {/* Total */}
           <div className="w-full flex justify-between items-center text-lg font-bold mb-3 border-t pt-3">
-            <span>Total à Payer:</span>
+            <span>{tb.total}</span>
             <span className="text-2xl text-primary">{formatPrice(totalPrice)}</span>
           </div>
 
@@ -1303,8 +1312,7 @@ export function SlotBookingView({
           {wantsMeal && incompleteMealGuests > 0 && (
             <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-3">
               <p className="text-xs text-yellow-700 font-semibold">
-                ⚠️ {incompleteMealGuests} repas sans nom : renseignez le prénom et le nom de
-                chaque personne, sinon ces repas ne seront pas comptés.
+                {tf(tb.mealsUnnamed, { count: incompleteMealGuests })}
               </p>
             </div>
           )}
@@ -1313,19 +1321,13 @@ export function SlotBookingView({
           {missingCategories > 0 && (
             <div className="p-3 bg-yellow-50 border border-yellow-300 rounded-lg mb-3 space-y-2">
               <p className="text-sm font-bold text-yellow-900">
-                🎟️ Il vous manque {missingCategories} catégorie
-                {missingCategories > 1 ? 's' : ''} pour pouvoir payer
+                {tf(tb.missingCategoriesTitle, { count: missingCategories })}
               </p>
               <p className="text-xs text-yellow-800">
-                L'inscription se fait dans {minSlotsRequired} catégories différentes minimum.
-                {selectedSlots.some(slot => participantsRequiredFor(slot.categoryId) > 1)
-                  ? " Une catégorie en équipe compte pour une seule catégorie, même avec 2 participants."
-                  : ''}
+                {tf(tb.missingCategoriesText, { min: minSlotsRequired })}
+                {selectedSlots.some(slot => participantsRequiredFor(slot.categoryId) > 1) ? tb.missingCategoriesTeam : ''}
               </p>
-              <p className="text-xs text-yellow-700">
-                💡 Vous pouvez aussi inscrire une autre personne sur un créneau supplémentaire :
-                chaque passage compte.
-              </p>
+              <p className="text-xs text-yellow-700">{tb.anotherPersonTip}</p>
               <Button
                 type="button"
                 size="sm"
@@ -1333,7 +1335,7 @@ export function SlotBookingView({
                 className="w-full bg-white"
                 onClick={() => setIsCartSheetOpen(false)}
               >
-                Choisir une autre catégorie
+                {tb.chooseAnotherCategory}
               </Button>
             </div>
           )}
@@ -1349,7 +1351,7 @@ export function SlotBookingView({
 
           <SheetClose asChild>
             <Button type="button" variant="outline" className="w-full mb-2">
-              Continuer la Sélection
+              {tb.continueSelection}
             </Button>
           </SheetClose>
           <Button
@@ -1388,7 +1390,7 @@ export function SlotBookingView({
               setAdditionalMealGuests([]);
             }}
           >
-            Procéder au Paiement
+            {tb.checkout}
           </Button>
         </SheetFooter>
       </SheetContent>
@@ -1398,16 +1400,13 @@ export function SlotBookingView({
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-extrabold text-gray-900 border-b pb-4 mb-8">
-        Réservation de Créneaux de Compétition
+        {tb.pageTitle}
       </h1>
 
       {registrationClosed && (
         <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg shadow-md">
-          <p className="font-bold">Inscriptions Fermées</p>
-          <p className="text-sm">
-            La date limite d'inscription était le {formatDateDisplay(registrationDeadlineDate)}.
-            Il n'est plus possible de réserver de créneaux.
-          </p>
+          <p className="font-bold">{tb.closedTitle}</p>
+          <p className="text-sm">{tf(tb.closedText, { date: formatDateDisplay(registrationDeadlineDate) })}</p>
         </div>
       )}
 
@@ -1423,37 +1422,28 @@ export function SlotBookingView({
           }`}
         >
           <p className="font-bold">
-            🎟️ Inscription : {minSlotsRequired} catégories minimum
+            {tf(tb.minTitle, { min: minSlotsRequired })}
           </p>
           <p className="text-sm">
             {selectedSlots.length === 0
-              ? `Vous devez vous inscrire dans au moins ${minSlotsRequired} catégories différentes. Une catégorie = un créneau = un passage.`
+              ? tf(tb.minNone, { min: minSlotsRequired })
               : missingSlotsCount > 0
-                ? `${selectedSlots.length} catégorie(s) sélectionnée(s) — il vous en manque encore ${missingSlotsCount} pour pouvoir payer.`
-                : `${selectedSlots.length} catégories sélectionnées : vous pouvez procéder au paiement.`}
+                ? tf(tb.minMissing, { count: selectedSlots.length, missing: missingSlotsCount })
+                : tf(tb.minReached, { count: selectedSlots.length })}
           </p>
           {/* 💡 Deux personnes différentes sur une même catégorie : c'est permis */}
           {selectedSlots.length > 0 && missingSlotsCount > 0 && (
-            <p className="text-sm mt-2">
-              💡 Une même personne ne peut pas concourir deux fois dans la même catégorie, mais vous
-              pouvez inscrire <strong>une autre personne</strong> sur un créneau supplémentaire :
-              chaque passage compte.
-            </p>
+            <p className="text-sm mt-2">{tb.minTip}</p>
           )}
 
           {/* 👥 Lever la confusion : une catégorie en équipe reste UNE catégorie */}
           {hasTeamCategory && (
-            <p className="text-sm mt-2">
-              👥 Les catégories en équipe (badge « 2 participants ») comptent pour{' '}
-              <strong>une seule catégorie</strong> : un seul créneau, un seul tarif, et vous y
-              inscrivez simplement 2 personnes.
-            </p>
+            <p className="text-sm mt-2">{tb.teamTip}</p>
           )}
           {/* 🍽️ Le minimum ne concerne QUE les catégories : les repas s'achètent seuls */}
           {(settings.mealPrice || 0) > 0 && (
             <p className="text-sm mt-2 pt-2 border-t border-current/20">
-              🍽️ Ce minimum ne concerne que les catégories de compétition.{' '}
-              <strong>Les repas peuvent être achetés seuls</strong>, sans aucun créneau.
+              {tb.mealsOnlyTip}
               <Button
                 type="button"
                 size="sm"
@@ -1462,7 +1452,7 @@ export function SlotBookingView({
                 onClick={() => setIsCartSheetOpen(true)}
               >
                 <UtensilsCrossedIcon className="w-3 h-3 mr-1" />
-                Acheter des repas uniquement
+                {tb.buyMealsOnly}
               </Button>
             </p>
           )}
@@ -1473,7 +1463,7 @@ export function SlotBookingView({
 
       <h2 className="text-2xl font-bold mb-4 text-gray-800 flex items-center">
         <PizzaIcon className="w-6 h-6 mr-2" />
-        Catégories de Compétition Individuelles
+        {tb.categoriesTitle}
       </h2>
 
       {renderCategoryCards()}
@@ -1482,6 +1472,7 @@ export function SlotBookingView({
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl z-50 transition-transform hover:scale-105"
         onClick={() => setIsCartSheetOpen(true)}
         disabled={selectedSlots.length === 0 && (settings.mealPrice || 0) <= 0}
+        aria-label={tf(tb.cartButton, { count: selectedSlots.length + mealGuests.filter(guest => guest.firstName.trim() && guest.lastName.trim()).length })}
       >
         <ShoppingCartIcon className="w-6 h-6" />
         {(selectedSlots.length > 0 || mealGuests.length > 0) && (
@@ -1537,6 +1528,7 @@ export function SlotBookingView({
 
       {/* 👤 Participant Modal - Créneaux Individuels */}
       <ParticipantModal
+        lang={lang}
         open={isParticipantModalOpen}
         onClose={() => {
           setIsParticipantModalOpen(false);
@@ -1562,11 +1554,12 @@ export function SlotBookingView({
             ? currentParticipantIndex + 1
             : undefined
         }
-        slotInfo={currentSlotForParticipant ? `${currentSlotForParticipant.categoryName} - ${formatTime(currentSlotForParticipant.startTime)}, ${formatDateDisplay(new Date(currentSlotForParticipant.date + 'T00:00:00'))}` : undefined}
+        slotInfo={currentSlotForParticipant ? `${categoryLabel(currentSlotForParticipant.categoryId)} - ${formatTime(currentSlotForParticipant.startTime)}, ${formatDateDisplay(new Date(currentSlotForParticipant.date + 'T00:00:00'))}` : undefined}
       />
 
       {/* 👤 Participant Modal - Pack */}
       <ParticipantModal
+        lang={lang}
         open={isPackParticipantModalOpen}
         onClose={() => {
           setIsPackParticipantModalOpen(false);
@@ -1602,7 +1595,7 @@ export function SlotBookingView({
             ? currentParticipantIndex + 1
             : undefined
         }
-        slotInfo={currentPackSlotForParticipant ? `${currentPackSlotForParticipant.categoryName} - ${formatTime(currentPackSlotForParticipant.startTime)}, ${formatDateDisplay(new Date(currentPackSlotForParticipant.date + 'T00:00:00'))}` : undefined}
+        slotInfo={currentPackSlotForParticipant ? `${categoryLabel(currentPackSlotForParticipant.categoryId)} - ${formatTime(currentPackSlotForParticipant.startTime)}, ${formatDateDisplay(new Date(currentPackSlotForParticipant.date + 'T00:00:00'))}` : undefined}
       />
     </div>
   );

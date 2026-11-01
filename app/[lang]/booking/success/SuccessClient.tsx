@@ -7,12 +7,15 @@ import { CheckCircle, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/providers/AuthProvider';
+import { BOOKING_LOCALES, bookingLang, bookingTexts, tf } from '@/lib/i18n/booking-texts';
 
 interface BookingSuccessClientProps {
   lang: string;
 }
 
 export default function SuccessClient({ lang }: BookingSuccessClientProps) {
+  const tb = bookingTexts(lang);
+  const locale = BOOKING_LOCALES[bookingLang(lang)];
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
@@ -57,11 +60,11 @@ export default function SuccessClient({ lang }: BookingSuccessClientProps) {
         } else {
           const errorData = await recordResponse.json();
           console.error(`❌ [Success] Failed to record payment:`, errorData);
-          setRecordingError(errorData.error || 'Erreur lors de l\'enregistrement du paiement');
+          setRecordingError(errorData.error || tb.recordFailed);
         }
       } catch (error) {
         console.error('❌ [Success] Error processing payment:', error);
-        setRecordingError('Erreur lors du traitement du paiement');
+        setRecordingError(tb.recordFailed);
       } finally {
         setLoading(false);
       }
@@ -75,12 +78,12 @@ export default function SuccessClient({ lang }: BookingSuccessClientProps) {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Authentification requise</CardTitle>
+            <CardTitle>{tb.successAuthTitle}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-600 mb-4">Vous devez être connecté pour voir votre commande.</p>
+            <p className="text-gray-600 mb-4">{tb.successAuthText}</p>
             <Button asChild className="w-full">
-              <Link href={`/${lang}/auth/login`}>Se connecter</Link>
+              <Link href={`/${lang}/auth/login`}>{tb.signIn}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -93,7 +96,7 @@ export default function SuccessClient({ lang }: BookingSuccessClientProps) {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-4">
           <Loader className="h-8 w-8 animate-spin text-[#8B0000]" />
-          <p className="text-gray-600">Vérification de votre paiement...</p>
+          <p className="text-gray-600" role="status">{tb.verifying}</p>
         </div>
       </div>
     );
@@ -108,47 +111,45 @@ export default function SuccessClient({ lang }: BookingSuccessClientProps) {
               <CheckCircle className={`h-16 w-16 ${recordingError ? 'text-yellow-600' : 'text-green-600'}`} />
             </div>
             <CardTitle className={`text-3xl ${recordingError ? 'text-yellow-700' : 'text-green-700'}`}>
-              {recordingError ? '⚠️ Paiement en cours de traitement' : 'Paiement confirmé ! 🍕'}
+              {recordingError ? tb.successPendingTitle : tb.successTitle}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center">
               <p className="text-lg font-semibold text-gray-800 mb-2">
-                {recordingError ? 'Votre paiement a été reçu' : 'Merci pour votre réservation !'}
+                {recordingError ? tb.successPendingSubtitle : tb.successSubtitle}
               </p>
               <p className="text-gray-600">
-                {recordingError 
-                  ? 'Il y a eu un léger problème lors de la sauvegarde, mais votre paiement est sécurisé. Contactez-nous si vous n\'avez pas reçu votre confirmation.'
-                  : 'Vos créneaux de participation ont été confirmés.'}
+                {recordingError ? tb.successPendingText : tb.successText}
               </p>
             </div>
 
             {recordingError && (
               <div className="bg-yellow-100 border border-yellow-400 rounded-lg p-4">
                 <p className="text-sm text-yellow-900 font-semibold">
-                  ⚠️ Erreur lors de la sauvegarde : {recordingError}
+                  {tf(tb.successRecordError, { error: recordingError })}
                 </p>
               </div>
             )}
 
             {sessionData && (
               <div className="bg-white rounded-lg p-4 space-y-2">
-                <h3 className="font-semibold text-gray-800 mb-4">Détails de votre commande</h3>
+                <h3 className="font-semibold text-gray-800 mb-4">{tb.orderDetails}</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-500">Montant payé</p>
+                    <p className="text-gray-500">{tb.amountPaid}</p>
                     <p className="font-semibold text-gray-800">
-                      {sessionData.amount ? `${(sessionData.amount / 100).toFixed(2)} €` : 'N/A'}
+                      {sessionData.amount ? (sessionData.amount / 100).toLocaleString(locale, { style: 'currency', currency: 'EUR' }) : '—'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Date</p>
+                    <p className="text-gray-500">{tb.date}</p>
                     <p className="font-semibold text-gray-800">
-                      {new Date().toLocaleDateString('fr-FR')}
+                      {new Date().toLocaleDateString(locale)}
                     </p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-gray-500">Session ID</p>
+                    <p className="text-gray-500">{tb.reference}</p>
                     <p className="font-mono text-xs text-gray-600 break-all">
                       {sessionData.id}
                     </p>
@@ -159,12 +160,10 @@ export default function SuccessClient({ lang }: BookingSuccessClientProps) {
 
             <div className={`${recordingError ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-200'} border rounded-lg p-4`}>
               <p className={`text-sm ${recordingError ? 'text-yellow-900' : 'text-blue-900'} font-semibold`}>
-                {recordingError ? '⏳ Traitement en cours...' : '📧 Un email de confirmation'}
+                {recordingError ? tb.processing : tb.confirmationEmail}
               </p>
               <p className={`text-sm ${recordingError ? 'text-yellow-800' : 'text-blue-800'} mt-2`}>
-                {recordingError 
-                  ? 'Veuillez attendre quelques instants, votre commande sera finalisée très bientôt.'
-                  : 'a été envoyé à votre adresse. Conservez cet email pour vos références d\'enregistrement.'}
+                {recordingError ? tb.processingText : tb.confirmationEmailText}
               </p>
             </div>
 
@@ -172,15 +171,15 @@ export default function SuccessClient({ lang }: BookingSuccessClientProps) {
               
               <Button asChild variant="outline" className="w-full">
                 <Link href={`/${lang}`}>
-                  Retour à l'accueil
+                  {tb.backHome}
                 </Link>
               </Button>
             </div>
 
             <div className="text-center text-sm text-gray-600 border-t pt-4">
-              <p>Avez-vous des questions ?</p>
+              <p>{tb.questions}</p>
               <Link href={`/${lang}/contact`} className="text-[#8B0000] hover:underline font-semibold">
-                Contactez-nous
+                {tb.contactUs}
               </Link>
             </div>
           </CardContent>

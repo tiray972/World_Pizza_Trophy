@@ -4,6 +4,7 @@ import { SlotBookingView } from "@/components/custom/SlotBookingCalendar";
 import { localizedCategoryName, type CheckoutOutcome, type SelectedPackSlot } from "@/components/custom/SlotBookingCalendar";
 import type { ClientRuleAcceptance } from "@/lib/server/rules/acceptance";
 import { fill, rulesDialogTexts } from "@/lib/i18n/rules-dialog-texts";
+import { BOOKING_LOCALES, bookingLang, bookingTexts, tf } from "@/lib/i18n/booking-texts";
 import { Slot, Category, WPTEvent, Product, MealGuest, Participant } from "@/types/firestore";
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
@@ -32,6 +33,11 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
 
   const { lang } = use(params);
   const currentLang = lang || 'fr';
+  const tb = bookingTexts(currentLang);
+  const locale = BOOKING_LOCALES[bookingLang(currentLang)];
+  /** Message d'erreur serveur dans la langue du Booking (repli : message du serveur). */
+  const serverMessage = (data: { error?: string; code?: string }) =>
+    (data.code && tb.serverErrors[data.code]) || data.error || tb.paymentStartFailed;
 
   // 🔥 Phase 1: Load all open events
   useEffect(() => {
@@ -44,9 +50,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
 
         if (eventsSnapshot.empty) {
           console.warn('⚠️  [BookingPage] No open events found');
-          toast.error("Aucun événement disponible", {
-            description: "Aucun événement n'est actuellement ouvert pour la réservation.",
-          });
+          toast.error(tb.noEventTitle, { description: tb.noEventText });
           setOpenEvents([]);
           setPageLoading(false);
           return;
@@ -78,15 +82,13 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
         }
       } catch (err: any) {
         console.error("❌ [BookingPage] ERROR loading open events:", err);
-        toast.error("Erreur de chargement", {
-          description: "Impossible de charger les événements disponibles.",
-        });
+        toast.error(tb.errorTitle, { description: tb.loadError });
         setPageLoading(false);
       }
     };
 
     loadOpenEvents();
-  }, []);
+  }, [tb]);
 
   // 🔥 Phase 2: Load event-specific data when selectedEventId changes
   useEffect(() => {
@@ -104,9 +106,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
         const selectedEvent = openEvents.find(e => e.id === selectedEventId);
         if (!selectedEvent) {
           console.error(`❌ [BookingPage] Event ${selectedEventId} not found in openEvents`);
-          toast.error("Événement introuvable", {
-            description: "L'événement sélectionné n'a pas pu être chargé.",
-          });
+          toast.error(tb.eventNotFound, { description: tb.eventNotFoundText });
           setPageLoading(false);
           return;
         }
@@ -214,15 +214,13 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
         console.log(`✅ [BookingPage] COMPLETE: All data loaded for event ${selectedEventId}`);
       } catch (err: any) {
         console.error("❌ [BookingPage] ERROR loading event data:", err);
-        toast.error("Erreur de chargement", {
-          description: "Impossible de charger les données de l'événement.",
-        });
+        toast.error(tb.errorTitle, { description: tb.loadError });
         setPageLoading(false);
       }
     };
 
     loadEventData();
-  }, [selectedEventId, openEvents]);
+  }, [selectedEventId, openEvents, tb]);
 
   /**
    * Réponse d'erreur du paiement. Un règlement refusé par le serveur (nouvelle
@@ -241,7 +239,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
   };
 
   const handleError = (msg: string) => {
-    toast.error("Une erreur est survenue", {
+    toast.error(tb.errorTitle, {
       description: msg,
       duration: 5000,
     });
@@ -257,9 +255,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
   ): Promise<CheckoutOutcome> => {
     if (!user) {
       const loginUrl = `/${currentLang}/auth/login?redirect=/booking`;
-      toast.info("Connexion requise", {
-        description: "Vous devez être connecté pour réserver.",
-      });
+      toast.info(tb.loginRequired, { description: tb.loginRequiredText });
       router.push(loginUrl);
       return false;
     }
@@ -273,7 +269,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
     const totalAmount = slotTotal + mealCost;
 
     setIsProcessing(true);
-    toast.loading("Préparation du paiement...", { id: "checkout-loading" });
+    toast.loading(tb.preparingPayment, { id: "checkout-loading" });
 
     try {
       // 🔒 L'acheteur est identifié par son jeton ; prix et règlement sont revérifiés par le serveur.
@@ -296,11 +292,11 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
         toast.dismiss("checkout-loading");
         const outcome = outcomeOfError(data);
         if (outcome) return outcome;
-        throw new Error(data.error);
+        throw new Error(serverMessage(data));
       }
 
       toast.dismiss("checkout-loading");
-      if (!data.url) throw new Error("Impossible de créer la session de paiement");
+      if (!data.url) throw new Error(tb.paymentStartFailed);
       window.location.href = data.url;
       return true;
     } catch (err: any) {
@@ -317,15 +313,13 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
   ): Promise<CheckoutOutcome> => {
     if (!user) {
       const loginUrl = `/${currentLang}/auth/login?redirect=/booking`;
-      toast.info("Connexion requise", {
-        description: "Vous devez être connecté pour réserver.",
-      });
+      toast.info(tb.loginRequired, { description: tb.loginRequiredText });
       router.push(loginUrl);
       return false;
     }
 
     setIsProcessing(true);
-    toast.loading("Configuration du pack...", { id: "pack-loading" });
+    toast.loading(tb.preparingPack, { id: "pack-loading" });
 
     try {
       // �� Calculer le montant total (prix du pack)
@@ -337,7 +331,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
       
       // 🔧 VALIDATION
       if (!totalAmount || totalAmount <= 0) {
-        throw new Error(`Montant invalide: ${totalAmount}€`);
+        throw new Error(tb.serverErrors.invalid_amount);
       }
 
       console.log(`📦 [PackCheckout] Slots data:`, slotsToCheckout); // 🔍 DEBUG
@@ -371,7 +365,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
         toast.dismiss("pack-loading");
         const outcome = outcomeOfError(data);
         if (outcome) return outcome;
-        throw new Error(data.error || `Erreur serveur: ${res.status}`);
+        throw new Error(serverMessage(data));
       }
 
       console.log(`✅ [PackCheckout] Session created:`, data.sessionId); // 🔍 DEBUG
@@ -379,7 +373,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
       
       if (!data.url) {
         console.error(`❌ [PackCheckout] No URL in response:`, data);
-        throw new Error("Impossible de créer la session de paiement");
+        throw new Error(tb.paymentStartFailed);
       }
       
       console.log(`✅ [PackCheckout] Redirecting to Stripe:`, data.url); // 🔍 DEBUG
@@ -400,8 +394,8 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
   // Loading state
   if (loading || pageLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        Chargement...
+      <div className="flex justify-center items-center h-screen" role="status">
+        {tb.loading}
       </div>
     );
   }
@@ -411,8 +405,8 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Aucun événement disponible</h1>
-          <p className="text-muted-foreground">Revenez plus tard pour des réservations.</p>
+          <h1 className="text-2xl font-bold mb-4">{tb.noEventTitle}</h1>
+          <p className="text-muted-foreground">{tb.noEventText}</p>
         </div>
       </div>
     );
@@ -425,10 +419,8 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
         <div className="max-w-2xl mx-auto">
           <Card>
             <CardHeader>
-              <CardTitle className="text-2xl">Sélectionnez un Événement</CardTitle>
-              <CardDescription>
-                Plusieurs événements sont actuellement ouverts pour la réservation.
-              </CardDescription>
+              <CardTitle className="text-2xl">{tb.chooseEvent}</CardTitle>
+              <CardDescription>{tb.chooseEventText}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -441,13 +433,12 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
                     <CardHeader className="p-4">
                       <CardTitle className="text-lg">{evt.name}</CardTitle>
                       <CardDescription className="text-sm">
-                        Année: {evt.eventYear} | Du{' '}
-                        {evt.eventStartDate.toLocaleDateString('fr-FR')} au{' '}
-                        {evt.eventEndDate.toLocaleDateString('fr-FR')}
+                        {tf(tb.eventDates, {
+                          start: evt.eventStartDate.toLocaleDateString(locale),
+                          end: evt.eventEndDate.toLocaleDateString(locale),
+                          deadline: evt.registrationDeadline.toLocaleDateString(locale),
+                        })}
                       </CardDescription>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Deadline: {evt.registrationDeadline.toLocaleDateString('fr-FR')}
-                      </p>
                     </CardHeader>
                   </Card>
                 ))}
@@ -464,8 +455,8 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Événement non trouvé</h1>
-          <p className="text-muted-foreground">Veuillez réessayer.</p>
+          <h1 className="text-2xl font-bold mb-4">{tb.eventNotFound}</h1>
+          <p className="text-muted-foreground">{tb.eventNotFoundText}</p>
         </div>
       </div>
     );
@@ -481,7 +472,7 @@ export default function BookingPage({ params }: { params: Promise<{ lang: string
       {/* Event selector for multiple events (shown if user navigates back) */}
       {openEvents.length > 1 && (
         <div className="mb-6 pb-6 border-b">
-          <p className="text-sm font-semibold text-gray-600 mb-3">Événement actif:</p>
+          <p className="text-sm font-semibold text-gray-600 mb-3">{tb.activeEvent}</p>
           <Tabs value={selectedEventId || ''} onValueChange={setSelectedEventId}>
             <TabsList className="grid" style={{ gridTemplateColumns: `repeat(${openEvents.length}, 1fr)` }}>
               {openEvents.map(evt => (
