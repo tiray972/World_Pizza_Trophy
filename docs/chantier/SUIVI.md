@@ -110,3 +110,10 @@ non réservable, panier et acceptation conservés au changement de langue, affic
 - Une requête HTTP 400 vue une fois dans la console du site local (page d'accueil) : non reproduite.
 - Index composites Firestore possiblement demandés en production : `resultSets` (`eventId` + `isPublished`),
   `categories`/`products` (`eventId` + `priceReview`).
+
+## Revue Codex après le lot 2
+
+- Correction des prérequis de compilation Next.js 16 : route de redirection `/` déplacée dans un groupe avec son propre layout racine, sans modifier les layouts des pages linguistiques ; `params` asynchrone sur accueil, éditions et galerie.
+- Build webpack de production réussi sur une copie isolée des fichiers suivis avec configuration factice (aucune connexion à la production). Le repli des résultats a été utilisé lors de l’indisponibilité de l’émulateur.
+- Une relance indépendante de la suite a donné 108/109 : le test de concurrence d’attribution a reçu une erreur native Firestore au lieu de l’erreur métier attendue. Les 10 tests ciblés d’attribution ont ensuite passé. Une autre relance complète a rencontré un délai dépassé sur le double clic (durée observée très supérieure au timeout, possiblement liée à la suspension de la machine ; cause non établie). Ne pas présenter ces relances comme toutes vertes : stabiliser et confirmer avant le mail « prêt à pousser ».
+- Aucun push, déploiement ou changement de base réelle. Compte et page Règlement hors nouveaux composants restent partiellement français, comme signalé par Claude.

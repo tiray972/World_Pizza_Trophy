@@ -6,7 +6,7 @@ import { getEditionImages } from "@/lib/edition-images";
 type SupportedLang = "fr" | "en" | "es" | "it";
 
 type Props = {
-  params: Promise<{ lang: string }> | { lang: string };
+  params: Promise<{ lang: string }>;
 };
 
 const copy = {

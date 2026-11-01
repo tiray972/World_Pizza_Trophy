@@ -14,7 +14,7 @@ import Footer from "@/components/Footer";
 import { homeContent, getPublicLang } from "@/lib/public-site-content";
 
 type Props = {
-  params: Promise<{ lang: string }> | { lang: string };
+  params: Promise<{ lang: string }>;
 };
 
 const ASSET_ROOT = "/images/editions/2025";
