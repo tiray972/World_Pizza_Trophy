@@ -9,6 +9,8 @@ import { CategoryFormModal } from "./CategoryFormModal";
 import { CategoryPreviewModal } from "./CategoryPreviewModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { Badge } from "./ui/Badge";
+import { RulesEditorModal } from "./RulesEditorModal";
+import { missingLangs } from "@/lib/domain/category-rules";
 
 interface CategoriesPageProps {
   categories: Category[];
@@ -27,6 +29,8 @@ export function CategoriesPage({
   onCreateCategory, 
   onDeleteCategory 
 }: CategoriesPageProps) {
+  const [rulesCategoryId, setRulesCategoryId] = useState<string | null>(null);
+  const rulesCategory = categories.find(category => category.id === rulesCategoryId) ?? null;
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
@@ -212,10 +216,20 @@ export function CategoriesPage({
                                             <Users className="h-4 w-4" />
                                             <span>Max {category.maxSlots} per day</span>
                                         </div>
-                                        {category.rules && (
+                                        {/* 📜 Règlement présenté dans le Booking (version publiée) */}
+                                        {category.rulesI18n?.published ? (
                                             <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
                                                 <FileText className="h-4 w-4" />
-                                                <span className="truncate max-w-[200px]">Rules attached</span>
+                                                <span>
+                                                    Règlement v{category.rulesI18n.published.version}
+                                                    {missingLangs(category.rulesI18n.published.texts).length > 0 &&
+                                                        ` · manque ${missingLangs(category.rulesI18n.published.texts).join(", ").toUpperCase()}`}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-amber-600">
+                                                <AlertTriangle className="h-4 w-4" />
+                                                <span>Règlement non publié</span>
                                             </div>
                                         )}
                                     </div>
@@ -248,6 +262,9 @@ export function CategoriesPage({
 
                                 {/* Right: Actions */}
                                 <div className="flex flex-row md:flex-col items-center justify-center gap-2 p-4 border-t md:border-t-0 md:border-l bg-muted/20">
+                                    <Button variant="outline" size="sm" onClick={() => setRulesCategoryId(category.id)}>
+                                        <FileText className="mr-1 h-4 w-4" /> Règlement
+                                    </Button>
                                     <div className="flex gap-2">
                                         <Button 
                                             variant="ghost" 
@@ -337,6 +354,7 @@ export function CategoriesPage({
             </span>
         }
       />
+      {rulesCategory && <RulesEditorModal key={rulesCategory.id} category={rulesCategory} onClose={() => setRulesCategoryId(null)} />}
     </div>
   );
 }

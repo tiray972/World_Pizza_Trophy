@@ -244,6 +244,7 @@ export const useEvents = () => {
         status: data.status,
         mealPrice: data.mealPrice, // 🍽️ Ajouter le prix du repas
         minSlotsPerBooking: data.minSlotsPerBooking, // 🎟️ Minimum de créneaux par réservation
+        rulesAcceptanceRequired: data.rulesAcceptanceRequired, // 📜 Règlement par catégorie
       });
 
       await updateDoc(doc(db, 'events', eventId), dataToWrite);
@@ -635,7 +636,12 @@ export const useCategories = (eventId?: string) => {
       if (snapshot.empty) {
         throw new Error(`Category with ID "${catId}" not found in database`);
       }
-      await updateDoc(categoryRef, data);
+      // 📜 Règlements et noms traduits : uniquement via la route de publication
+      // (versionnée, tracée). Une copie périmée dans l'onglet ne doit jamais
+      // écraser un règlement publié.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id: _id, rulesI18n: _rules, nameI18n: _names, ...editable } = data;
+      await updateDoc(categoryRef, editable);
     } catch (err) {
       throw new Error(`Failed to update category: ${err}`);
     }

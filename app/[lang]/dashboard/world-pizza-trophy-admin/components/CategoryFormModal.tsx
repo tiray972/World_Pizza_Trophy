@@ -202,12 +202,16 @@ export function CategoryFormModal({
           </div>
 
           <div className="grid gap-2">
-            <label htmlFor="rules" className="text-sm font-medium">Rules & Regulations</label>
+            <label htmlFor="rules" className="text-sm font-medium">Notes internes (ancien champ)</label>
+            <p className="text-xs text-muted-foreground">
+              Ce texte n&apos;est jamais affiché aux candidats. Le règlement présenté dans le Booking se rédige et se publie
+              avec le bouton « Règlement » de la catégorie (4 langues, versions).
+            </p>
             <textarea
               id="rules"
               name="rules"
               rows={4}
-              placeholder="Enter detailed rules, PDF links, or specific requirements here..."
+              placeholder="Notes internes…"
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={formData.rules}
               onChange={handleChange}

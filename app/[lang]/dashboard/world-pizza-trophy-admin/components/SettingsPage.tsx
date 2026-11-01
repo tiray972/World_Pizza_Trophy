@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Button } from "./ui/Button";
 import { WPTEvent, EventStatus } from "@/types/firestore";
 import { getMinSlotsPerBooking } from "@/lib/booking/rules";
+import { allowedTransitions, EVENT_STATUS_LABELS } from "@/lib/domain/event-lifecycle";
 import { Calendar, Save, AlertCircle, Plus, Activity } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -22,6 +23,7 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
     status: "draft" as EventStatus,
     mealPrice: 0,
     minSlotsPerBooking: 2,
+    rulesAcceptanceRequired: false,
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -39,13 +41,25 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
         status: event.status,
         mealPrice: event.mealPrice || 0,
         minSlotsPerBooking: getMinSlotsPerBooking(event),
+        rulesAcceptanceRequired: !!event.rulesAcceptanceRequired,
       });
     }
   }, [event]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === "status" && value === "archived" && event?.status !== "archived") {
+      const confirmed = window.confirm(
+        "Archiver cette édition ?\n\n" +
+          "• Plus aucune nouvelle réservation ni nouveau paiement d'inscription.\n" +
+          "• Rien n'est supprimé : comptes, paiements, factures, exports et résultats restent accessibles.\n" +
+          "• Les paiements tardifs, remboursements et rapprochements continuent d'être traités.\n" +
+          "• L'édition disparaît des parcours d'inscription."
+      );
+      if (!confirmed) return;
+    }
+    const nextValue = e.target instanceof HTMLInputElement && e.target.type === "checkbox" ? e.target.checked : value;
+    setFormData(prev => ({ ...prev, [name]: nextValue }));
     setSuccessMsg(null);
   };
 
@@ -69,6 +83,7 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
         status: formData.status,
         mealPrice: Number(formData.mealPrice),
         minSlotsPerBooking: Math.max(1, Number(formData.minSlotsPerBooking) || 1),
+        rulesAcceptanceRequired: !!formData.rulesAcceptanceRequired,
       };
 
       onUpdateEvent(updatedEvent);
@@ -103,6 +118,7 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
       case 'open': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800';
       case 'draft': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800';
       case 'closed': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800';
+      case 'completed': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800';
       case 'archived': return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700';
     }
   };
@@ -147,18 +163,45 @@ export function SettingsPage({ event, onUpdateEvent, onCreateEvent }: SettingsPa
                 onChange={handleChange}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary"
               >
-                <option value="draft">Draft - Configuration Only (Hidden from Public)</option>
-                <option value="open">Open - Active & Registrations Enabled</option>
-                <option value="closed">Closed - Registrations Disabled</option>
-                <option value="archived">Archived - Read-only History</option>
+                {(["draft", "open", "closed", "completed", "archived"] as EventStatus[]).map(status => (
+                  <option
+                    key={status}
+                    value={status}
+                    // Seules les transitions prévues par le cycle de vie sont proposées.
+                    disabled={status !== event.status && !allowedTransitions(event.status).includes(status)}
+                  >
+                    {EVENT_STATUS_LABELS[status]}
+                  </option>
+                ))}
               </select>
               <div className="text-xs text-muted-foreground">
                 <ul className="list-disc pl-4 space-y-1">
                   <li><strong>Draft:</strong> Use this to set up categories and slots before going live.</li>
                   <li><strong>Open:</strong> The main active state. Allows users to register.</li>
                   <li><strong>Closed:</strong> Use this when the event is over or full.</li>
+                  <li><strong>Terminé :</strong> compétition passée, résultats à saisir et publier.</li>
+                  <li><strong>Archivé :</strong> historique consultable, aucune nouvelle vente ; paiements tardifs et remboursements toujours traités.</li>
                 </ul>
               </div>
+
+              {/* 📜 Règlement par catégorie à accepter avant les créneaux */}
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  name="rulesAcceptanceRequired"
+                  className="mt-0.5 size-4"
+                  checked={formData.rulesAcceptanceRequired}
+                  onChange={handleChange}
+                />
+                <span>
+                  <span className="font-medium">Exiger l&apos;acceptation du règlement de chaque catégorie</span>
+                  <span className="block text-xs text-muted-foreground">
+                    Le candidat lit et accepte le règlement publié de la catégorie avant d&apos;en voir les créneaux ; le paiement
+                    vérifie la version acceptée. Une catégorie sans règlement publié n&apos;est alors plus réservable. Sans effet
+                    sur les inscriptions déjà confirmées.
+                  </span>
+                </span>
+              </label>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
