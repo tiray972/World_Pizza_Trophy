@@ -14,7 +14,7 @@ import { ParticipantsPage } from './components/ParticipantsPage';
 import { MealsPage } from './components/MealsPage';
 import type { SlotOffer } from './components/ParticipantMatrix';
 import { assignSlots } from './lib/assignSlots';
-import { newRequestId } from './lib/adminFetch';
+import { adminFetch, newRequestId } from './lib/adminFetch';
 import { ResultsPage } from './components/ResultsPage';
 import { CreateEventModal } from './components/CreateEventModal';
 import { ThemeProvider } from './components/ThemeProvider';
@@ -98,7 +98,7 @@ export default function App() {
   // Firebase hooks - loads data in real-time
   const { events, createEvent, updateEvent } = useEvents();
   const { users, updateUser } = useUsers();
-  const { slots, createSlots, transferSlot, releaseSlot, deleteSlot, deleteSlotsByDate } = useSlots(selectedEventId);
+  const { slots, createSlots, releaseSlot, deleteSlot, deleteSlotsByDate } = useSlots(selectedEventId);
   const { categories, createCategory, updateCategory, deleteCategory } = useCategories(selectedEventId);
   const { products, createProduct, updateProduct, deleteProduct } = useProducts(selectedEventId);
   const { vouchers, createVoucher, deleteVoucher } = useVouchers(selectedEventId);
@@ -240,15 +240,8 @@ export default function App() {
    * réellement disputé, et le suivi financier reste juste.
    */
   const handleTransferSlot = async (source: Slot, targetSlotId: string) => {
-    await transferSlot(source, targetSlotId);
-
-    const affectedPayments = payments.filter(payment => payment.slotIds?.includes(source.id));
-    for (const payment of affectedPayments) {
-      await updatePayment(payment.id, {
-        slotIds: payment.slotIds.map(slotId => (slotId === source.id ? targetSlotId : slotId)),
-        updatedAt: new Date(),
-      });
-    }
+    // Une seule transaction serveur : identités, équipe, paiement et statut suivent.
+    await adminFetch('/api/admin/slots/transfer', { body: { sourceSlotId: source.id, targetSlotId } });
   };
 
   /**

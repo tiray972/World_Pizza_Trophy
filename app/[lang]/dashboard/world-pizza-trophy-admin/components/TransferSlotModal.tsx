@@ -27,6 +27,7 @@ export function TransferSlotModal({
   const [targetDate, setTargetDate] = useState<string>("all");
   const [selectedTargetId, setSelectedTargetId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   // Confirmation explicite avant de déplacer une réservation payée
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
@@ -66,10 +67,15 @@ export function TransferSlotModal({
   const handleConfirm = async () => {
     if (!selectedTargetId) return;
     setIsSubmitting(true);
+    setError(null);
     try {
       await onConfirm(selectedTargetId);
       setSelectedTargetId("");
       onClose();
+    } catch (transferError) {
+      // Refus serveur (créneau pris, format différent, participant déjà inscrit…) : rien n'a été modifié.
+      setIsConfirmOpen(false);
+      setError(transferError instanceof Error ? transferError.message : String(transferError));
     } finally {
       setIsSubmitting(false);
     }
@@ -167,6 +173,7 @@ export function TransferSlotModal({
         </div>
 
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-2">
+          {error && <p className="mr-auto text-sm text-red-700" role="alert">{error}</p>}
           <Button type="button" variant="outline" onClick={onClose}>
             Annuler
           </Button>
@@ -192,7 +199,7 @@ export function TransferSlotModal({
         title="Confirmer le transfert ?"
         description={
           <>
-            La réservation, le participant et le paiement seront déplacés vers le nouveau créneau.
+            La réservation, les participants, l&apos;équipe et le paiement seront déplacés vers le nouveau créneau.
             L&apos;ancien créneau repartira en vente. Le montant encaissé ne change pas.
           </>
         }
