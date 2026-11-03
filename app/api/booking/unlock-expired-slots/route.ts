@@ -54,12 +54,19 @@ export async function POST(req: NextRequest) {
 
     // 3️⃣ Achats sans créneau (repas seuls) : aucun verrou ne les signale, on
     // examine donc aussi les réservations en attente.
-    const pendingSnapshot = await adminDB
+    // ⚠️ Uniquement les réservations récentes au format actuel (`lockedUntil`
+    // n'existe que depuis la finalisation unique) : les réservations
+    // historiques ne sont jamais finalisées ni modifiées automatiquement — elles
+    // relèvent du diagnostic validé. Filtre d'intervalle sur un seul champ :
+    // aucun index composite requis ; le statut est filtré en mémoire.
+    const recentSnapshot = await adminDB
       .collection('pendingBookings')
-      .where('status', '==', 'pending')
-      .limit(PENDING_SCAN_LIMIT)
+      .where('lockedUntil', '>=', admin.firestore.Timestamp.fromDate(new Date(now.getTime() - PENDING_EXPIRY_MS)))
       .get();
-    for (const pending of pendingSnapshot.docs) {
+    const pendingDocs = recentSnapshot.docs
+      .filter(doc => doc.data().status === 'pending')
+      .slice(0, PENDING_SCAN_LIMIT);
+    for (const pending of pendingDocs) {
       const data = pending.data();
       const sessionId = data.stripeSessionId as string | undefined;
       const createdAt: Date | null = data.createdAt?.toDate?.() ?? null;
@@ -69,6 +76,11 @@ export async function POST(req: NextRequest) {
         if (session.payment_status === 'paid') {
           const result = await finalizeAndNotify(adminDB, session, 'recovery');
           if (result.status === 'created') recovered.push(sessionId);
+          // Déjà enregistrée (webhook ou page de succès) : on referme la réservation
+          // pour qu'elle ne soit plus réexaminée.
+          if (result.status === 'already_finalized') {
+            await pending.ref.update({ status: 'paid', paymentId: result.paymentId, updatedAt: admin.firestore.Timestamp.now() });
+          }
         } else if (session.status === 'expired' || (createdAt && now.getTime() - createdAt.getTime() > PENDING_EXPIRY_MS)) {
           await pending.ref.update({ status: 'expired', updatedAt: admin.firestore.Timestamp.now() });
         }

@@ -64,6 +64,12 @@ non réservable, panier et acceptation conservés au changement de langue, affic
 
 109 tests verts (15 fichiers) dans l'émulateur ; `npm run typecheck` sans erreur.
 
+**Correctif post-revue (3 novembre 2026)** : le rattrapage des réservations en attente
+(`/api/booking/unlock-expired-slots`) ne traite plus que les réservations récentes au format actuel
+(`lockedUntil` des dernières 26 h) ; les réservations historiques ne sont ni finalisées, ni modifiées,
+ni notifiées automatiquement. Une réservation déjà enregistrée est refermée (`paid`). Vérifié par
+typage et lint ; non testé dans l'émulateur (autre projet actif).
+
 ## Restant à faire
 
 1. **Vérification de build** du lot 2 dans un worktree propre (la dernière vérification date du lot 1,
